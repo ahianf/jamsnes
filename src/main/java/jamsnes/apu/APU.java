@@ -198,6 +198,87 @@ public class APU extends AMemory {
         return 3;
     }
 
+    public int SET1(int directPageAddress, int bit) {
+        int data = _internalRead(directPageAddress);
+        _internalWrite(directPageAddress, data | (1 << bit));
+        return 4;
+    }
+
+    public int CLR1(int directPageAddress, int bit) {
+        int data = _internalRead(directPageAddress);
+        _internalWrite(directPageAddress, data & ~(1 << bit));
+        return 4;
+    }
+
+    public int TSET1(int absoluteAddress) {
+        int data = _internalRead(absoluteAddress);
+        _internalWrite(absoluteAddress, data | internalRegisters.a);
+        setNzFlags(data);
+        return 6;
+    }
+
+    public int TCLR1(int absoluteAddress) {
+        int data = _internalRead(absoluteAddress);
+        _internalWrite(absoluteAddress, data & ~internalRegisters.a);
+        setNzFlags(data);
+        return 6;
+    }
+
+    public int AND1(AbsoluteBit operand) {
+        return AND1(operand, false);
+    }
+
+    public int AND1(AbsoluteBit operand, boolean invert) {
+        boolean bit = getAbsoluteBitValue(operand);
+        internalRegisters.c = internalRegisters.c & (invert ? !bit : bit);
+        return 4;
+    }
+
+    public int OR1(AbsoluteBit operand) {
+        return OR1(operand, false);
+    }
+
+    public int OR1(AbsoluteBit operand, boolean invert) {
+        boolean bit = getAbsoluteBitValue(operand);
+        internalRegisters.c = internalRegisters.c | (invert ? !bit : bit);
+        return 5;
+    }
+
+    public int EOR1(AbsoluteBit operand) {
+        internalRegisters.c = internalRegisters.c ^ getAbsoluteBitValue(operand);
+        return 5;
+    }
+
+    public int NOT1(AbsoluteBit operand) {
+        _internalWrite(operand.address(), _internalRead(operand.address()) ^ (1 << operand.bit()));
+        return 5;
+    }
+
+    public int MOV1(AbsoluteBit operand) {
+        return MOV1(operand, false);
+    }
+
+    public int MOV1(AbsoluteBit operand, boolean toCarry) {
+        int mask = 1 << operand.bit();
+        if (toCarry) {
+            internalRegisters.c = (_internalRead(operand.address()) & mask) != 0;
+            return 4;
+        }
+        int data = _internalRead(operand.address());
+        _internalWrite(operand.address(), internalRegisters.c ? data | mask : data & ~mask);
+        return 6;
+    }
+
+    private boolean getAbsoluteBitValue(AbsoluteBit operand) {
+        return (_internalRead(operand.address()) & (1 << operand.bit())) != 0;
+    }
+
+    private void setNzFlags(int data) {
+        int value = u8(data);
+        internalRegisters.z = value == 0;
+        internalRegisters.n = (value & 0x80) != 0;
+    }
+
     @Override
     public int getSize() {
         return 0x3;
