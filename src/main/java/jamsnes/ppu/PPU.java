@@ -2,6 +2,7 @@ package jamsnes.ppu;
 
 import jamsnes.memory.AMemory;
 import jamsnes.models.Component;
+import jamsnes.models.Vector2;
 import jamsnes.ram.Ram;
 import jamsnes.renderer.IRenderer;
 
@@ -91,6 +92,43 @@ public class PPU extends AMemory {
             case 0b11 -> (vanillaAddress & 0xfc00) | ((vanillaAddress & 0x0380) >>> 7) | ((vanillaAddress & 0x007f) << 3);
             default -> vanillaAddress;
         };
+    }
+
+    public int getBpp(int backgroundNumber) {
+        return switch (ppuRegisters.bgMode()) {
+            case 0 -> 2;
+            case 1 -> backgroundNumber < 3 ? 4 : 2;
+            case 2 -> 4;
+            case 3 -> backgroundNumber == 1 ? 8 : 4;
+            case 4 -> backgroundNumber == 1 ? 8 : 2;
+            case 5 -> backgroundNumber == 1 ? 4 : 2;
+            case 6 -> 4;
+            case 7 -> backgroundNumber == 1 ? 8 : 7;
+            default -> throw new IllegalStateException("Invalid background mode");
+        };
+    }
+
+    public Vector2<Integer> getCharacterSize(int backgroundNumber) {
+        if ((registers[0x05] & (1 << (3 + backgroundNumber))) != 0) {
+            return new Vector2<>(16, 16);
+        }
+        return new Vector2<>(8, 8);
+    }
+
+    public int getTileMapStartAddress(int backgroundNumber) {
+        return u16(ppuRegisters.bgTilemapAddress(backgroundNumber - 1) << 11);
+    }
+
+    public int getTilesetAddress(int backgroundNumber) {
+        int baseAddress = registers[0x0b + (backgroundNumber > 2 ? 1 : 0)];
+        baseAddress = backgroundNumber % 2 != 0 ? baseAddress & 0x0f : (baseAddress & 0x0f) >>> 4;
+        return u16(baseAddress << 13);
+    }
+
+    public Vector2<Boolean> getBackgroundMirroring(int backgroundNumber) {
+        return new Vector2<>(
+                ppuRegisters.bgTilemapHorizontalMirroring(backgroundNumber - 1),
+                ppuRegisters.bgTilemapVerticalMirroring(backgroundNumber - 1));
     }
 
     private void setVmain(int value) {
