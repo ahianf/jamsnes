@@ -726,6 +726,136 @@ public class APU extends AMemory {
         return 6;
     }
 
+    public int BRA(int offset) {
+        internalRegisters.pc = u16(internalRegisters.pc + (byte) offset);
+        return 4;
+    }
+
+    public int BEQ(int offset) {
+        if (!internalRegisters.z) {
+            return 2;
+        }
+        BRA(offset);
+        return 4;
+    }
+
+    public int BNE(int offset) {
+        if (internalRegisters.z) {
+            return 2;
+        }
+        BRA(offset);
+        return 4;
+    }
+
+    public int BCS(int offset) {
+        if (!internalRegisters.c) {
+            return 2;
+        }
+        BRA(offset);
+        return 4;
+    }
+
+    public int BCC(int offset) {
+        if (internalRegisters.c) {
+            return 2;
+        }
+        BRA(offset);
+        return 4;
+    }
+
+    public int BVS(int offset) {
+        if (!internalRegisters.v) {
+            return 2;
+        }
+        BRA(offset);
+        return 4;
+    }
+
+    public int BVC(int offset) {
+        if (internalRegisters.v) {
+            return 2;
+        }
+        BRA(offset);
+        return 4;
+    }
+
+    public int BMI(int offset) {
+        if (!internalRegisters.n) {
+            return 2;
+        }
+        BRA(offset);
+        return 4;
+    }
+
+    public int BPL(int offset) {
+        if (internalRegisters.n) {
+            return 2;
+        }
+        BRA(offset);
+        return 4;
+    }
+
+    public int BBS(int address, int offset, int bit) {
+        int data = _internalRead(address);
+        if ((data & (1 << bit)) == 0) {
+            return 5;
+        }
+        BRA(offset);
+        return 7;
+    }
+
+    public int BBC(int address, int offset, int bit) {
+        int data = _internalRead(address);
+        if ((data & (1 << bit)) != 0) {
+            return 5;
+        }
+        BRA(offset);
+        return 7;
+    }
+
+    public int CBNE(int address, int offset) {
+        return CBNE(address, offset, false);
+    }
+
+    public int CBNE(int address, int offset, boolean byX) {
+        int data = _internalRead(address);
+        if (internalRegisters.a == data) {
+            return 5 + (byX ? 1 : 0);
+        }
+        BRA(offset);
+        return 7 + (byX ? 1 : 0);
+    }
+
+    public int DBNZ(int offset) {
+        return DBNZ(offset, false);
+    }
+
+    public int DBNZ(int offset, boolean directAddress) {
+        int data;
+        if (directAddress) {
+            int address = _getDirectAddr();
+            data = u8(_internalRead(address) - 1);
+            _internalWrite(address, data);
+        } else {
+            data = u8(internalRegisters.y - 1);
+            internalRegisters.y = data;
+        }
+        if (data == 0) {
+            return 4 + (directAddress ? 1 : 0);
+        }
+        BRA(offset);
+        return 6 + (directAddress ? 1 : 0);
+    }
+
+    public int JMP(int address) {
+        return JMP(address, false);
+    }
+
+    public int JMP(int address, boolean byX) {
+        internalRegisters.pc = u16(address);
+        return byX ? 6 : 3;
+    }
+
     @Override
     public int getSize() {
         return 0x3;
