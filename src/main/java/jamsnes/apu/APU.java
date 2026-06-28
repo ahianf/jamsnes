@@ -1,5 +1,6 @@
 package jamsnes.apu;
 
+import jamsnes.exceptions.InvalidOpcode;
 import jamsnes.memory.AMemory;
 import jamsnes.models.Component;
 import jamsnes.renderer.IRenderer;
@@ -142,6 +143,158 @@ public class APU extends AMemory {
         }
         int high = _internalRead(directIndex);
         return u16(((high << 8) | low) + internalRegisters.y);
+    }
+
+    public int executeInstruction() {
+        int opcode = _getImmediateData();
+
+        switch (opcode) {
+            case 0x00:
+                return NOP();
+            case 0x01:
+                return TCALL(0);
+            case 0x03:
+                return BBS(_getDirectAddr(), _getImmediateData(), 0);
+            case 0x0d:
+                return PUSH(internalRegisters.psw());
+            case 0x0f:
+                return BRK();
+            case 0x10:
+                return BPL(_getImmediateData());
+            case 0x11:
+                return TCALL(1);
+            case 0x13:
+                return BBC(_getDirectAddr(), _getImmediateData(), 0);
+            case 0x1f:
+                return JMP(_getAbsoluteByXAddr(), true);
+            case 0x20:
+                return CLRP();
+            case 0x21:
+                return TCALL(2);
+            case 0x23:
+                return BBS(_getDirectAddr(), _getImmediateData(), 1);
+            case 0x2d:
+                return PUSH(internalRegisters.a);
+            case 0x2e:
+                return CBNE(_getDirectAddr(), _getImmediateData());
+            case 0x2f:
+                return BRA(_getImmediateData());
+            case 0x30:
+                return BMI(_getImmediateData());
+            case 0x31:
+                return TCALL(3);
+            case 0x33:
+                return BBC(_getDirectAddr(), _getImmediateData(), 1);
+            case 0x3f:
+                return CALL(_getAbsoluteAddr());
+            case 0x40:
+                return SETP();
+            case 0x41:
+                return TCALL(4);
+            case 0x43:
+                return BBS(_getDirectAddr(), _getImmediateData(), 2);
+            case 0x4d:
+                return PUSH(internalRegisters.x);
+            case 0x4f:
+                return PCALL();
+            case 0x50:
+                return BVC(_getImmediateData());
+            case 0x51:
+                return TCALL(5);
+            case 0x53:
+                return BBC(_getDirectAddr(), _getImmediateData(), 2);
+            case 0x5f:
+                return JMP(_getAbsoluteAddr());
+            case 0x60:
+                return CLRC();
+            case 0x61:
+                return TCALL(6);
+            case 0x63:
+                return BBS(_getDirectAddr(), _getImmediateData(), 3);
+            case 0x6d:
+                return PUSH(internalRegisters.y);
+            case 0x6e:
+                return DBNZ(_getImmediateData(), true);
+            case 0x6f:
+                return RET();
+            case 0x70:
+                return BVS(_getImmediateData());
+            case 0x71:
+                return TCALL(7);
+            case 0x73:
+                return BBC(_getDirectAddr(), _getImmediateData(), 3);
+            case 0x7f:
+                return RETI();
+            case 0x80:
+                return SETC();
+            case 0x81:
+                return TCALL(8);
+            case 0x83:
+                return BBS(_getDirectAddr(), _getImmediateData(), 4);
+            case 0x8e:
+                internalRegisters.setPsw(popStack());
+                return 4;
+            case 0x90:
+                return BCC(_getImmediateData());
+            case 0x91:
+                return TCALL(9);
+            case 0x93:
+                return BBC(_getDirectAddr(), _getImmediateData(), 4);
+            case 0xa0:
+                return EI();
+            case 0xa1:
+                return TCALL(10);
+            case 0xa3:
+                return BBS(_getDirectAddr(), _getImmediateData(), 5);
+            case 0xae:
+                return POP("a");
+            case 0xb0:
+                return BCS(_getImmediateData());
+            case 0xb1:
+                return TCALL(11);
+            case 0xb3:
+                return BBC(_getDirectAddr(), _getImmediateData(), 5);
+            case 0xc0:
+                return DI();
+            case 0xc1:
+                return TCALL(12);
+            case 0xc3:
+                return BBS(_getDirectAddr(), _getImmediateData(), 6);
+            case 0xce:
+                return POP("x");
+            case 0xd0:
+                return BNE(_getImmediateData());
+            case 0xd1:
+                return TCALL(13);
+            case 0xd3:
+                return BBC(_getDirectAddr(), _getImmediateData(), 6);
+            case 0xde:
+                return CBNE(_getDirectAddrByX(), _getImmediateData(), true);
+            case 0xe0:
+                return CLRV();
+            case 0xe1:
+                return TCALL(14);
+            case 0xe3:
+                return BBS(_getDirectAddr(), _getImmediateData(), 7);
+            case 0xed:
+                return NOTC();
+            case 0xee:
+                return POP("y");
+            case 0xef:
+                return SLEEP();
+            case 0xf0:
+                return BEQ(_getImmediateData());
+            case 0xf1:
+                return TCALL(15);
+            case 0xf3:
+                return BBC(_getDirectAddr(), _getImmediateData(), 7);
+            case 0xfe:
+                return DBNZ(_getImmediateData());
+            case 0xff:
+                return STOP();
+            default:
+                throw new InvalidOpcode("APU opcode 0x%02x is not implemented".formatted(opcode));
+        }
     }
 
     public int NOP() {
