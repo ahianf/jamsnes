@@ -1,7 +1,13 @@
 package jamsnes.ppu;
 
+import static jamsnes.models.Unsigned.u16;
+import static jamsnes.models.Unsigned.u8;
+
 public class PPURegisters {
     private final int[] raw;
+    private int cgAddress;
+    private int cgData;
+    private boolean cgLowByte = true;
 
     public PPURegisters(int[] raw) {
         this.raw = raw;
@@ -93,6 +99,47 @@ public class PPURegisters {
 
     public int vmdata() {
         return raw[0x18] | (raw[0x19] << 8);
+    }
+
+    public int cgAddress() {
+        return cgAddress;
+    }
+
+    public int cgData() {
+        return cgData;
+    }
+
+    public int cgDataLow() {
+        return cgData & 0xff;
+    }
+
+    public int cgDataHigh() {
+        return (cgData >>> 8) & 0xff;
+    }
+
+    public boolean isCgLowByte() {
+        return cgLowByte;
+    }
+
+    void setCgAddress(int value) {
+        cgAddress = u8(value);
+        cgLowByte = true;
+    }
+
+    void setCgDataLow(int value) {
+        cgData = u16((cgData & 0xff00) | u8(value));
+    }
+
+    void setCgDataHigh(int value) {
+        cgData = u16((cgData & 0x00ff) | (u8(value) << 8));
+    }
+
+    void incrementCgAddress() {
+        cgAddress = u8(cgAddress + 1);
+    }
+
+    void toggleCgLowByte() {
+        cgLowByte = !cgLowByte;
     }
 
     private boolean bit(int value, int bit) {

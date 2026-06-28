@@ -61,6 +61,8 @@ public class PPU extends AMemory {
                     incrementVramAddress();
                 }
             }
+            case 0x21 -> ppuRegisters.setCgAddress(value);
+            case 0x22 -> writeCgData(value);
             default -> {
             }
         }
@@ -126,6 +128,19 @@ public class PPU extends AMemory {
 
     private void updateVramReadBuffer() {
         vramReadBuffer = vram.read(getVramAddress()) | (vram.read(u16(getVramAddress() + 1)) << 8);
+    }
+
+    private void writeCgData(int value) {
+        if (ppuRegisters.isCgLowByte()) {
+            ppuRegisters.setCgDataLow(value);
+        } else {
+            ppuRegisters.setCgDataHigh(value);
+            cgram.write(ppuRegisters.cgAddress(), ppuRegisters.cgDataLow());
+            ppuRegisters.incrementCgAddress();
+            cgram.write(ppuRegisters.cgAddress(), ppuRegisters.cgDataHigh());
+            ppuRegisters.incrementCgAddress();
+        }
+        ppuRegisters.toggleCgLowByte();
     }
 
     @Override

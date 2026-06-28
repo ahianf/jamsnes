@@ -101,6 +101,27 @@ class PpuRegisterWriteTest {
         assertEquals(0x00ff, snes.ppu.ppuRegisters().vmdata());
     }
 
+    @Test
+    void writesCgAddressAndData() {
+        SNES snes = init();
+
+        snes.bus.write(0x2121, 0x10);
+        assertEquals(0x10, snes.ppu.ppuRegisters().cgAddress());
+        assertTrue(snes.ppu.ppuRegisters().isCgLowByte());
+
+        snes.bus.write(0x2122, 0xff);
+        assertEquals(0xff, snes.ppu.ppuRegisters().cgDataLow());
+        assertFalse(snes.ppu.ppuRegisters().isCgLowByte());
+        assertEquals(0x10, snes.ppu.ppuRegisters().cgAddress());
+
+        snes.bus.write(0x2122, 0xf8);
+        assertEquals(0xf8, snes.ppu.ppuRegisters().cgDataHigh());
+        assertTrue(snes.ppu.ppuRegisters().isCgLowByte());
+        assertEquals(0x12, snes.ppu.ppuRegisters().cgAddress());
+        assertEquals(0xff, snes.ppu.cgram.read(0x10));
+        assertEquals(0xf8, snes.ppu.cgram.read(0x11));
+    }
+
     private static SNES init() {
         SNES snes = new SNES(new NoRenderer(0, 0, 0));
         snes.bus.mapComponents(snes);
