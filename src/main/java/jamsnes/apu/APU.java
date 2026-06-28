@@ -334,6 +334,52 @@ public class APU extends AMemory {
         return cycles;
     }
 
+    public int DAA() {
+        if (internalRegisters.c || internalRegisters.a > 0x99) {
+            internalRegisters.c = true;
+            internalRegisters.a = u8(internalRegisters.a + 0x60);
+        }
+        if (internalRegisters.h || (internalRegisters.a & 0x0f) > 0x09) {
+            internalRegisters.a = u8(internalRegisters.a + 0x06);
+        }
+        setNzFlags(internalRegisters.a);
+        return 3;
+    }
+
+    public int DAS() {
+        if (!internalRegisters.c || internalRegisters.a > 0x99) {
+            internalRegisters.c = false;
+            internalRegisters.a = u8(internalRegisters.a - 0x60);
+        }
+        if (!internalRegisters.h || (internalRegisters.a & 0x0f) > 0x09) {
+            internalRegisters.a = u8(internalRegisters.a - 0x06);
+        }
+        setNzFlags(internalRegisters.a);
+        return 3;
+    }
+
+    public int MUL() {
+        internalRegisters.setYa(internalRegisters.y * internalRegisters.a);
+        internalRegisters.n = (internalRegisters.a & 0x80) != 0;
+        internalRegisters.z = internalRegisters.y == 0;
+        return 9;
+    }
+
+    public int DIV() {
+        int ya = internalRegisters.ya();
+        internalRegisters.v = internalRegisters.y >= internalRegisters.x;
+        internalRegisters.h = (internalRegisters.y & 0x0f) >= (internalRegisters.x & 0x0f);
+        if (internalRegisters.y < (internalRegisters.x << 1)) {
+            internalRegisters.a = u8(ya / internalRegisters.x);
+            internalRegisters.y = u8(ya % internalRegisters.x);
+        } else {
+            internalRegisters.a = u8(0xff - (ya - (internalRegisters.x << 9)) / (0x100 - internalRegisters.x));
+            internalRegisters.y = u8(internalRegisters.x + (ya - (internalRegisters.x << 9)) % (0x100 - internalRegisters.x));
+        }
+        setNzFlags(internalRegisters.a);
+        return 12;
+    }
+
     private boolean getAbsoluteBitValue(AbsoluteBit operand) {
         return (_internalRead(operand.address()) & (1 << operand.bit())) != 0;
     }
