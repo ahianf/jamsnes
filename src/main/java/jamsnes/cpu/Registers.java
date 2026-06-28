@@ -57,6 +57,14 @@ public class Registers {
         return u8(y >>> 8);
     }
 
+    public void setXh(int value) {
+        x = u16((u8(value) << 8) | (x & 0xff));
+    }
+
+    public void setYh(int value) {
+        y = u16((u8(value) << 8) | (y & 0xff));
+    }
+
     public int sl() {
         return u8(s);
     }

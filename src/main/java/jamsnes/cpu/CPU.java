@@ -13,9 +13,16 @@ public class CPU extends AMemory {
     private final int[] internalRegisters = new int[0x300];
     private IMemoryBus bus;
     private boolean hasIndexCrossedPageBoundary;
+    private boolean emulationMode = true;
+    private boolean stopped;
 
     public CPU(IMemoryBus bus) {
         this.bus = bus;
+        registers.p.i = true;
+        registers.p.m = true;
+        registers.p.x_b = true;
+        registers.setPbr(0);
+        registers.d = 0;
     }
 
     public void setBus(IMemoryBus bus) {
@@ -32,6 +39,18 @@ public class CPU extends AMemory {
 
     public boolean hasIndexCrossedPageBoundary() {
         return hasIndexCrossedPageBoundary;
+    }
+
+    public boolean isEmulationMode() {
+        return emulationMode;
+    }
+
+    public void setEmulationMode(boolean emulationMode) {
+        this.emulationMode = emulationMode;
+    }
+
+    public boolean isStopped() {
+        return stopped;
     }
 
     @Override
@@ -234,10 +253,236 @@ public class CPU extends AMemory {
         return u16(value);
     }
 
+    public int SEC(int valueAddr) {
+        registers.p.c = true;
+        return 0;
+    }
+
+    public int SED(int valueAddr) {
+        registers.p.d = true;
+        return 0;
+    }
+
+    public int SEI(int valueAddr) {
+        registers.p.i = true;
+        return 0;
+    }
+
+    public int CLC(int valueAddr) {
+        registers.p.c = false;
+        return 0;
+    }
+
+    public int CLI(int valueAddr) {
+        registers.p.i = false;
+        return 0;
+    }
+
+    public int CLD(int valueAddr) {
+        registers.p.d = false;
+        return 0;
+    }
+
+    public int CLV(int valueAddr) {
+        registers.p.v = false;
+        return 0;
+    }
+
+    public int SEP(int valueAddr) {
+        registers.p.setFlags(registers.p.flags() | bus.read(valueAddr));
+        return 0;
+    }
+
+    public int REP(int valueAddr) {
+        registers.p.setFlags(registers.p.flags() & ~bus.read(valueAddr));
+        if (emulationMode) {
+            registers.p.x_b = true;
+            registers.p.m = true;
+        }
+        return 0;
+    }
+
+    public int JSR(int valueAddr) {
+        registers.setPc(registers.pc - 1);
+        _push16(registers.pc);
+        registers.setPc(valueAddr);
+        return 0;
+    }
+
+    public int JSL(int valueAddr) {
+        registers.setPac(registers.pac - 1);
+        _push8(registers.pbr);
+        _push16(registers.pc);
+        registers.setPac(valueAddr);
+        return 0;
+    }
+
+    public int PHA(int valueAddr) {
+        if (registers.p.m) {
+            _push8(registers.al());
+        } else {
+            _push16(registers.a);
+        }
+        return registers.p.m ? 0 : 1;
+    }
+
+    public int PHB(int valueAddr) {
+        _push8(registers.dbr);
+        return 0;
+    }
+
+    public int PHD(int valueAddr) {
+        _push16(registers.d);
+        return 0;
+    }
+
+    public int PHK(int valueAddr) {
+        _push8(registers.pbr);
+        return 0;
+    }
+
+    public int PHP(int valueAddr) {
+        _push8(registers.p.flags());
+        return 0;
+    }
+
+    public int PHX(int valueAddr) {
+        if (registers.p.x_b) {
+            _push8(registers.xl());
+        } else {
+            _push16(registers.x);
+        }
+        return registers.p.x_b ? 0 : 1;
+    }
+
+    public int PHY(int valueAddr) {
+        if (registers.p.x_b) {
+            _push8(registers.yl());
+        } else {
+            _push16(registers.y);
+        }
+        return registers.p.x_b ? 0 : 1;
+    }
+
+    public int PER(int valueAddr) {
+        int value = bus.read(valueAddr) | (bus.read(valueAddr + 1) << 8);
+        value = u16(value + registers.pc);
+        _push16(value);
+        return 0;
+    }
+
+    public int PEA(int value) {
+        _push16(value);
+        return 0;
+    }
+
+    public int PEI(int value) {
+        _push16(value);
+        return 0;
+    }
+
+    public int XCE(int valueAddr) {
+        boolean oldCarry = registers.p.c;
+        registers.p.c = emulationMode;
+        emulationMode = oldCarry;
+
+        if (!emulationMode) {
+            registers.p.m = true;
+            registers.p.x_b = true;
+            registers.x &= 0xff;
+            registers.y &= 0xff;
+        }
+        return 0;
+    }
+
+    public int BCC(int valueAddr) {
+        return branch(valueAddr, !registers.p.c);
+    }
+
+    public int BCS(int valueAddr) {
+        return branch(valueAddr, registers.p.c);
+    }
+
+    public int BEQ(int valueAddr) {
+        return branch(valueAddr, registers.p.z);
+    }
+
+    public int BNE(int valueAddr) {
+        return branch(valueAddr, !registers.p.z);
+    }
+
+    public int BMI(int valueAddr) {
+        return branch(valueAddr, registers.p.n);
+    }
+
+    public int BPL(int valueAddr) {
+        return branch(valueAddr, !registers.p.n);
+    }
+
+    public int BRA(int valueAddr) {
+        registers.setPc(registers.pc + (byte) bus.read(valueAddr));
+        return emulationMode ? 1 : 0;
+    }
+
+    public int BRL(int valueAddr) {
+        int value = bus.read(valueAddr) | (bus.read(valueAddr + 1) << 8);
+        registers.setPc(registers.pc + (short) value);
+        return 0;
+    }
+
+    public int BVC(int valueAddr) {
+        return branch(valueAddr, !registers.p.v);
+    }
+
+    public int BVS(int valueAddr) {
+        return branch(valueAddr, registers.p.v);
+    }
+
+    public int JMP(int value) {
+        registers.setPc(value);
+        return 0;
+    }
+
+    public int JML(int value) {
+        registers.setPac(value);
+        return 0;
+    }
+
+    public int NOP(int valueAddr) {
+        return 0;
+    }
+
+    public int RTS(int valueAddr) {
+        registers.setPc(_pop16() + 1);
+        return 0;
+    }
+
+    public int RTL(int valueAddr) {
+        registers.setPc(_pop16() + 1);
+        registers.dbr = _pop();
+        return 0;
+    }
+
+    public int STP(int valueAddr) {
+        stopped = true;
+        return 0;
+    }
+
+    public int WDM(int valueAddr) {
+        return 0;
+    }
+
     private int readPC() {
         int result = bus.read(registers.pac);
         registers.incrementPc(1);
         return result;
+    }
+
+    private int branch(int valueAddr, boolean condition) {
+        if (condition) {
+            registers.setPc(registers.pc + (byte) bus.read(valueAddr));
+        }
+        return (condition ? 1 : 0) + (emulationMode ? 1 : 0);
     }
 
     private void markIndexBoundary(int base, int index) {
