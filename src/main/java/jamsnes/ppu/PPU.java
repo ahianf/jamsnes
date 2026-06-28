@@ -20,13 +20,18 @@ public class PPU extends AMemory {
     private int vramAddress;
     private int vmain;
     private int vramIncrementAmount = 1;
+    private int vramReadBuffer;
 
     public PPU(IRenderer renderer) {
     }
 
     @Override
     public int read(int address) {
-        return registers[address];
+        return switch (address) {
+            case 0x39 -> readVramLow();
+            case 0x3a -> readVramHigh();
+            default -> registers[address];
+        };
     }
 
     @Override
@@ -35,8 +40,14 @@ public class PPU extends AMemory {
         registers[address] = value;
         switch (address) {
             case 0x15 -> setVmain(value);
-            case 0x16 -> vramAddress = u16((vramAddress & 0xff00) | value);
-            case 0x17 -> vramAddress = u16((vramAddress & 0x00ff) | (value << 8));
+            case 0x16 -> {
+                vramAddress = u16((vramAddress & 0xff00) | value);
+                updateVramReadBuffer();
+            }
+            case 0x17 -> {
+                vramAddress = u16((vramAddress & 0x00ff) | (value << 8));
+                updateVramReadBuffer();
+            }
             case 0x18 -> {
                 vram.write(getVramAddress(), value);
                 if (!isVramIncrementAfterHighByte()) {
@@ -88,6 +99,28 @@ public class PPU extends AMemory {
 
     private void incrementVramAddress() {
         vramAddress = u16(vramAddress + vramIncrementAmount);
+    }
+
+    private int readVramLow() {
+        int value = vramReadBuffer & 0xff;
+        if (!isVramIncrementAfterHighByte()) {
+            updateVramReadBuffer();
+            incrementVramAddress();
+        }
+        return value;
+    }
+
+    private int readVramHigh() {
+        int value = (vramReadBuffer >>> 8) & 0xff;
+        if (isVramIncrementAfterHighByte()) {
+            updateVramReadBuffer();
+            incrementVramAddress();
+        }
+        return value;
+    }
+
+    private void updateVramReadBuffer() {
+        vramReadBuffer = vram.read(getVramAddress()) | (vram.read(u16(getVramAddress() + 1)) << 8);
     }
 
     @Override
