@@ -380,6 +380,75 @@ public class APU extends AMemory {
         return 12;
     }
 
+    public int ADC(int operand1, int operand2, int cycles) {
+        int data1 = _internalRead(operand1);
+        int data2 = _internalRead(operand2);
+        int carry = internalRegisters.c ? 1 : 0;
+        int result = data1 + data2 + carry;
+
+        internalRegisters.v = ((~(data1 ^ data2) & (data1 ^ result)) & 0x80) != 0;
+        internalRegisters.h = ((data1 & 0x0f) + (data2 & 0x0f) + carry) > 0x0f;
+        internalRegisters.c = result > 0xff;
+        setNzFlags(result);
+        _internalWrite(operand1, result);
+        return cycles;
+    }
+
+    public int ADCacc(int address, int cycles) {
+        int data = _internalRead(address);
+        int carry = internalRegisters.c ? 1 : 0;
+        int result = internalRegisters.a + data + carry;
+
+        internalRegisters.v = ((~(internalRegisters.a ^ data) & (internalRegisters.a ^ result)) & 0x80) != 0;
+        internalRegisters.h = ((internalRegisters.a & 0x0f) + (data & 0x0f) + carry) > 0x0f;
+        internalRegisters.c = result > 0xff;
+        setNzFlags(result);
+        internalRegisters.a = u8(result);
+        return cycles;
+    }
+
+    public int SBC(int operand1, int operand2, int cycles) {
+        int data1 = _internalRead(operand1);
+        int data2 = _internalRead(operand2);
+        int carry = internalRegisters.c ? 1 : 0;
+        int result = data1 - data2 - (carry ^ 1);
+
+        internalRegisters.v = (((data1 ^ data2) & (data1 ^ result)) & 0x80) != 0;
+        internalRegisters.h = ((result & 0x0f) - (data1 & 0x0f) + carry) > 0x0f;
+        internalRegisters.c = result >= 0 && result <= 0xff;
+        setNzFlags(result);
+        _internalWrite(operand1, result);
+        return cycles;
+    }
+
+    public int SBCacc(int address, int cycles) {
+        int data = _internalRead(address);
+        int carry = internalRegisters.c ? 1 : 0;
+        int result = internalRegisters.a - data - (carry ^ 1);
+
+        internalRegisters.v = (((internalRegisters.a ^ data) & (internalRegisters.a ^ result)) & 0x80) != 0;
+        internalRegisters.h = ((result & 0x0f) - (internalRegisters.a & 0x0f) + carry) > 0x0f;
+        internalRegisters.c = result >= 0 && result <= 0xff;
+        setNzFlags(result);
+        internalRegisters.a = u8(result);
+        return cycles;
+    }
+
+    public int CMP(int operand1, int operand2, int cycles) {
+        int data1 = _internalRead(operand1);
+        internalRegisters.c = data1 >= operand2;
+        setNzFlags(data1 - operand2);
+        return cycles;
+    }
+
+    public int CMPreg(String register, int address, int cycles) {
+        int data = _internalRead(address);
+        int value = getRegister(register);
+        internalRegisters.c = value >= data;
+        setNzFlags(value - data);
+        return cycles;
+    }
+
     private boolean getAbsoluteBitValue(AbsoluteBit operand) {
         return (_internalRead(operand.address()) & (1 << operand.bit())) != 0;
     }
