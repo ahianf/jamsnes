@@ -334,6 +334,82 @@ public class APU extends AMemory {
         return cycles;
     }
 
+    public int ASL(int operand, int cycles) {
+        return ASL(operand, cycles, false);
+    }
+
+    public int ASL(int operand, int cycles, boolean accumulator) {
+        int value = accumulator ? operand : _internalRead(operand);
+        internalRegisters.c = (value & 0x80) != 0;
+        value = u8(value << 1);
+        if (accumulator) {
+            internalRegisters.a = value;
+        } else {
+            _internalWrite(operand, value);
+        }
+        setNzFlags(value);
+        return cycles;
+    }
+
+    public int LSR(int operand, int cycles) {
+        return LSR(operand, cycles, false);
+    }
+
+    public int LSR(int operand, int cycles, boolean accumulator) {
+        int value = accumulator ? operand : _internalRead(operand);
+        internalRegisters.c = (value & 0x01) != 0;
+        value = u8(value >>> 1);
+        if (accumulator) {
+            internalRegisters.a = value;
+        } else {
+            _internalWrite(operand, value);
+        }
+        internalRegisters.n = (value & 0x01) != 0;
+        internalRegisters.z = value == 0;
+        return cycles;
+    }
+
+    public int ROL(int operand, int cycles) {
+        return ROL(operand, cycles, false);
+    }
+
+    public int ROL(int operand, int cycles, boolean accumulator) {
+        int value = accumulator ? operand : _internalRead(operand);
+        int result = u8((value << 1) + (internalRegisters.c ? 1 : 0));
+        internalRegisters.c = (value & 0x80) != 0;
+        if (accumulator) {
+            internalRegisters.a = result;
+        } else {
+            _internalWrite(operand, result);
+        }
+        setNzFlags(result);
+        return cycles;
+    }
+
+    public int ROR(int operand, int cycles) {
+        return ROR(operand, cycles, false);
+    }
+
+    public int ROR(int operand, int cycles, boolean accumulator) {
+        int value = accumulator ? operand : _internalRead(operand);
+        int result = u8((value >>> 1) + (internalRegisters.c ? 1 : 0));
+        internalRegisters.c = (value & 0x01) != 0;
+        if (accumulator) {
+            internalRegisters.a = result;
+        } else {
+            _internalWrite(operand, result);
+        }
+        internalRegisters.n = (result & 0x01) != 0;
+        internalRegisters.z = result == 0;
+        return cycles;
+    }
+
+    public int XCN() {
+        internalRegisters.a = u8((internalRegisters.a >>> 4) | (internalRegisters.a << 4));
+        setNzFlags(internalRegisters.a);
+        return 5;
+    }
+
     public int DAA() {
         if (internalRegisters.c || internalRegisters.a > 0x99) {
             internalRegisters.c = true;
