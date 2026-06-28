@@ -686,6 +686,46 @@ public class APU extends AMemory {
         return 4;
     }
 
+    public int CALL(int absoluteAddress) {
+        PUSH(internalRegisters.pcHigh());
+        PUSH(internalRegisters.pcLow());
+        internalRegisters.pc = u16(absoluteAddress);
+        return 8;
+    }
+
+    public int PCALL() {
+        CALL(0xff00 + _getImmediateData());
+        return 6;
+    }
+
+    public int TCALL(int bit) {
+        CALL(_internalRead(0xffde - bit * 2));
+        return 8;
+    }
+
+    public int BRK() {
+        internalRegisters.b = true;
+        PUSH(internalRegisters.pcHigh());
+        PUSH(internalRegisters.pcLow());
+        PUSH(internalRegisters.psw());
+        internalRegisters.i = false;
+        internalRegisters.setPcHigh(_internalRead(0xffdf));
+        internalRegisters.setPcLow(_internalRead(0xffde));
+        return 8;
+    }
+
+    public int RET() {
+        internalRegisters.setPcHigh(popStack());
+        internalRegisters.setPcLow(popStack());
+        return 5;
+    }
+
+    public int RETI() {
+        internalRegisters.setPsw(popStack());
+        RET();
+        return 6;
+    }
+
     @Override
     public int getSize() {
         return 0x3;
