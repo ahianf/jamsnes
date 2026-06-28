@@ -449,6 +449,56 @@ public class APU extends AMemory {
         return cycles;
     }
 
+    public int MOVregToReg(String from, String to) {
+        int value = getRegister(from);
+        setRegister(to, value);
+        setNzFlags(value);
+        return 2;
+    }
+
+    public int MOVregToMem(String from, int address, int cycles) {
+        return MOVregToMem(from, address, cycles, false);
+    }
+
+    public int MOVregToMem(String from, int address, int cycles, boolean incrementX) {
+        _internalWrite(address, getRegister(from));
+        if (incrementX) {
+            internalRegisters.x = u8(internalRegisters.x + 1);
+        }
+        return cycles;
+    }
+
+    public int MOVmemToReg(int address, String to, int cycles) {
+        return MOVmemToReg(address, to, cycles, false);
+    }
+
+    public int MOVmemToReg(int address, String to, int cycles, boolean incrementX) {
+        setRegister(to, address);
+        if (incrementX) {
+            internalRegisters.x = u8(internalRegisters.x + 1);
+        }
+        setNzFlags(getRegister(to));
+        return cycles;
+    }
+
+    public int MOVmemToMem(int memTo, int memFrom) {
+        _internalWrite(memTo, memFrom);
+        return 5;
+    }
+
+    public int MOVW(int address, boolean toYa) {
+        int address2 = address + 1 + (internalRegisters.p ? 0x0100 : 0);
+        if (toYa) {
+            int value = (_internalRead(address2) << 8) | _internalRead(address);
+            internalRegisters.setYa(value);
+            setNzFlags(value);
+        } else {
+            _internalWrite(address, internalRegisters.a);
+            _internalWrite(address2, internalRegisters.y);
+        }
+        return 5;
+    }
+
     private boolean getAbsoluteBitValue(AbsoluteBit operand) {
         return (_internalRead(operand.address()) & (1 << operand.bit())) != 0;
     }
