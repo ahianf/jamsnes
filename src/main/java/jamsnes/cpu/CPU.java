@@ -748,6 +748,44 @@ public class CPU extends AMemory {
         return registers.p.m ? 0 : 1;
     }
 
+    public int ADC(int valueAddr) {
+        int value = bus.read(valueAddr) + (registers.p.c ? 1 : 0);
+        if (!registers.p.m) {
+            value += bus.read(valueAddr + 1) << 8;
+        }
+        int negativeMask = registers.p.m ? 0x80 : 0x8000;
+        int maxValue = registers.p.m ? 0xff : 0xffff;
+        int oldA = registers.a;
+        int result = oldA + value;
+
+        registers.p.c = result > maxValue;
+        if ((oldA & negativeMask) == (value & negativeMask)) {
+            registers.p.v = (oldA & negativeMask) != (result & negativeMask);
+        } else {
+            registers.p.v = false;
+        }
+        registers.a = normalizeAccumulator(result);
+        setZNAccumulator(registers.a);
+        return registers.p.m ? 0 : 1;
+    }
+
+    public int SBC(int valueAddr) {
+        int negativeMask = registers.p.m ? 0x80 : 0x8000;
+        int value = readAccumulatorWidth(valueAddr);
+        boolean oldCarry = registers.p.c;
+        int oldA = registers.a;
+
+        registers.p.c = oldA >= value;
+        if ((oldA & negativeMask) == (value & negativeMask)) {
+            registers.p.v = (oldA & negativeMask) != ((oldA + value) & negativeMask);
+        } else {
+            registers.p.v = false;
+        }
+        registers.a = normalizeAccumulator(oldA + ~value + (oldCarry ? 1 : 0));
+        setZNAccumulator(registers.a);
+        return registers.p.m ? 0 : 1;
+    }
+
     public int INC(int valueAddr) {
         int result;
         if (registers.p.m) {

@@ -45,6 +45,52 @@ class MathLogicInstructionTest {
     }
 
     @Test
+    void adcHandlesCarryOverflowAndWidth() {
+        SNES snes = init();
+        snes.cpu.registers().p.m = true;
+        snes.cpu.registers().a = 0xff;
+        snes.wram.data()[0] = 0x01;
+        snes.cpu.ADC(0);
+        assertEquals(0, snes.cpu.registers().a);
+        assertTrue(snes.cpu.registers().p.c);
+        assertTrue(snes.cpu.registers().p.z);
+
+        snes.cpu.registers().p.m = false;
+        snes.cpu.registers().p.c = false;
+        snes.cpu.registers().a = 0x7fff;
+        snes.wram.data()[0] = 0x01;
+        snes.wram.data()[1] = 0x00;
+        snes.cpu.ADC(0);
+        assertEquals(0x8000, snes.cpu.registers().a);
+        assertTrue(snes.cpu.registers().p.v);
+        assertTrue(snes.cpu.registers().p.n);
+        assertFalse(snes.cpu.registers().p.c);
+    }
+
+    @Test
+    void sbcHandlesBorrowAndWidth() {
+        SNES snes = init();
+        snes.cpu.registers().p.m = true;
+        snes.cpu.registers().p.c = true;
+        snes.cpu.registers().a = 0x01;
+        snes.wram.data()[0] = 0x01;
+        snes.cpu.SBC(0);
+        assertEquals(0, snes.cpu.registers().a);
+        assertTrue(snes.cpu.registers().p.c);
+        assertTrue(snes.cpu.registers().p.z);
+
+        snes.cpu.registers().p.m = false;
+        snes.cpu.registers().p.c = true;
+        snes.cpu.registers().a = 0x0001;
+        snes.wram.data()[0] = 0x03;
+        snes.wram.data()[1] = 0x20;
+        snes.cpu.SBC(0);
+        assertEquals(0xdffe, snes.cpu.registers().a);
+        assertFalse(snes.cpu.registers().p.c);
+        assertTrue(snes.cpu.registers().p.n);
+    }
+
+    @Test
     void oraAndAndAndEorUseAccumulatorWidth() {
         SNES snes = init();
         snes.cpu.registers().p.m = true;
