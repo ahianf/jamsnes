@@ -269,6 +269,71 @@ public class APU extends AMemory {
         return 6;
     }
 
+    public int INC(int address, int cycles) {
+        int value = u8(_internalRead(address) + 1);
+        _internalWrite(address, value);
+        setNzFlags(value);
+        return cycles;
+    }
+
+    public int INCreg(String register) {
+        setRegister(register, u8(getRegister(register) + 1));
+        setNzFlags(getRegister(register));
+        return 2;
+    }
+
+    public int DEC(int address, int cycles) {
+        int value = u8(_internalRead(address) - 1);
+        _internalWrite(address, value);
+        setNzFlags(value);
+        return cycles;
+    }
+
+    public int DECreg(String register) {
+        setRegister(register, u8(getRegister(register) - 1));
+        setNzFlags(getRegister(register));
+        return 2;
+    }
+
+    public int AND(int operand1, int operand2, int cycles) {
+        int data = _internalRead(operand1) & _internalRead(operand2);
+        _internalWrite(operand1, data);
+        setNzFlags(data);
+        return cycles;
+    }
+
+    public int ANDacc(int address, int cycles) {
+        internalRegisters.a = u8(internalRegisters.a & _internalRead(address));
+        setNzFlags(internalRegisters.a);
+        return cycles;
+    }
+
+    public int OR(int operand1, int operand2, int cycles) {
+        int data = _internalRead(operand1) | _internalRead(operand2);
+        _internalWrite(operand1, data);
+        setNzFlags(data);
+        return cycles;
+    }
+
+    public int ORacc(int address, int cycles) {
+        internalRegisters.a = u8(internalRegisters.a | _internalRead(address));
+        setNzFlags(internalRegisters.a);
+        return cycles;
+    }
+
+    public int EOR(int operand1, int operand2, int cycles) {
+        int data = _internalRead(operand1) ^ _internalRead(operand2);
+        _internalWrite(operand1, data);
+        setNzFlags(data);
+        return cycles;
+    }
+
+    public int EORacc(int address, int cycles) {
+        internalRegisters.a = u8(internalRegisters.a ^ _internalRead(address));
+        setNzFlags(internalRegisters.a);
+        return cycles;
+    }
+
     private boolean getAbsoluteBitValue(AbsoluteBit operand) {
         return (_internalRead(operand.address()) & (1 << operand.bit())) != 0;
     }
@@ -277,6 +342,25 @@ public class APU extends AMemory {
         int value = u8(data);
         internalRegisters.z = value == 0;
         internalRegisters.n = (value & 0x80) != 0;
+    }
+
+    private int getRegister(String register) {
+        return switch (register) {
+            case "a" -> internalRegisters.a;
+            case "x" -> internalRegisters.x;
+            case "y" -> internalRegisters.y;
+            default -> throw new IllegalArgumentException("Unknown APU register: " + register);
+        };
+    }
+
+    private void setRegister(String register, int value) {
+        int normalized = u8(value);
+        switch (register) {
+            case "a" -> internalRegisters.a = normalized;
+            case "x" -> internalRegisters.x = normalized;
+            case "y" -> internalRegisters.y = normalized;
+            default -> throw new IllegalArgumentException("Unknown APU register: " + register);
+        }
     }
 
     @Override
