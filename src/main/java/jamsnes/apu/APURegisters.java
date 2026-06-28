@@ -9,7 +9,14 @@ public class APURegisters {
     public int y;
     public int sp;
     public int pc;
+    public boolean c;
+    public boolean z;
+    public boolean i;
+    public boolean h;
+    public boolean b;
     public boolean p;
+    public boolean v;
+    public boolean n;
 
     public int ya() {
         return u16(a | (y << 8));

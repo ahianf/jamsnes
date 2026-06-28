@@ -8,9 +8,16 @@ import static jamsnes.models.Unsigned.u16;
 import static jamsnes.models.Unsigned.u8;
 
 public class APU extends AMemory {
+    public enum StateMode {
+        RUNNING,
+        SLEEPING,
+        STOPPED
+    }
+
     private final APURegisters internalRegisters = new APURegisters();
     private final int[] internalMemory = new int[0x10000];
     private final int[] ports = new int[4];
+    private StateMode state = StateMode.RUNNING;
 
     public APU(IRenderer renderer) {
     }
@@ -31,6 +38,10 @@ public class APU extends AMemory {
 
     public APURegisters internalRegisters() {
         return internalRegisters;
+    }
+
+    public StateMode getState() {
+        return state;
     }
 
     public int _internalRead(int address) {
@@ -130,6 +141,61 @@ public class APU extends AMemory {
         }
         int high = _internalRead(directIndex);
         return u16(((high << 8) | low) + internalRegisters.y);
+    }
+
+    public int NOP() {
+        return 2;
+    }
+
+    public int SLEEP() {
+        state = StateMode.SLEEPING;
+        return 3;
+    }
+
+    public int STOP() {
+        state = StateMode.STOPPED;
+        return 3;
+    }
+
+    public int CLRC() {
+        internalRegisters.c = false;
+        return 2;
+    }
+
+    public int SETC() {
+        internalRegisters.c = true;
+        return 2;
+    }
+
+    public int NOTC() {
+        internalRegisters.c = !internalRegisters.c;
+        return 3;
+    }
+
+    public int CLRV() {
+        internalRegisters.v = false;
+        internalRegisters.h = false;
+        return 2;
+    }
+
+    public int CLRP() {
+        internalRegisters.p = false;
+        return 2;
+    }
+
+    public int SETP() {
+        internalRegisters.p = true;
+        return 2;
+    }
+
+    public int EI() {
+        internalRegisters.i = true;
+        return 3;
+    }
+
+    public int DI() {
+        internalRegisters.i = false;
+        return 3;
     }
 
     @Override
