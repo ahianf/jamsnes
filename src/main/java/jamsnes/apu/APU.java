@@ -353,6 +353,8 @@ public class APU extends AMemory {
                 return LSR(_getDirectAddrByX(), 5);
             case 0x5c:
                 return LSR(internalRegisters.a, 2, true);
+            case 0x5d:
+                return MOVregToReg("a", "x");
             case 0x5e:
                 return CMPreg("y", _getAbsoluteAddr(), 4);
             case 0x5f:
@@ -421,6 +423,8 @@ public class APU extends AMemory {
                 return ROR(_getDirectAddrByX(), 5);
             case 0x7c:
                 return ROR(internalRegisters.a, 2, true);
+            case 0x7d:
+                return MOVregToReg("x", "a");
             case 0x7e:
                 return CMPreg("y", _getDirectAddr(), 3);
             case 0x7f:
@@ -454,9 +458,16 @@ public class APU extends AMemory {
                 return DEC(_getDirectAddr(), 4);
             case 0x8c:
                 return DEC(_getAbsoluteAddr(), 5);
+            case 0x8d:
+                return MOVmemToReg(_getImmediateData(), "y", 2);
             case 0x8e:
                 internalRegisters.setPsw(popStack());
                 return 4;
+            case 0x8f: {
+                int to = _getDirectAddr();
+                int from = _getImmediateData();
+                return MOVmemToMem(to, from);
+            }
             case 0x90:
                 return BCC(_getImmediateData());
             case 0x91:
@@ -486,6 +497,8 @@ public class APU extends AMemory {
                 return DEC(_getDirectAddrByX(), 5);
             case 0x9c:
                 return DECreg("a");
+            case 0x9d:
+                return MOVregToReg("sp", "x");
             case 0x9e:
                 return DIV();
             case 0x9f:
@@ -523,6 +536,8 @@ public class APU extends AMemory {
                 return CMPreg("y", _getImmediateData(), 2);
             case 0xae:
                 return POP("a");
+            case 0xaf:
+                return MOVregToMem("a", _getIndexXAddr(), 4, true);
             case 0xb0:
                 return BCS(_getImmediateData());
             case 0xb1:
@@ -546,12 +561,18 @@ public class APU extends AMemory {
             }
             case 0xb9:
                 return SBC(_getIndexXAddr(), _getIndexYAddr(), 5);
+            case 0xba:
+                return MOVW(_getDirectAddr(), true);
             case 0xbb:
                 return INC(_getDirectAddrByX(), 5);
             case 0xbc:
                 return INCreg("a");
+            case 0xbd:
+                return MOVregToReg("x", "sp", false);
             case 0xbe:
                 return DAS();
+            case 0xbf:
+                return MOVmemToReg(_getIndexXAddr(), "a", 4, true);
             case 0xc0:
                 return DI();
             case 0xc1:
@@ -560,10 +581,26 @@ public class APU extends AMemory {
                 return SET1(_getDirectAddr(), 6);
             case 0xc3:
                 return BBS(_getDirectAddr(), _getImmediateData(), 6);
+            case 0xc4:
+                return MOVregToMem("a", _getDirectAddr(), 4);
+            case 0xc5:
+                return MOVregToMem("a", _getAbsoluteAddr(), 5);
+            case 0xc6:
+                return MOVregToMem("a", _getIndexXAddr(), 4);
+            case 0xc7:
+                return MOVregToMem("a", _getAbsoluteDirectByXAddr(), 7);
             case 0xc8:
                 return CMPreg("x", _getImmediateData(), 2);
+            case 0xc9:
+                return MOVregToMem("x", _getAbsoluteAddr(), 5);
             case 0xca:
                 return MOV1(_getAbsoluteBit());
+            case 0xcb:
+                return MOVregToMem("y", _getDirectAddr(), 4);
+            case 0xcc:
+                return MOVregToMem("y", _getAbsoluteAddr(), 5);
+            case 0xcd:
+                return MOVmemToReg(_getImmediateData(), "x", 2);
             case 0xce:
                 return POP("x");
             case 0xcf:
@@ -576,8 +613,26 @@ public class APU extends AMemory {
                 return CLR1(_getDirectAddr(), 6);
             case 0xd3:
                 return BBC(_getDirectAddr(), _getImmediateData(), 6);
+            case 0xd4:
+                return MOVregToMem("a", _getDirectAddrByX(), 5);
+            case 0xd5:
+                return MOVregToMem("a", _getAbsoluteAddrByX(), 6);
+            case 0xd6:
+                return MOVregToMem("a", _getAbsoluteAddrByY(), 6);
+            case 0xd7:
+                return MOVregToMem("a", _getAbsoluteDirectAddrByY(), 7);
+            case 0xd8:
+                return MOVregToMem("x", _getDirectAddr(), 4);
+            case 0xd9:
+                return MOVregToMem("x", _getDirectAddrByY(), 5);
+            case 0xda:
+                return MOVW(_getDirectAddr(), false);
+            case 0xdb:
+                return MOVregToMem("y", _getDirectAddrByX(), 5);
             case 0xdc:
                 return DECreg("y");
+            case 0xdd:
+                return MOVregToReg("y", "a");
             case 0xde:
                 return CBNE(_getDirectAddrByX(), _getImmediateData(), true);
             case 0xdf:
@@ -592,6 +647,22 @@ public class APU extends AMemory {
                 return BBS(_getDirectAddr(), _getImmediateData(), 7);
             case 0xea:
                 return NOT1(_getAbsoluteBit());
+            case 0xe4:
+                return MOVmemToReg(_internalRead(_getDirectAddr()), "a", 3);
+            case 0xe5:
+                return MOVregToMem("a", _getAbsoluteAddrByX(), 5);
+            case 0xe6:
+                return MOVregToMem("a", _getIndexXAddr(), 3);
+            case 0xe7:
+                return MOVregToMem("a", _getAbsoluteDirectByXAddr(), 6);
+            case 0xe8:
+                return MOVregToMem("a", _getImmediateData(), 2);
+            case 0xe9:
+                return MOVregToMem("x", _getAbsoluteAddr(), 4);
+            case 0xeb:
+                return MOVregToMem("y", _getDirectAddr(), 3);
+            case 0xec:
+                return MOVregToMem("y", _getAbsoluteAddr(), 4);
             case 0xed:
                 return NOTC();
             case 0xee:
@@ -606,8 +677,29 @@ public class APU extends AMemory {
                 return CLR1(_getDirectAddr(), 7);
             case 0xf3:
                 return BBC(_getDirectAddr(), _getImmediateData(), 7);
+            case 0xf4:
+                return MOVmemToReg(_internalRead(_getDirectAddrByX()), "a", 4);
+            case 0xf5:
+                return MOVmemToReg(_internalRead(_getAbsoluteAddrByX()), "a", 5);
+            case 0xf6:
+                return MOVregToMem("a", _getAbsoluteAddrByY(), 5);
+            case 0xf7:
+                return MOVregToMem("a", _getAbsoluteDirectAddrByY(), 6);
+            case 0xf8:
+                return MOVregToMem("x", _getDirectAddr(), 3);
+            case 0xf9:
+                return MOVregToMem("x", _getDirectAddrByY(), 4);
+            case 0xfa: {
+                int to = _getDirectAddr();
+                int from = _getDirectAddr();
+                return MOVmemToMem(to, from);
+            }
+            case 0xfb:
+                return MOVregToMem("y", _getDirectAddrByX(), 4);
             case 0xfc:
                 return INCreg("y");
+            case 0xfd:
+                return MOVregToReg("y", "a");
             case 0xfe:
                 return DBNZ(_getImmediateData());
             case 0xff:
@@ -1000,9 +1092,15 @@ public class APU extends AMemory {
     }
 
     public int MOVregToReg(String from, String to) {
+        return MOVregToReg(from, to, true);
+    }
+
+    public int MOVregToReg(String from, String to, boolean setFlags) {
         int value = getRegister(from);
         setRegister(to, value);
-        setNzFlags(value);
+        if (setFlags) {
+            setNzFlags(value);
+        }
         return 2;
     }
 
@@ -1134,6 +1232,7 @@ public class APU extends AMemory {
             case "a" -> internalRegisters.a;
             case "x" -> internalRegisters.x;
             case "y" -> internalRegisters.y;
+            case "sp" -> internalRegisters.sp;
             default -> throw new IllegalArgumentException("Unknown APU register: " + register);
         };
     }
@@ -1144,6 +1243,7 @@ public class APU extends AMemory {
             case "a" -> internalRegisters.a = normalized;
             case "x" -> internalRegisters.x = normalized;
             case "y" -> internalRegisters.y = normalized;
+            case "sp" -> internalRegisters.sp = normalized;
             default -> throw new IllegalArgumentException("Unknown APU register: " + register);
         }
     }

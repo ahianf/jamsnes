@@ -1,26 +1,22 @@
 package jamsnes.apu;
 
 import jamsnes.SNES;
-import jamsnes.exceptions.InvalidOpcode;
 import jamsnes.renderer.NoRenderer;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class OpcodeDispatchTest {
     @Test
-    void executesNopAndRejectsUnwiredOpcode() {
+    void executesNopAndAdvancesProgramCounter() {
         SNES snes = init();
         snes.apu.internalRegisters().pc = 0x200;
         snes.apu._internalWrite(0x200, 0x00);
-        snes.apu._internalWrite(0x201, 0x8d);
 
         assertEquals(2, snes.apu.executeInstruction());
         assertEquals(0x201, snes.apu.internalRegisters().pc);
-        assertThrows(InvalidOpcode.class, () -> snes.apu.executeInstruction());
     }
 
     @Test
