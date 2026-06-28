@@ -40,6 +40,7 @@ public class PPU extends AMemory {
         int value = u8(data);
         registers[address] = value;
         switch (address) {
+            case 0x04 -> writeOamData(value);
             case 0x15 -> setVmain(value);
             case 0x16 -> {
                 vramAddress = u16((vramAddress & 0xff00) | value);
@@ -142,6 +143,11 @@ public class PPU extends AMemory {
             ppuRegisters.incrementCgAddress();
         }
         ppuRegisters.toggleCgLowByte();
+    }
+
+    private void writeOamData(int value) {
+        oamram.write(ppuRegisters.oamAddress(), value);
+        ppuRegisters.incrementOamAddress();
     }
 
     @Override

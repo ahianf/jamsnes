@@ -50,6 +50,24 @@ class PpuRegisterWriteTest {
     }
 
     @Test
+    void writesOamDataAndIncrementsAddress() {
+        SNES snes = init();
+
+        snes.bus.write(0x2102, 0x0b);
+        snes.bus.write(0x2103, 0x80);
+        snes.bus.write(0x2104, 0x42);
+
+        assertEquals(0x42, snes.ppu.ppuRegisters().oamData());
+        assertEquals(0x42, snes.ppu.oamram.read(0x0b));
+        assertEquals(0x0c, snes.ppu.ppuRegisters().oamAddress());
+        assertTrue(snes.ppu.ppuRegisters().oamObjPriorityActivationBit());
+
+        snes.bus.write(0x2104, 0x24);
+        assertEquals(0x24, snes.ppu.oamram.read(0x0c));
+        assertEquals(0x0d, snes.ppu.ppuRegisters().oamAddress());
+    }
+
+    @Test
     void decodesBgModeAndMosaic() {
         SNES snes = init();
 

@@ -42,6 +42,10 @@ public class PPURegisters {
         return bit(raw[0x03], 7);
     }
 
+    public int oamData() {
+        return raw[0x04];
+    }
+
     public int bgMode() {
         return raw[0x05] & 0b111;
     }
@@ -317,6 +321,12 @@ public class PPURegisters {
 
     void writeM7Matrix(int index, int value) {
         m7[index] = u16((m7[index] << 8) | u8(value));
+    }
+
+    void incrementOamAddress() {
+        int address = (oamAddress() + 1) & 0x1ff;
+        raw[0x02] = address & 0xff;
+        raw[0x03] = (raw[0x03] & 0xfe) | ((address >>> 8) & 1);
     }
 
     private boolean bit(int value, int bit) {
