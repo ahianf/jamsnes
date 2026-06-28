@@ -837,6 +837,115 @@ public class CPU extends AMemory {
         return 0;
     }
 
+    public int TSB(int valueAddr) {
+        int value = readAccumulatorWidth(valueAddr);
+        value = normalizeAccumulator(value | registers.a);
+        bus.write(valueAddr, value);
+        if (!registers.p.m) {
+            bus.write(valueAddr + 1, value >>> 8);
+        }
+        registers.p.z = value == 0;
+        return registers.p.m ? 0 : 2;
+    }
+
+    public int TRB(int valueAddr) {
+        int value = readAccumulatorWidth(valueAddr);
+        int newValue = normalizeAccumulator(value & ~registers.a);
+        bus.write(valueAddr, newValue);
+        if (!registers.p.m) {
+            bus.write(valueAddr + 1, newValue >>> 8);
+        }
+        registers.p.z = (value & registers.a) == 0;
+        return registers.p.m ? 0 : 2;
+    }
+
+    public int BIT(int valueAddr, AddressingMode mode) {
+        int negativeMask = registers.p.m ? 0x80 : 0x8000;
+        int value = readAccumulatorWidth(valueAddr);
+
+        if (mode != AddressingMode.IMMEDIATE_FOR_A) {
+            registers.p.n = (value & negativeMask) != 0;
+            registers.p.v = (value & (negativeMask >>> 1)) != 0;
+        }
+        registers.p.z = (value & registers.a) == 0;
+        return registers.p.m ? 0 : 1;
+    }
+
+    public int ASL(int valueAddr, AddressingMode mode) {
+        int highBit = registers.p.m ? 0x80 : 0x8000;
+        if (mode == AddressingMode.IMPLIED) {
+            registers.p.c = (registers.a & highBit) != 0;
+            registers.a = u16(registers.a << 1);
+            registers.p.n = (registers.a & highBit) != 0;
+            registers.p.z = registers.a == 0;
+            return 0;
+        }
+
+        int value = readAccumulatorWidth(valueAddr);
+        registers.p.c = (value & highBit) != 0;
+        value = normalizeAccumulator(value << 1);
+        registers.p.n = (value & highBit) != 0;
+        registers.p.z = value == 0;
+        writeAccumulatorWidth(valueAddr, value);
+        return registers.p.m ? 0 : 2;
+    }
+
+    public int LSR(int valueAddr, AddressingMode mode) {
+        registers.p.n = false;
+        if (mode == AddressingMode.IMPLIED) {
+            registers.p.c = (registers.a & 1) != 0;
+            registers.a = u16(registers.a >>> 1);
+            registers.p.z = registers.a == 0;
+            return 0;
+        }
+
+        int value = readAccumulatorWidth(valueAddr);
+        registers.p.c = (value & 1) != 0;
+        value = normalizeAccumulator(value >>> 1);
+        registers.p.z = value == 0;
+        writeAccumulatorWidth(valueAddr, value);
+        return registers.p.m ? 0 : 2;
+    }
+
+    public int ROL(int valueAddr, AddressingMode mode) {
+        int highBit = registers.p.m ? 0x80 : 0x8000;
+        boolean oldCarry = registers.p.c;
+        if (mode == AddressingMode.IMPLIED) {
+            registers.p.c = (registers.a & highBit) != 0;
+            registers.a = u16((registers.a << 1) | (oldCarry ? 1 : 0));
+            registers.p.n = (registers.a & highBit) != 0;
+            registers.p.z = registers.a == 0;
+            return 0;
+        }
+
+        int value = readAccumulatorWidth(valueAddr);
+        registers.p.c = (value & highBit) != 0;
+        value = normalizeAccumulator((value << 1) | (oldCarry ? 1 : 0));
+        registers.p.n = (value & highBit) != 0;
+        registers.p.z = value == 0;
+        writeAccumulatorWidth(valueAddr, value);
+        return registers.p.m ? 0 : 2;
+    }
+
+    public int ROR(int valueAddr, AddressingMode mode) {
+        registers.p.n = false;
+        boolean oldCarry = registers.p.c;
+        int highBitIndex = registers.p.m ? 7 : 15;
+        if (mode == AddressingMode.IMPLIED) {
+            registers.p.c = (registers.a & 1) != 0;
+            registers.a = u16((registers.a >>> 1) | ((oldCarry ? 1 : 0) << highBitIndex));
+            registers.p.z = registers.a == 0;
+            return 0;
+        }
+
+        int value = readAccumulatorWidth(valueAddr);
+        registers.p.c = (value & 1) != 0;
+        value = normalizeAccumulator((value >>> 1) | ((oldCarry ? 1 : 0) << highBitIndex));
+        registers.p.z = value == 0;
+        writeAccumulatorWidth(valueAddr, value);
+        return registers.p.m ? 0 : 2;
+    }
+
     private int readPC() {
         int result = bus.read(registers.pac);
         registers.incrementPc(1);
@@ -875,6 +984,13 @@ public class CPU extends AMemory {
             value |= bus.read(valueAddr + 1) << 8;
         }
         return value;
+    }
+
+    private void writeAccumulatorWidth(int valueAddr, int value) {
+        bus.write(valueAddr, value);
+        if (!registers.p.m) {
+            bus.write(valueAddr + 1, value >>> 8);
+        }
     }
 
     private int normalizeAccumulator(int value) {
