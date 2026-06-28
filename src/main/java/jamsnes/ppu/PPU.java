@@ -17,6 +17,7 @@ public class PPU extends AMemory {
     public final Ram oamram = new Ram(OAMRAM_SIZE, Component.OAMRAM, "OAMRAM");
     public final Ram cgram = new Ram(CGRAM_SIZE, Component.CGRAM, "CGRAM");
     private final int[] registers = new int[0x40];
+    private final PPURegisters ppuRegisters = new PPURegisters(registers);
     private int vramAddress;
     private int vmain;
     private int vramIncrementAmount = 1;
@@ -67,6 +68,10 @@ public class PPU extends AMemory {
 
     public int[] registers() {
         return registers;
+    }
+
+    public PPURegisters ppuRegisters() {
+        return ppuRegisters;
     }
 
     public int getVramAddressRegister() {
