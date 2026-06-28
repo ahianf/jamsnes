@@ -19,6 +19,8 @@ public class APU extends AMemory {
     private final int[] internalMemory = new int[0x10000];
     private final int[] ports = new int[4];
     private StateMode state = StateMode.RUNNING;
+    private int paddingCycles;
+    public boolean isDisabled;
 
     public APU(IRenderer renderer) {
         reset();
@@ -44,6 +46,10 @@ public class APU extends AMemory {
 
     public StateMode getState() {
         return state;
+    }
+
+    public int paddingCycles() {
+        return paddingCycles;
     }
 
     public int _internalRead(int address) {
@@ -706,6 +712,29 @@ public class APU extends AMemory {
                 return STOP();
             default:
                 throw new InvalidOpcode("APU opcode 0x%02x is not implemented".formatted(opcode));
+        }
+    }
+
+    public void update(int cycles) {
+        if (isDisabled) {
+            return;
+        }
+
+        int remainingCycles = cycles;
+        int total = 0;
+
+        if (paddingCycles > remainingCycles) {
+            paddingCycles -= remainingCycles;
+            return;
+        }
+
+        remainingCycles -= paddingCycles;
+        paddingCycles = 0;
+        while (total < remainingCycles && state == StateMode.RUNNING) {
+            total += executeInstruction();
+        }
+        if (state == StateMode.RUNNING) {
+            paddingCycles = total - remainingCycles;
         }
     }
 
@@ -1455,5 +1484,7 @@ public class APU extends AMemory {
         internalRegisters.x = 0;
         internalRegisters.sp = 0xef;
         internalRegisters.pc = 0xffc0;
+        paddingCycles = 0;
+        state = StateMode.RUNNING;
     }
 }
