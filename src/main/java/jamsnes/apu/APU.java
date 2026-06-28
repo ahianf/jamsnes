@@ -499,6 +499,59 @@ public class APU extends AMemory {
         return 5;
     }
 
+    public int INCW(int address) {
+        int value = u16(readWordWithDirectPage(address) + 1);
+        writeWordWithDirectPage(address, value);
+        setNzWordFlags(value);
+        return 6;
+    }
+
+    public int DECW(int address) {
+        int value = u16(readWordWithDirectPage(address) - 1);
+        writeWordWithDirectPage(address, value);
+        setNzWordFlags(value);
+        return 6;
+    }
+
+    public int ADDW(int address) {
+        int value = readWordWithDirectPage(address);
+        int ya = internalRegisters.ya();
+        int result = ya + value;
+
+        internalRegisters.v = ((~(ya ^ value) & (ya ^ result)) & 0x8000) != 0;
+        internalRegisters.c = result > 0xffff;
+        internalRegisters.h = ((ya & 0x0fff) + (value & 0x0fff)) > 0x0fff;
+        internalRegisters.setYa(result);
+        setNzWordFlags(result);
+        return 5;
+    }
+
+    public int SUBW(int address) {
+        int value = readWordWithDirectPage(address);
+        int ya = internalRegisters.ya();
+        int result = ya - value;
+        int halfCarryProbe = (((ya & 0x0f00) - (value & 0x0f00)) >>> 8) & 0xffff;
+        if ((ya & 0x00ff) < (value & 0x00ff)) {
+            halfCarryProbe = u16(halfCarryProbe - 1);
+        }
+
+        internalRegisters.v = (((ya ^ value) & (ya ^ result)) & 0x8000) != 0;
+        internalRegisters.c = result >= 0 && result <= 0xffff;
+        internalRegisters.h = halfCarryProbe <= 0x000f;
+        internalRegisters.setYa(result);
+        setNzWordFlags(result);
+        return 5;
+    }
+
+    public int CMPW(int address) {
+        int value = readWordWithDirectPage(address);
+        int result = internalRegisters.ya() - value;
+
+        setNzWordFlags(result);
+        internalRegisters.c = internalRegisters.ya() >= value;
+        return 4;
+    }
+
     private boolean getAbsoluteBitValue(AbsoluteBit operand) {
         return (_internalRead(operand.address()) & (1 << operand.bit())) != 0;
     }
@@ -507,6 +560,23 @@ public class APU extends AMemory {
         int value = u8(data);
         internalRegisters.z = value == 0;
         internalRegisters.n = (value & 0x80) != 0;
+    }
+
+    private void setNzWordFlags(int data) {
+        int value = u16(data);
+        internalRegisters.z = value == 0;
+        internalRegisters.n = (value & 0x8000) != 0;
+    }
+
+    private int readWordWithDirectPage(int address) {
+        int address2 = address + 1 + (internalRegisters.p ? 0x0100 : 0);
+        return u16((_internalRead(address2) << 8) | _internalRead(address));
+    }
+
+    private void writeWordWithDirectPage(int address, int value) {
+        int address2 = address + 1 + (internalRegisters.p ? 0x0100 : 0);
+        _internalWrite(address, value);
+        _internalWrite(address2, value >>> 8);
     }
 
     private int getRegister(String register) {
