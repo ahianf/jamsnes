@@ -209,6 +209,31 @@ public class CPU extends AMemory {
         return u24(base + registers.y);
     }
 
+    public void _push8(int data) {
+        bus.write(registers.s, data);
+        registers.s = u16(registers.s - 1);
+    }
+
+    public void _push16(int data) {
+        bus.write(registers.s, data >>> 8);
+        registers.s = u16(registers.s - 1);
+        bus.write(registers.s, data);
+        registers.s = u16(registers.s - 1);
+    }
+
+    public int _pop() {
+        registers.s = u16(registers.s + 1);
+        return bus.read(registers.s);
+    }
+
+    public int _pop16() {
+        registers.s = u16(registers.s + 1);
+        int value = bus.read(registers.s);
+        registers.s = u16(registers.s + 1);
+        value += bus.read(registers.s) << 8;
+        return u16(value);
+    }
+
     private int readPC() {
         int result = bus.read(registers.pac);
         registers.incrementPc(1);

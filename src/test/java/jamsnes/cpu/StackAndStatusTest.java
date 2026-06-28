@@ -1,0 +1,76 @@
+package jamsnes.cpu;
+
+import jamsnes.SNES;
+import jamsnes.cartridge.MappingMode;
+import jamsnes.renderer.NoRenderer;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+class StackAndStatusTest {
+    @Test
+    void statusFlagsRoundTripToByte() {
+        StatusRegister status = new StatusRegister();
+        status.setFlags(0b1010_0101);
+
+        assertTrue(status.c);
+        assertFalse(status.z);
+        assertTrue(status.i);
+        assertFalse(status.d);
+        assertFalse(status.x_b);
+        assertTrue(status.m);
+        assertFalse(status.v);
+        assertTrue(status.n);
+        assertEquals(0b1010_0101, status.flags());
+    }
+
+    @Test
+    void pushAndPopEightBits() {
+        SNES snes = init();
+        snes.cpu.registers().s = 0x0010;
+
+        snes.cpu._push8(0xab);
+
+        assertEquals(0x000f, snes.cpu.registers().s);
+        assertEquals(0xab, snes.wram.data()[0x10]);
+        assertEquals(0xab, snes.cpu._pop());
+        assertEquals(0x0010, snes.cpu.registers().s);
+    }
+
+    @Test
+    void pushAndPopSixteenBitsHighByteFirst() {
+        SNES snes = init();
+        snes.cpu.registers().s = 0x0010;
+
+        snes.cpu._push16(0xabcd);
+
+        assertEquals(0x000e, snes.cpu.registers().s);
+        assertEquals(0xab, snes.wram.data()[0x10]);
+        assertEquals(0xcd, snes.wram.data()[0x0f]);
+        assertEquals(0xabcd, snes.cpu._pop16());
+        assertEquals(0x0010, snes.cpu.registers().s);
+    }
+
+    @Test
+    void stackPointerWrapsAtSixteenBits() {
+        SNES snes = init();
+        snes.cpu.registers().s = 0x0000;
+
+        snes.cpu._push8(0x42);
+
+        assertEquals(0xffff, snes.cpu.registers().s);
+        assertEquals(0x42, snes.cpu._pop());
+        assertEquals(0x0000, snes.cpu.registers().s);
+    }
+
+    private static SNES init() {
+        SNES snes = new SNES(new NoRenderer(0, 0, 0));
+        snes.cartridge.setSize(100);
+        snes.cartridge.header.addMappingMode(MappingMode.LOROM);
+        snes.sram.setSize(100);
+        snes.bus.mapComponents(snes);
+        return snes;
+    }
+}
