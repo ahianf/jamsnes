@@ -25,7 +25,7 @@ public class SNES {
         this.cartridge = new Cartridge();
         this.wram = new Ram(131_072, Component.WRAM, "WRam");
         this.sram = new Ram(0, Component.SRAM, "SRam");
-        this.cpu = new CPU(bus);
+        this.cpu = new CPU(bus, cartridge.header);
         this.ppu = new PPU(renderer);
         this.apu = new APU(renderer);
     }

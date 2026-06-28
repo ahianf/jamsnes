@@ -1,5 +1,6 @@
 package jamsnes.cpu;
 
+import jamsnes.cartridge.Header;
 import jamsnes.memory.AMemory;
 import jamsnes.memory.IMemoryBus;
 import jamsnes.models.Component;
@@ -11,18 +12,22 @@ import static jamsnes.models.Unsigned.u8;
 public class CPU extends AMemory {
     private final Registers registers = new Registers();
     private final int[] internalRegisters = new int[0x300];
+    private final Header cartridgeHeader;
     private IMemoryBus bus;
     private boolean hasIndexCrossedPageBoundary;
     private boolean emulationMode = true;
     private boolean stopped;
+    private boolean waitingForInterrupt;
 
-    public CPU(IMemoryBus bus) {
+    public CPU(IMemoryBus bus, Header cartridgeHeader) {
         this.bus = bus;
+        this.cartridgeHeader = cartridgeHeader;
         registers.p.i = true;
         registers.p.m = true;
         registers.p.x_b = true;
         registers.setPbr(0);
         registers.d = 0;
+        registers.s = 0x0100;
     }
 
     public void setBus(IMemoryBus bus) {
@@ -51,6 +56,10 @@ public class CPU extends AMemory {
 
     public boolean isStopped() {
         return stopped;
+    }
+
+    public boolean isWaitingForInterrupt() {
+        return waitingForInterrupt;
     }
 
     @Override
@@ -469,6 +478,45 @@ public class CPU extends AMemory {
     }
 
     public int WDM(int valueAddr) {
+        return 0;
+    }
+
+    public int RESB() {
+        registers.p.i = true;
+        registers.p.d = false;
+        emulationMode = true;
+        registers.p.m = true;
+        registers.p.x_b = true;
+        registers.dbr = 0;
+        registers.setPbr(0);
+        registers.d = 0;
+        registers.s = 0x0100 | registers.sl();
+        registers.setPc(cartridgeHeader.emulationInterrupts.reset);
+        stopped = false;
+        return 0;
+    }
+
+    public int BRK(int valueAddr) {
+        runInterrupt(cartridgeHeader.nativeInterrupts.brk, cartridgeHeader.emulationInterrupts.brk);
+        return emulationMode ? 0 : 1;
+    }
+
+    public int COP(int valueAddr) {
+        runInterrupt(cartridgeHeader.nativeInterrupts.cop, cartridgeHeader.emulationInterrupts.cop);
+        return emulationMode ? 0 : 1;
+    }
+
+    public int RTI(int valueAddr) {
+        registers.p.setFlags(_pop());
+        registers.setPc(_pop16());
+        if (!emulationMode) {
+            registers.setPbr(_pop16());
+        }
+        return emulationMode ? 0 : 1;
+    }
+
+    public int WAI(int valueAddr) {
+        waitingForInterrupt = true;
         return 0;
     }
 
@@ -957,6 +1005,25 @@ public class CPU extends AMemory {
             registers.setPc(registers.pc + (byte) bus.read(valueAddr));
         }
         return (condition ? 1 : 0) + (emulationMode ? 1 : 0);
+    }
+
+    private void runInterrupt(int nativeHandler, int emulationHandler) {
+        if (emulationMode) {
+            _push16(registers.pc);
+            _push8(registers.p.flags());
+            registers.p.i = true;
+            registers.p.d = false;
+            registers.setPbr(0);
+            registers.setPc(emulationHandler);
+        } else {
+            _push8(registers.pbr);
+            _push16(registers.pc);
+            _push8(registers.p.flags());
+            registers.p.i = true;
+            registers.p.d = false;
+            registers.setPbr(0);
+            registers.setPc(nativeHandler);
+        }
     }
 
     private void setZN16(int value) {
