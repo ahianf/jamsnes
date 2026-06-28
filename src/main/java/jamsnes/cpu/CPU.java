@@ -472,6 +472,182 @@ public class CPU extends AMemory {
         return 0;
     }
 
+    public int TAX(int valueAddr) {
+        if (registers.p.x_b) {
+            registers.x = u16((registers.x & 0xff00) | registers.al());
+            registers.p.z = registers.xl() == 0;
+            registers.p.n = (registers.x & 0x80) != 0;
+        } else {
+            registers.x = u16(registers.a);
+            registers.p.z = registers.x == 0;
+            registers.p.n = (registers.x & 0x8000) != 0;
+        }
+        return 0;
+    }
+
+    public int TAY(int valueAddr) {
+        if (registers.p.x_b) {
+            registers.y = u16((registers.y & 0xff00) | registers.al());
+            registers.p.z = registers.yl() == 0;
+            registers.p.n = (registers.y & 0x80) != 0;
+        } else {
+            registers.y = u16(registers.a);
+            registers.p.z = registers.y == 0;
+            registers.p.n = (registers.y & 0x8000) != 0;
+        }
+        return 0;
+    }
+
+    public int TXS(int valueAddr) {
+        if (registers.p.x_b) {
+            registers.s = registers.xl();
+            registers.p.z = registers.s == 0;
+            registers.p.n = (registers.s & 0x80) != 0;
+        } else {
+            registers.s = u16(registers.x);
+            registers.p.z = registers.s == 0;
+            registers.p.n = (registers.s & 0x8000) != 0;
+        }
+        return 0;
+    }
+
+    public int TCD(int valueAddr) {
+        registers.d = u16(registers.a);
+        setZN16(registers.d);
+        return 0;
+    }
+
+    public int TCS(int valueAddr) {
+        registers.s = u16(registers.a);
+        if (emulationMode) {
+            registers.s = 0x0100 | registers.sl();
+        }
+        return 0;
+    }
+
+    public int TDC(int valueAddr) {
+        registers.a = u16(registers.d);
+        setZN16(registers.a);
+        return 0;
+    }
+
+    public int TSC(int valueAddr) {
+        registers.a = u16(registers.s);
+        setZN16(registers.a);
+        return 0;
+    }
+
+    public int TSX(int valueAddr) {
+        registers.x = u16(registers.s);
+        if (registers.p.x_b) {
+            registers.x &= 0xff;
+        }
+        setZNIndex(registers.x);
+        return 0;
+    }
+
+    public int TXA(int valueAddr) {
+        int negativeFlag = registers.p.m ? 0x80 : 0x8000;
+        if (registers.p.m) {
+            registers.setAl(registers.xl());
+        } else {
+            registers.a = u16(registers.x);
+            if (registers.p.x_b) {
+                registers.setAh(0);
+            }
+        }
+        registers.p.n = (registers.a & negativeFlag) != 0;
+        registers.p.z = registers.a == 0;
+        return 0;
+    }
+
+    public int TYA(int valueAddr) {
+        int negativeFlag = registers.p.m ? 0x80 : 0x8000;
+        if (registers.p.m) {
+            registers.setAl(registers.yl());
+        } else {
+            registers.a = u16(registers.y);
+            if (registers.p.x_b) {
+                registers.setAh(0);
+            }
+        }
+        registers.p.n = (registers.a & negativeFlag) != 0;
+        registers.p.z = registers.a == 0;
+        return 0;
+    }
+
+    public int TXY(int valueAddr) {
+        int negativeFlag = registers.p.x_b ? 0x80 : 0x8000;
+        if (registers.p.x_b) {
+            registers.y = u16((registers.y & 0xff00) | registers.xl());
+        } else {
+            registers.y = u16(registers.x);
+        }
+        registers.p.n = (registers.y & negativeFlag) != 0;
+        registers.p.z = registers.y == 0;
+        return 0;
+    }
+
+    public int TYX(int valueAddr) {
+        int negativeFlag = registers.p.x_b ? 0x80 : 0x8000;
+        if (registers.p.x_b) {
+            registers.x = u16((registers.x & 0xff00) | registers.yl());
+        } else {
+            registers.x = u16(registers.y);
+        }
+        registers.p.n = (registers.y & negativeFlag) != 0;
+        registers.p.z = registers.y == 0;
+        return 0;
+    }
+
+    public int INX(int valueAddr) {
+        registers.x++;
+        if (registers.p.x_b) {
+            registers.x &= 0xff;
+        } else {
+            registers.x = u16(registers.x);
+        }
+        setZNIndex(registers.x);
+        return 0;
+    }
+
+    public int INY(int valueAddr) {
+        registers.y++;
+        if (registers.p.x_b) {
+            registers.y &= 0xff;
+        } else {
+            registers.y = u16(registers.y);
+        }
+        setZNIndex(registers.y);
+        return 0;
+    }
+
+    public int DEX(int valueAddr) {
+        registers.x = u16(registers.x - 1);
+        if (registers.p.x_b) {
+            registers.x &= 0xff;
+        }
+        setZNIndex(registers.x);
+        return 0;
+    }
+
+    public int DEY(int valueAddr) {
+        registers.y = u16(registers.y - 1);
+        if (registers.p.x_b) {
+            registers.y &= 0xff;
+        }
+        setZNIndex(registers.y);
+        return 0;
+    }
+
+    public int CPX(int valueAddr) {
+        return compareIndex(registers.x, valueAddr);
+    }
+
+    public int CPY(int valueAddr) {
+        return compareIndex(registers.y, valueAddr);
+    }
+
     private int readPC() {
         int result = bus.read(registers.pac);
         registers.incrementPc(1);
@@ -483,6 +659,39 @@ public class CPU extends AMemory {
             registers.setPc(registers.pc + (byte) bus.read(valueAddr));
         }
         return (condition ? 1 : 0) + (emulationMode ? 1 : 0);
+    }
+
+    private void setZN16(int value) {
+        int normalized = u16(value);
+        registers.p.z = normalized == 0;
+        registers.p.n = (normalized & 0x8000) != 0;
+    }
+
+    private void setZNIndex(int value) {
+        int negativeFlag = registers.p.x_b ? 0x80 : 0x8000;
+        registers.p.z = value == 0;
+        registers.p.n = (value & negativeFlag) != 0;
+    }
+
+    private int compareIndex(int registerValue, int valueAddr) {
+        int value = bus.read(valueAddr);
+        int result;
+        if (registers.p.x_b) {
+            int left = registerValue & 0xff;
+            result = (left - value) & 0xff;
+            registers.p.z = result == 0;
+            registers.p.n = (result & 0x80) != 0;
+            registers.p.c = left >= value;
+            return 0;
+        }
+
+        value |= bus.read(valueAddr + 1) << 8;
+        int left = registerValue & 0xffff;
+        result = (left - value) & 0xffff;
+        registers.p.z = result == 0;
+        registers.p.n = (result & 0x8000) != 0;
+        registers.p.c = left >= value;
+        return 1;
     }
 
     private void markIndexBoundary(int base, int index) {
