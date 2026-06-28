@@ -23,6 +23,8 @@ public class PPU extends AMemory {
     private int vmain;
     private int vramIncrementAmount = 1;
     private int vramReadBuffer;
+    private int hvSharedScrollPreviousValue;
+    private int hScrollPreviousValue;
 
     public PPU(IRenderer renderer) {
     }
@@ -42,6 +44,8 @@ public class PPU extends AMemory {
         registers[address] = value;
         switch (address) {
             case 0x04 -> writeOamData(value);
+            case 0x0d, 0x0f, 0x11, 0x13 -> writeBgHorizontalOffset(address, value);
+            case 0x0e, 0x10, 0x12, 0x14 -> writeBgVerticalOffset(address, value);
             case 0x15 -> setVmain(value);
             case 0x16 -> {
                 vramAddress = u16((vramAddress & 0xff00) | value);
@@ -131,6 +135,11 @@ public class PPU extends AMemory {
                 ppuRegisters.bgTilemapVerticalMirroring(backgroundNumber - 1));
     }
 
+    public Vector2<Integer> getBgScroll(int backgroundNumber) {
+        int index = (backgroundNumber - 1) * 2;
+        return new Vector2<>(ppuRegisters.bgOffset(index), ppuRegisters.bgOffset(index + 1));
+    }
+
     private void setVmain(int value) {
         vmain = value;
         vramIncrementAmount = switch (value & 0b11) {
@@ -186,6 +195,19 @@ public class PPU extends AMemory {
     private void writeOamData(int value) {
         oamram.write(ppuRegisters.oamAddress(), value);
         ppuRegisters.incrementOamAddress();
+    }
+
+    private void writeBgHorizontalOffset(int address, int value) {
+        int offset = ((value << 8) | (hvSharedScrollPreviousValue & ~7) | (hScrollPreviousValue & 7)) & 0x3ff;
+        ppuRegisters.setBgOffset(address - 0x0d, offset);
+        hScrollPreviousValue = value;
+        hvSharedScrollPreviousValue = value;
+    }
+
+    private void writeBgVerticalOffset(int address, int value) {
+        int offset = ((value << 8) | hvSharedScrollPreviousValue) & 0x3ff;
+        ppuRegisters.setBgOffset(address - 0x0e, offset);
+        hvSharedScrollPreviousValue = value;
     }
 
     @Override

@@ -6,6 +6,7 @@ import static jamsnes.models.Unsigned.u8;
 public class PPURegisters {
     private final int[] raw;
     private final int[] m7 = new int[4];
+    private final int[] bgOffsets = new int[8];
     private int cgAddress;
     private int cgData;
     private boolean cgLowByte = true;
@@ -84,6 +85,10 @@ public class PPURegisters {
 
     public int bgBaseAddressSecond(int index) {
         return (raw[0x0b + index] >>> 4) & 0x0f;
+    }
+
+    public int bgOffset(int index) {
+        return bgOffsets[index];
     }
 
     public int vmainIncrementAmount() {
@@ -327,6 +332,10 @@ public class PPURegisters {
         int address = (oamAddress() + 1) & 0x1ff;
         raw[0x02] = address & 0xff;
         raw[0x03] = (raw[0x03] & 0xfe) | ((address >>> 8) & 1);
+    }
+
+    void setBgOffset(int index, int value) {
+        bgOffsets[index] = value & 0x3ff;
     }
 
     private boolean bit(int value, int bit) {

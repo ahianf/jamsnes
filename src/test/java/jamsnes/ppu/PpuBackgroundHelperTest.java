@@ -64,6 +64,20 @@ class PpuBackgroundHelperTest {
         assertEquals(0x6000, snes.ppu.getTilesetAddress(3));
     }
 
+    @Test
+    void tracksBackgroundScrollWithOriginalLatchIndexing() {
+        SNES snes = init();
+
+        snes.bus.write(0x210d, 0x12);
+        assertEquals(new Vector2<>(0x200, 0), snes.ppu.getBgScroll(1));
+
+        snes.bus.write(0x210f, 0x34);
+        assertEquals(new Vector2<>(0x12, 0), snes.ppu.getBgScroll(2));
+
+        snes.bus.write(0x2110, 0x56);
+        assertEquals(new Vector2<>(0x234, 0), snes.ppu.getBgScroll(2));
+    }
+
     private static SNES init() {
         SNES snes = new SNES(new NoRenderer(0, 0, 0));
         snes.bus.mapComponents(snes);
