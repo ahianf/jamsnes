@@ -5,6 +5,7 @@ import static jamsnes.models.Unsigned.u8;
 
 public class PPURegisters {
     private final int[] raw;
+    private final int[] m7 = new int[4];
     private int cgAddress;
     private int cgData;
     private boolean cgLowByte = true;
@@ -117,6 +118,178 @@ public class PPURegisters {
         return (cgData >>> 8) & 0xff;
     }
 
+    public boolean m7HorizontalMirroring() {
+        return bit(raw[0x1a], 0);
+    }
+
+    public boolean m7VerticalMirroring() {
+        return bit(raw[0x1a], 1);
+    }
+
+    public boolean m7EmptySpaceFill() {
+        return bit(raw[0x1a], 6);
+    }
+
+    public boolean m7PlayingFieldSize() {
+        return bit(raw[0x1a], 7);
+    }
+
+    public int m7Matrix(int index) {
+        return m7[index];
+    }
+
+    public int m7MatrixLow(int index) {
+        return m7[index] & 0xff;
+    }
+
+    public boolean windowEnableWindow2ForBg2Bg4Color(int index) {
+        return bit(raw[0x23 + index], 0);
+    }
+
+    public boolean window2InversionForBg2Bg4Color(int index) {
+        return bit(raw[0x23 + index], 1);
+    }
+
+    public boolean windowEnableWindow1ForBg2Bg4Color(int index) {
+        return bit(raw[0x23 + index], 2);
+    }
+
+    public boolean window1InversionForBg2Bg4Color(int index) {
+        return bit(raw[0x23 + index], 3);
+    }
+
+    public boolean windowEnableWindow2ForBg1Bg3Obj(int index) {
+        return bit(raw[0x23 + index], 4);
+    }
+
+    public boolean window2InversionForBg1Bg3Obj(int index) {
+        return bit(raw[0x23 + index], 5);
+    }
+
+    public boolean windowEnableWindow1ForBg1Bg3Obj(int index) {
+        return bit(raw[0x23 + index], 6);
+    }
+
+    public boolean window1InversionForBg1Bg3Obj(int index) {
+        return bit(raw[0x23 + index], 7);
+    }
+
+    public int windowMaskLogicBg1() {
+        return (raw[0x2a] >>> 6) & 0b11;
+    }
+
+    public int windowMaskLogicBg2() {
+        return (raw[0x2a] >>> 4) & 0b11;
+    }
+
+    public int windowMaskLogicBg3() {
+        return (raw[0x2a] >>> 2) & 0b11;
+    }
+
+    public int windowMaskLogicBg4() {
+        return raw[0x2a] & 0b11;
+    }
+
+    public int windowMaskLogicObj() {
+        return raw[0x2b] & 0b11;
+    }
+
+    public int windowMaskLogicColor() {
+        return (raw[0x2b] >>> 2) & 0b11;
+    }
+
+    public boolean screenDesignationBackground(int screenIndex, int backgroundIndex) {
+        return bit(raw[0x2c + screenIndex], backgroundIndex);
+    }
+
+    public boolean screenDesignationObj(int screenIndex) {
+        return bit(raw[0x2c + screenIndex], 4);
+    }
+
+    public boolean windowMaskDesignationBackground(int screenIndex, int backgroundIndex) {
+        return bit(raw[0x2e + screenIndex], backgroundIndex);
+    }
+
+    public boolean windowMaskDesignationObj(int screenIndex) {
+        return bit(raw[0x2e + screenIndex], 4);
+    }
+
+    public boolean cgwselDirectColorMode() {
+        return bit(raw[0x30], 0);
+    }
+
+    public boolean cgwselAddSubscreen() {
+        return bit(raw[0x30], 1);
+    }
+
+    public int cgwselPreventColorMath() {
+        return (raw[0x30] >>> 4) & 0b11;
+    }
+
+    public int cgwselClipColorToBlackBeforeMath() {
+        return (raw[0x30] >>> 6) & 0b11;
+    }
+
+    public boolean cgadsubEnableColorMathBg(int backgroundIndex) {
+        return bit(raw[0x31], backgroundIndex);
+    }
+
+    public boolean cgadsubEnableColorMathObj() {
+        return bit(raw[0x31], 4);
+    }
+
+    public boolean cgadsubEnableColorMathBackdrop() {
+        return bit(raw[0x31], 5);
+    }
+
+    public boolean cgadsubHalfColorMath() {
+        return bit(raw[0x31], 6);
+    }
+
+    public boolean cgadsubAddSubtractSelect() {
+        return bit(raw[0x31], 7);
+    }
+
+    public int coldataColorIntensity() {
+        return raw[0x32] & 0b1_1111;
+    }
+
+    public boolean coldataRed() {
+        return bit(raw[0x32], 5);
+    }
+
+    public boolean coldataGreen() {
+        return bit(raw[0x32], 6);
+    }
+
+    public boolean coldataBlue() {
+        return bit(raw[0x32], 7);
+    }
+
+    public boolean setiniScreenInterlace() {
+        return bit(raw[0x33], 0);
+    }
+
+    public boolean setiniObjInterlace() {
+        return bit(raw[0x33], 1);
+    }
+
+    public boolean setiniOverscanMode() {
+        return bit(raw[0x33], 2);
+    }
+
+    public boolean setiniEnablePseudoHiresMode() {
+        return bit(raw[0x33], 3);
+    }
+
+    public boolean setiniMode7ExtBg() {
+        return bit(raw[0x33], 6);
+    }
+
+    public boolean setiniExternalSync() {
+        return bit(raw[0x33], 7);
+    }
+
     public boolean isCgLowByte() {
         return cgLowByte;
     }
@@ -140,6 +313,10 @@ public class PPURegisters {
 
     void toggleCgLowByte() {
         cgLowByte = !cgLowByte;
+    }
+
+    void writeM7Matrix(int index, int value) {
+        m7[index] = u16((m7[index] << 8) | u8(value));
     }
 
     private boolean bit(int value, int bit) {

@@ -61,6 +61,7 @@ public class PPU extends AMemory {
                     incrementVramAddress();
                 }
             }
+            case 0x1b, 0x1c, 0x1d, 0x1e -> ppuRegisters.writeM7Matrix(address - 0x1b, value);
             case 0x21 -> ppuRegisters.setCgAddress(value);
             case 0x22 -> writeCgData(value);
             default -> {

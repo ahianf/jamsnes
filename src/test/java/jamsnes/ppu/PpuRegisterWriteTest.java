@@ -122,6 +122,119 @@ class PpuRegisterWriteTest {
         assertEquals(0xf8, snes.ppu.cgram.read(0x11));
     }
 
+    @Test
+    void decodesMode7Registers() {
+        SNES snes = init();
+
+        snes.bus.write(0x211a, 0b0111_1101);
+        assertFalse(snes.ppu.ppuRegisters().m7PlayingFieldSize());
+        assertTrue(snes.ppu.ppuRegisters().m7EmptySpaceFill());
+        assertTrue(snes.ppu.ppuRegisters().m7HorizontalMirroring());
+        assertFalse(snes.ppu.ppuRegisters().m7VerticalMirroring());
+
+        snes.bus.write(0x211b, 0b1011_1001);
+        assertEquals(0b1011_1001, snes.ppu.ppuRegisters().m7MatrixLow(0));
+        snes.bus.write(0x211d, 0b1011_1001);
+        snes.bus.write(0x211d, 0b1111_1111);
+        assertEquals(0b1011_1001_1111_1111, snes.ppu.ppuRegisters().m7Matrix(2));
+    }
+
+    @Test
+    void decodesWindowSelectionAndLogicRegisters() {
+        SNES snes = init();
+
+        snes.bus.write(0x2123, 0b1111_1111);
+        assertTrue(snes.ppu.ppuRegisters().window1InversionForBg1Bg3Obj(0));
+        assertTrue(snes.ppu.ppuRegisters().windowEnableWindow1ForBg1Bg3Obj(0));
+        assertTrue(snes.ppu.ppuRegisters().window2InversionForBg1Bg3Obj(0));
+        assertTrue(snes.ppu.ppuRegisters().windowEnableWindow2ForBg1Bg3Obj(0));
+        assertTrue(snes.ppu.ppuRegisters().window1InversionForBg2Bg4Color(0));
+        assertTrue(snes.ppu.ppuRegisters().windowEnableWindow1ForBg2Bg4Color(0));
+        assertTrue(snes.ppu.ppuRegisters().window2InversionForBg2Bg4Color(0));
+        assertTrue(snes.ppu.ppuRegisters().windowEnableWindow2ForBg2Bg4Color(0));
+
+        snes.bus.write(0x2125, 0b1011_0001);
+        assertTrue(snes.ppu.ppuRegisters().window1InversionForBg1Bg3Obj(2));
+        assertFalse(snes.ppu.ppuRegisters().windowEnableWindow1ForBg1Bg3Obj(2));
+        assertTrue(snes.ppu.ppuRegisters().window2InversionForBg1Bg3Obj(2));
+        assertTrue(snes.ppu.ppuRegisters().windowEnableWindow2ForBg1Bg3Obj(2));
+        assertFalse(snes.ppu.ppuRegisters().window1InversionForBg2Bg4Color(2));
+        assertFalse(snes.ppu.ppuRegisters().windowEnableWindow1ForBg2Bg4Color(2));
+        assertFalse(snes.ppu.ppuRegisters().window2InversionForBg2Bg4Color(2));
+        assertTrue(snes.ppu.ppuRegisters().windowEnableWindow2ForBg2Bg4Color(2));
+
+        snes.bus.write(0x212a, 0b1011_0001);
+        assertEquals(0b10, snes.ppu.ppuRegisters().windowMaskLogicBg1());
+        assertEquals(0b11, snes.ppu.ppuRegisters().windowMaskLogicBg2());
+        assertEquals(0b00, snes.ppu.ppuRegisters().windowMaskLogicBg3());
+        assertEquals(0b01, snes.ppu.ppuRegisters().windowMaskLogicBg4());
+
+        snes.bus.write(0x212b, 0b1011_0001);
+        assertEquals(0b01, snes.ppu.ppuRegisters().windowMaskLogicObj());
+        assertEquals(0b00, snes.ppu.ppuRegisters().windowMaskLogicColor());
+    }
+
+    @Test
+    void decodesScreenAndWindowMaskDesignationRegisters() {
+        SNES snes = init();
+
+        snes.bus.write(0x212c, 0b1011_0001);
+        assertTrue(snes.ppu.ppuRegisters().screenDesignationBackground(0, 0));
+        assertFalse(snes.ppu.ppuRegisters().screenDesignationBackground(0, 1));
+        assertFalse(snes.ppu.ppuRegisters().screenDesignationBackground(0, 2));
+        assertFalse(snes.ppu.ppuRegisters().screenDesignationBackground(0, 3));
+        assertTrue(snes.ppu.ppuRegisters().screenDesignationObj(0));
+
+        snes.bus.write(0x212d, 0b1010_1110);
+        assertFalse(snes.ppu.ppuRegisters().screenDesignationBackground(1, 0));
+        assertTrue(snes.ppu.ppuRegisters().screenDesignationBackground(1, 1));
+        assertTrue(snes.ppu.ppuRegisters().screenDesignationBackground(1, 2));
+        assertTrue(snes.ppu.ppuRegisters().screenDesignationBackground(1, 3));
+        assertFalse(snes.ppu.ppuRegisters().screenDesignationObj(1));
+
+        snes.bus.write(0x212f, 0b1010_0011);
+        assertTrue(snes.ppu.ppuRegisters().windowMaskDesignationBackground(1, 0));
+        assertTrue(snes.ppu.ppuRegisters().windowMaskDesignationBackground(1, 1));
+        assertFalse(snes.ppu.ppuRegisters().windowMaskDesignationBackground(1, 2));
+        assertFalse(snes.ppu.ppuRegisters().windowMaskDesignationBackground(1, 3));
+        assertFalse(snes.ppu.ppuRegisters().windowMaskDesignationObj(1));
+    }
+
+    @Test
+    void decodesColorMathAndSetiniRegisters() {
+        SNES snes = init();
+
+        snes.bus.write(0x2130, 0b1011_1001);
+        assertEquals(0b10, snes.ppu.ppuRegisters().cgwselClipColorToBlackBeforeMath());
+        assertEquals(0b11, snes.ppu.ppuRegisters().cgwselPreventColorMath());
+        assertFalse(snes.ppu.ppuRegisters().cgwselAddSubscreen());
+        assertTrue(snes.ppu.ppuRegisters().cgwselDirectColorMode());
+
+        snes.bus.write(0x2131, 0b1011_1001);
+        assertTrue(snes.ppu.ppuRegisters().cgadsubAddSubtractSelect());
+        assertFalse(snes.ppu.ppuRegisters().cgadsubHalfColorMath());
+        assertTrue(snes.ppu.ppuRegisters().cgadsubEnableColorMathBackdrop());
+        assertTrue(snes.ppu.ppuRegisters().cgadsubEnableColorMathObj());
+        assertTrue(snes.ppu.ppuRegisters().cgadsubEnableColorMathBg(3));
+        assertFalse(snes.ppu.ppuRegisters().cgadsubEnableColorMathBg(2));
+        assertFalse(snes.ppu.ppuRegisters().cgadsubEnableColorMathBg(1));
+        assertTrue(snes.ppu.ppuRegisters().cgadsubEnableColorMathBg(0));
+
+        snes.bus.write(0x2132, 0b1011_1001);
+        assertTrue(snes.ppu.ppuRegisters().coldataBlue());
+        assertFalse(snes.ppu.ppuRegisters().coldataGreen());
+        assertTrue(snes.ppu.ppuRegisters().coldataRed());
+        assertEquals(0b1_1001, snes.ppu.ppuRegisters().coldataColorIntensity());
+
+        snes.bus.write(0x2133, 0b1011_1001);
+        assertTrue(snes.ppu.ppuRegisters().setiniExternalSync());
+        assertFalse(snes.ppu.ppuRegisters().setiniMode7ExtBg());
+        assertTrue(snes.ppu.ppuRegisters().setiniEnablePseudoHiresMode());
+        assertFalse(snes.ppu.ppuRegisters().setiniOverscanMode());
+        assertFalse(snes.ppu.ppuRegisters().setiniObjInterlace());
+        assertTrue(snes.ppu.ppuRegisters().setiniScreenInterlace());
+    }
+
     private static SNES init() {
         SNES snes = new SNES(new NoRenderer(0, 0, 0));
         snes.bus.mapComponents(snes);
