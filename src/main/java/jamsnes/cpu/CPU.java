@@ -648,6 +648,75 @@ public class CPU extends AMemory {
         return compareIndex(registers.y, valueAddr);
     }
 
+    public int STA(int address) {
+        bus.write(address, registers.al());
+        if (!registers.p.m) {
+            bus.write(address + 1, registers.ah());
+        }
+        return registers.p.m ? 0 : 1;
+    }
+
+    public int STX(int address) {
+        bus.write(address, registers.xl());
+        if (!registers.p.x_b) {
+            bus.write(address + 1, registers.xh());
+        }
+        return registers.p.x_b ? 0 : 1;
+    }
+
+    public int STY(int address) {
+        bus.write(address, registers.yl());
+        if (!registers.p.x_b) {
+            bus.write(address + 1, registers.yh());
+        }
+        return registers.p.x_b ? 0 : 1;
+    }
+
+    public int STZ(int address) {
+        bus.write(address, 0);
+        if (!registers.p.m) {
+            bus.write(address + 1, 0);
+        }
+        return registers.p.m ? 0 : 1;
+    }
+
+    public int LDA(int address) {
+        if (registers.p.m) {
+            registers.a = bus.read(address);
+            registers.p.n = (registers.al() & 0xf0) != 0;
+        } else {
+            registers.setAl(bus.read(address));
+            registers.setAh(bus.read(address + 1));
+            registers.p.n = (registers.a & 0xf000) != 0;
+        }
+        registers.p.z = registers.a == 0;
+        return registers.p.m ? 0 : 1;
+    }
+
+    public int LDX(int address) {
+        if (registers.p.x_b) {
+            registers.x = bus.read(address);
+            registers.p.n = (registers.xl() & 0xf0) != 0;
+        } else {
+            registers.x = bus.read(address) | (bus.read(address + 1) << 8);
+            registers.p.n = (registers.x & 0xf000) != 0;
+        }
+        registers.p.z = registers.x == 0;
+        return registers.p.x_b ? 0 : 1;
+    }
+
+    public int LDY(int address) {
+        if (registers.p.x_b) {
+            registers.y = bus.read(address);
+            registers.p.n = (registers.yl() & 0xf0) != 0;
+        } else {
+            registers.y = bus.read(address) | (bus.read(address + 1) << 8);
+            registers.p.n = (registers.y & 0xf000) != 0;
+        }
+        registers.p.z = registers.y == 0;
+        return registers.p.x_b ? 0 : 1;
+    }
+
     private int readPC() {
         int result = bus.read(registers.pac);
         registers.incrementPc(1);
