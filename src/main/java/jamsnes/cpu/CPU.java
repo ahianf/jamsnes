@@ -717,6 +717,88 @@ public class CPU extends AMemory {
         return registers.p.x_b ? 0 : 1;
     }
 
+    public int ORA(int valueAddr) {
+        registers.a = normalizeAccumulator(registers.a | readAccumulatorWidth(valueAddr));
+        setZNAccumulator(registers.a);
+        return registers.p.m ? 0 : 1;
+    }
+
+    public int AND(int valueAddr) {
+        registers.a = normalizeAccumulator(registers.a & readAccumulatorWidth(valueAddr));
+        setZNAccumulator(registers.a);
+        return registers.p.m ? 0 : 1;
+    }
+
+    public int EOR(int valueAddr) {
+        registers.a = normalizeAccumulator(registers.a ^ readAccumulatorWidth(valueAddr));
+        setZNAccumulator(registers.a);
+        return registers.p.m ? 0 : 1;
+    }
+
+    public int CMP(int valueAddr) {
+        int value = readAccumulatorWidth(valueAddr);
+        long result = (Integer.toUnsignedLong(registers.a) - Integer.toUnsignedLong(value)) & 0xffff_ffffL;
+        if (registers.p.m) {
+            result &= 0xff;
+        }
+        int negativeMask = registers.p.m ? 0x80 : 0x8000;
+        registers.p.n = (result & negativeMask) != 0;
+        registers.p.z = result == 0;
+        registers.p.c = Integer.toUnsignedLong(registers.a) >= result;
+        return registers.p.m ? 0 : 1;
+    }
+
+    public int INC(int valueAddr) {
+        int result;
+        if (registers.p.m) {
+            result = (bus.read(valueAddr) + 1) & 0xff;
+            bus.write(valueAddr, result);
+        } else {
+            result = (bus.read(valueAddr) | (bus.read(valueAddr + 1) << 8)) + 1;
+            result &= 0xffff;
+            bus.write(valueAddr, result);
+            bus.write(valueAddr + 1, result >>> 8);
+        }
+        setZNAccumulator(result);
+        return registers.p.m ? 0 : 2;
+    }
+
+    public int DEC(int valueAddr) {
+        int result;
+        if (registers.p.m) {
+            result = (bus.read(valueAddr) - 1) & 0xff;
+            bus.write(valueAddr, result);
+        } else {
+            result = (bus.read(valueAddr) | (bus.read(valueAddr + 1) << 8)) - 1;
+            result &= 0xffff;
+            bus.write(valueAddr, result);
+            bus.write(valueAddr + 1, result >>> 8);
+        }
+        setZNAccumulator(result);
+        return registers.p.m ? 0 : 2;
+    }
+
+    public int INA(int valueAddr) {
+        registers.a = normalizeAccumulator(registers.a + 1);
+        setZNAccumulator(registers.a);
+        return 0;
+    }
+
+    public int DEA(int valueAddr) {
+        registers.a = normalizeAccumulator(registers.a - 1);
+        setZNAccumulator(registers.a);
+        return 0;
+    }
+
+    public int XBA(int valueAddr) {
+        int low = registers.al();
+        registers.setAl(registers.ah());
+        registers.setAh(low);
+        registers.p.n = (registers.al() & 0x80) != 0;
+        registers.p.z = registers.al() == 0;
+        return 0;
+    }
+
     private int readPC() {
         int result = bus.read(registers.pac);
         registers.incrementPc(1);
@@ -740,6 +822,25 @@ public class CPU extends AMemory {
         int negativeFlag = registers.p.x_b ? 0x80 : 0x8000;
         registers.p.z = value == 0;
         registers.p.n = (value & negativeFlag) != 0;
+    }
+
+    private void setZNAccumulator(int value) {
+        int normalized = normalizeAccumulator(value);
+        int negativeFlag = registers.p.m ? 0x80 : 0x8000;
+        registers.p.z = normalized == 0;
+        registers.p.n = (normalized & negativeFlag) != 0;
+    }
+
+    private int readAccumulatorWidth(int valueAddr) {
+        int value = bus.read(valueAddr);
+        if (!registers.p.m) {
+            value |= bus.read(valueAddr + 1) << 8;
+        }
+        return value;
+    }
+
+    private int normalizeAccumulator(int value) {
+        return registers.p.m ? (value & 0xff) : u16(value);
     }
 
     private int compareIndex(int registerValue, int valueAddr) {

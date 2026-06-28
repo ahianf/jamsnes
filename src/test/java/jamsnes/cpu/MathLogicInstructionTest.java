@@ -1,0 +1,119 @@
+package jamsnes.cpu;
+
+import jamsnes.SNES;
+import jamsnes.cartridge.MappingMode;
+import jamsnes.renderer.NoRenderer;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+class MathLogicInstructionTest {
+    @Test
+    void cmpSetsCarryZeroAndNegative() {
+        SNES snes = init();
+        snes.cpu.registers().p.m = true;
+        snes.cpu.registers().a = 0;
+        snes.wram.data()[0] = 1;
+        snes.cpu.CMP(0);
+        assertFalse(snes.cpu.registers().p.c);
+        assertTrue(snes.cpu.registers().p.n);
+        assertFalse(snes.cpu.registers().p.z);
+
+        snes.cpu.registers().a = 5;
+        snes.wram.data()[0] = 5;
+        snes.cpu.CMP(0);
+        assertTrue(snes.cpu.registers().p.c);
+        assertFalse(snes.cpu.registers().p.n);
+        assertTrue(snes.cpu.registers().p.z);
+    }
+
+    @Test
+    void cmpHandlesSixteenBitMode() {
+        SNES snes = init();
+        snes.cpu.registers().p.m = false;
+        snes.cpu.registers().a = 0xb000;
+        snes.wram.data()[0] = 0x00;
+        snes.wram.data()[1] = 0x10;
+
+        snes.cpu.CMP(0);
+
+        assertTrue(snes.cpu.registers().p.c);
+        assertTrue(snes.cpu.registers().p.n);
+        assertFalse(snes.cpu.registers().p.z);
+    }
+
+    @Test
+    void oraAndAndAndEorUseAccumulatorWidth() {
+        SNES snes = init();
+        snes.cpu.registers().p.m = true;
+        snes.cpu.registers().a = 0x80;
+        snes.wram.data()[0] = 0x0f;
+        snes.cpu.ORA(0);
+        assertEquals(0x8f, snes.cpu.registers().a);
+        assertTrue(snes.cpu.registers().p.n);
+
+        snes.wram.data()[0] = 0x0f;
+        snes.cpu.AND(0);
+        assertEquals(0x0f, snes.cpu.registers().a);
+        assertFalse(snes.cpu.registers().p.n);
+
+        snes.wram.data()[0] = 0x0f;
+        snes.cpu.EOR(0);
+        assertEquals(0, snes.cpu.registers().a);
+        assertTrue(snes.cpu.registers().p.z);
+    }
+
+    @Test
+    void incAndDecMemoryUseAccumulatorWidth() {
+        SNES snes = init();
+        snes.cpu.registers().p.m = true;
+        snes.wram.data()[0] = 0x7f;
+        snes.cpu.INC(0);
+        assertEquals(0x80, snes.wram.data()[0]);
+        assertTrue(snes.cpu.registers().p.n);
+
+        snes.wram.data()[0] = 0x81;
+        snes.cpu.DEC(0);
+        assertEquals(0x80, snes.wram.data()[0]);
+        assertTrue(snes.cpu.registers().p.n);
+    }
+
+    @Test
+    void incAndDecAccumulatorUseAccumulatorWidth() {
+        SNES snes = init();
+        snes.cpu.registers().p.m = false;
+        snes.cpu.registers().a = 0x8fff;
+        snes.cpu.INA(0);
+        assertEquals(0x9000, snes.cpu.registers().a);
+        assertTrue(snes.cpu.registers().p.n);
+
+        snes.cpu.registers().p.m = true;
+        snes.cpu.registers().a = 0x00;
+        snes.cpu.DEA(0);
+        assertEquals(0xff, snes.cpu.registers().a);
+        assertTrue(snes.cpu.registers().p.n);
+    }
+
+    @Test
+    void xbaSwapsAccumulatorBytesAndSetsFlagsFromLowByte() {
+        SNES snes = init();
+        snes.cpu.registers().a = 0x0012;
+
+        snes.cpu.XBA(0);
+
+        assertEquals(0x1200, snes.cpu.registers().a);
+        assertTrue(snes.cpu.registers().p.z);
+        assertFalse(snes.cpu.registers().p.n);
+    }
+
+    private static SNES init() {
+        SNES snes = new SNES(new NoRenderer(0, 0, 0));
+        snes.cartridge.setSize(100);
+        snes.cartridge.header.addMappingMode(MappingMode.LOROM);
+        snes.sram.setSize(100);
+        snes.bus.mapComponents(snes);
+        return snes;
+    }
+}
