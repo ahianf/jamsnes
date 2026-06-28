@@ -157,6 +157,21 @@ public class APU extends AMemory {
                 return SET1(_getDirectAddr(), 0);
             case 0x03:
                 return BBS(_getDirectAddr(), _getImmediateData(), 0);
+            case 0x04:
+                return ORacc(_getDirectAddr(), 3);
+            case 0x05:
+                return ORacc(_getAbsoluteAddr(), 4);
+            case 0x06:
+                return ORacc(_getIndexXAddr(), 3);
+            case 0x07:
+                return ORacc(_getAbsoluteDirectByXAddr(), 6);
+            case 0x08:
+                return ORacc(_getImmediateData(), 2);
+            case 0x09: {
+                int operand1 = _getDirectAddr();
+                int operand2 = _getDirectAddr();
+                return OR(operand1, operand2, 6);
+            }
             case 0x0a:
                 return OR1(_getAbsoluteBit());
             case 0x0b:
@@ -177,10 +192,29 @@ public class APU extends AMemory {
                 return CLR1(_getDirectAddr(), 0);
             case 0x13:
                 return BBC(_getDirectAddr(), _getImmediateData(), 0);
+            case 0x14:
+                return ORacc(_getDirectAddrByX(), 4);
+            case 0x15:
+                return ORacc(_getAbsoluteAddrByX(), 5);
+            case 0x16:
+                return ORacc(_getAbsoluteAddrByY(), 5);
+            case 0x17:
+                return ORacc(_getAbsoluteDirectAddrByY(), 6);
+            case 0x18: {
+                int operand1 = _getDirectAddr();
+                int operand2 = _getImmediateData();
+                return OR(operand1, operand2, 5);
+            }
+            case 0x19:
+                return OR(_getIndexXAddr(), _getIndexYAddr(), 5);
+            case 0x1a:
+                return DECW(_getDirectAddr());
             case 0x1b:
                 return ASL(_getDirectAddrByX(), 5);
             case 0x1c:
                 return ASL(internalRegisters.a, 2, true);
+            case 0x1d:
+                return DECreg("x");
             case 0x1f:
                 return JMP(_getAbsoluteByXAddr(), true);
             case 0x20:
@@ -191,6 +225,21 @@ public class APU extends AMemory {
                 return SET1(_getDirectAddr(), 1);
             case 0x23:
                 return BBS(_getDirectAddr(), _getImmediateData(), 1);
+            case 0x24:
+                return ANDacc(_getDirectAddr(), 3);
+            case 0x25:
+                return ANDacc(_getAbsoluteAddr(), 4);
+            case 0x26:
+                return ANDacc(_getIndexXAddr(), 3);
+            case 0x27:
+                return ANDacc(_getAbsoluteDirectByXAddr(), 6);
+            case 0x28:
+                return ANDacc(_getImmediateData(), 2);
+            case 0x29: {
+                int operand1 = _getDirectAddr();
+                int operand2 = _getDirectAddr();
+                return AND(operand1, operand2, 6);
+            }
             case 0x2a:
                 return OR1(_getAbsoluteBit(), true);
             case 0x2b:
@@ -211,10 +260,29 @@ public class APU extends AMemory {
                 return CLR1(_getDirectAddr(), 1);
             case 0x33:
                 return BBC(_getDirectAddr(), _getImmediateData(), 1);
+            case 0x34:
+                return ANDacc(_getDirectAddrByX(), 4);
+            case 0x35:
+                return ANDacc(_getAbsoluteAddrByX(), 5);
+            case 0x36:
+                return ANDacc(_getAbsoluteAddrByY(), 5);
+            case 0x37:
+                return ANDacc(_getAbsoluteDirectAddrByY(), 6);
+            case 0x38: {
+                int operand1 = _getDirectAddr();
+                int operand2 = _getImmediateData();
+                return AND(operand1, operand2, 5);
+            }
+            case 0x39:
+                return AND(_getIndexXAddr(), _getIndexYAddr(), 5);
+            case 0x3a:
+                return INCW(_getDirectAddr());
             case 0x3b:
                 return ROL(_getAbsoluteAddrByX(), 5);
             case 0x3c:
                 return ROL(internalRegisters.a, 2, true);
+            case 0x3d:
+                return INCreg("x");
             case 0x3f:
                 return CALL(_getAbsoluteAddr());
             case 0x40:
@@ -225,6 +293,21 @@ public class APU extends AMemory {
                 return SET1(_getDirectAddr(), 2);
             case 0x43:
                 return BBS(_getDirectAddr(), _getImmediateData(), 2);
+            case 0x44:
+                return EORacc(_getDirectAddr(), 3);
+            case 0x45:
+                return EORacc(_getAbsoluteAddr(), 4);
+            case 0x46:
+                return EORacc(_getIndexXAddr(), 3);
+            case 0x47:
+                return EORacc(_getAbsoluteDirectByXAddr(), 6);
+            case 0x48:
+                return EORacc(_getImmediateData(), 2);
+            case 0x49: {
+                int operand1 = _getDirectAddr();
+                int operand2 = _getDirectAddr();
+                return EOR(operand1, operand2, 6);
+            }
             case 0x4a:
                 return AND1(_getAbsoluteBit());
             case 0x4b:
@@ -245,6 +328,21 @@ public class APU extends AMemory {
                 return CLR1(_getDirectAddr(), 2);
             case 0x53:
                 return BBC(_getDirectAddr(), _getImmediateData(), 2);
+            case 0x54:
+                return EORacc(_getDirectAddrByX(), 4);
+            case 0x55:
+                return EORacc(_getAbsoluteAddrByX(), 5);
+            case 0x56:
+                return EORacc(_getAbsoluteAddrByY(), 5);
+            case 0x57:
+                return EORacc(_getAbsoluteDirectAddrByY(), 6);
+            case 0x58: {
+                int operand1 = _getDirectAddr();
+                int operand2 = _getImmediateData();
+                return EOR(operand1, operand2, 5);
+            }
+            case 0x59:
+                return EOR(_getIndexXAddr(), _getIndexYAddr(), 5);
             case 0x5b:
                 return LSR(_getDirectAddrByX(), 5);
             case 0x5c:
@@ -295,6 +393,10 @@ public class APU extends AMemory {
                 return BBS(_getDirectAddr(), _getImmediateData(), 4);
             case 0x8a:
                 return EOR1(_getAbsoluteBit());
+            case 0x8b:
+                return DEC(_getDirectAddr(), 4);
+            case 0x8c:
+                return DEC(_getAbsoluteAddr(), 5);
             case 0x8e:
                 internalRegisters.setPsw(popStack());
                 return 4;
@@ -306,6 +408,10 @@ public class APU extends AMemory {
                 return CLR1(_getDirectAddr(), 4);
             case 0x93:
                 return BBC(_getDirectAddr(), _getImmediateData(), 4);
+            case 0x9b:
+                return DEC(_getDirectAddrByX(), 5);
+            case 0x9c:
+                return DECreg("a");
             case 0x9f:
                 return XCN();
             case 0xa0:
@@ -318,6 +424,10 @@ public class APU extends AMemory {
                 return BBS(_getDirectAddr(), _getImmediateData(), 5);
             case 0xaa:
                 return MOV1(_getAbsoluteBit(), true);
+            case 0xab:
+                return INC(_getDirectAddr(), 4);
+            case 0xac:
+                return INC(_getAbsoluteAddr(), 5);
             case 0xae:
                 return POP("a");
             case 0xb0:
@@ -328,6 +438,10 @@ public class APU extends AMemory {
                 return CLR1(_getDirectAddr(), 5);
             case 0xb3:
                 return BBC(_getDirectAddr(), _getImmediateData(), 5);
+            case 0xbb:
+                return INC(_getDirectAddrByX(), 5);
+            case 0xbc:
+                return INCreg("a");
             case 0xc0:
                 return DI();
             case 0xc1:
@@ -348,6 +462,8 @@ public class APU extends AMemory {
                 return CLR1(_getDirectAddr(), 6);
             case 0xd3:
                 return BBC(_getDirectAddr(), _getImmediateData(), 6);
+            case 0xdc:
+                return DECreg("y");
             case 0xde:
                 return CBNE(_getDirectAddrByX(), _getImmediateData(), true);
             case 0xe0:
@@ -374,6 +490,8 @@ public class APU extends AMemory {
                 return CLR1(_getDirectAddr(), 7);
             case 0xf3:
                 return BBC(_getDirectAddr(), _getImmediateData(), 7);
+            case 0xfc:
+                return INCreg("y");
             case 0xfe:
                 return DBNZ(_getImmediateData());
             case 0xff:

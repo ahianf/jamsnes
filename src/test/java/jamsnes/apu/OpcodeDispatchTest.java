@@ -16,7 +16,7 @@ class OpcodeDispatchTest {
         SNES snes = init();
         snes.apu.internalRegisters().pc = 0x200;
         snes.apu._internalWrite(0x200, 0x00);
-        snes.apu._internalWrite(0x201, 0x04);
+        snes.apu._internalWrite(0x201, 0x64);
 
         assertEquals(2, snes.apu.executeInstruction());
         assertEquals(0x201, snes.apu.internalRegisters().pc);
