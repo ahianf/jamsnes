@@ -20,6 +20,7 @@ public class APU extends AMemory {
     private StateMode state = StateMode.RUNNING;
 
     public APU(IRenderer renderer) {
+        reset();
     }
 
     @Override
@@ -674,6 +675,17 @@ public class APU extends AMemory {
         }
     }
 
+    public int PUSH(int value) {
+        _internalWrite(0x0100 + internalRegisters.sp, value);
+        internalRegisters.sp = u8(internalRegisters.sp - 1);
+        return 4;
+    }
+
+    public int POP(String destination) {
+        setRegister(destination, popStack());
+        return 4;
+    }
+
     @Override
     public int getSize() {
         return 0x3;
@@ -687,5 +699,18 @@ public class APU extends AMemory {
     @Override
     public Component getComponent() {
         return Component.APU;
+    }
+
+    private int popStack() {
+        internalRegisters.sp = u8(internalRegisters.sp + 1);
+        return _internalRead(0x0100 + internalRegisters.sp);
+    }
+
+    private void reset() {
+        internalRegisters.a = 0;
+        internalRegisters.y = 0;
+        internalRegisters.x = 0;
+        internalRegisters.sp = 0xef;
+        internalRegisters.pc = 0xffc0;
     }
 }
