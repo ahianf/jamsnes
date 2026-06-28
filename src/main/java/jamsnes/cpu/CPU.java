@@ -12,6 +12,7 @@ import static jamsnes.models.Unsigned.u8;
 public class CPU extends AMemory {
     private final Registers registers = new Registers();
     private final int[] internalRegisters = new int[0x300];
+    private final DMA[] dmaChannels = new DMA[8];
     private final Header cartridgeHeader;
     private IMemoryBus bus;
     private boolean hasIndexCrossedPageBoundary;
@@ -22,6 +23,9 @@ public class CPU extends AMemory {
     public CPU(IMemoryBus bus, Header cartridgeHeader) {
         this.bus = bus;
         this.cartridgeHeader = cartridgeHeader;
+        for (int i = 0; i < dmaChannels.length; i++) {
+            dmaChannels[i] = new DMA(bus);
+        }
         registers.p.i = true;
         registers.p.m = true;
         registers.p.x_b = true;
@@ -32,6 +36,9 @@ public class CPU extends AMemory {
 
     public void setBus(IMemoryBus bus) {
         this.bus = bus;
+        for (DMA dmaChannel : dmaChannels) {
+            dmaChannel.setBus(bus);
+        }
     }
 
     public IMemoryBus getBus() {
@@ -64,11 +71,35 @@ public class CPU extends AMemory {
 
     @Override
     public int read(int address) {
+        if (address == 0x0b) {
+            int value = 0;
+            for (int i = 0; i < dmaChannels.length; i++) {
+                if (dmaChannels[i].isEnabled()) {
+                    value |= 1 << i;
+                }
+            }
+            return value;
+        }
+        if (address >= 0x100 && address < 0x180) {
+            return dmaChannels[(address - 0x100) >>> 4].read(address & 0x0f);
+        }
         return internalRegisters[address];
     }
 
     @Override
     public void write(int address, int data) {
+        if (address == 0x0b) {
+            int value = u8(data);
+            internalRegisters[address] = value;
+            for (int i = 0; i < dmaChannels.length; i++) {
+                dmaChannels[i].setEnabled((value & (1 << i)) != 0);
+            }
+            return;
+        }
+        if (address >= 0x100 && address < 0x180) {
+            dmaChannels[(address - 0x100) >>> 4].write(address & 0x0f, data);
+            return;
+        }
         internalRegisters[address] = u8(data);
     }
 
@@ -76,9 +107,13 @@ public class CPU extends AMemory {
         return internalRegisters;
     }
 
+    public DMA[] dmaChannels() {
+        return dmaChannels;
+    }
+
     @Override
     public int getSize() {
-        return 0x180;
+        return 0x300;
     }
 
     public int _getImmediateAddr8Bits() {
