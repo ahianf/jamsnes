@@ -20,7 +20,7 @@ public class APU extends AMemory {
 
     private final APURegisters internalRegisters = new APURegisters();
     private final int[] internalMemory = new int[0x10000];
-    private final DSP dsp = new DSP();
+    private final DSP dsp;
     private final int[] ports = new int[4];
     private final int[] timers = new int[3];
     private final int[] counters = new int[3];
@@ -34,6 +34,7 @@ public class APU extends AMemory {
     public boolean isDisabled;
 
     public APU(IRenderer renderer) {
+        dsp = new DSP(this::_internalRead, this::_internalWrite);
         reset();
     }
 

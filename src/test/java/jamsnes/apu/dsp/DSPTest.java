@@ -125,4 +125,59 @@ class DSPTest {
         assertEquals(0x1f0, dsp.voiceEnvelope(0));
         assertEquals(0x1f0, dsp.voiceHiddenEnvelope(0));
     }
+
+    @Test
+    void defaultDspRamReadWriteWrapsToSixteenBits() {
+        DSP dsp = new DSP();
+
+        dsp.writeRam(0x10001, 0x12);
+
+        assertEquals(0x12, dsp.readRam(0x0001));
+        assertEquals(0x12, dsp.readRam(0x10001));
+    }
+
+    @Test
+    void decodeBrrReadsNibblesIntoVoiceSamples() {
+        DSP dsp = new DSP();
+        dsp.setBrrState(0x00, 0x12);
+        dsp.setVoiceBrrState(0, 0x2000, 1, 0);
+        dsp.writeRam(0x2002, 0x34);
+
+        dsp.decodeBRR(0);
+
+        assertEquals(0, dsp.voiceSample(0, 0));
+        assertEquals(18, dsp.voiceSample(0, 1));
+        assertEquals(32, dsp.voiceSample(0, 2));
+        assertEquals(32, dsp.voiceSample(0, 3));
+        assertEquals(4, dsp.voiceSampleOffset(0));
+    }
+
+    @Test
+    void decodeBrrAppliesPreviousSampleFilterAndWrapsOffset() {
+        DSP dsp = new DSP();
+        dsp.setBrrState(0x04, 0xf0);
+        dsp.setVoiceBrrState(0, 0x3000, 1, 10);
+        dsp.setVoiceSample(0, 9, 16);
+        dsp.writeRam(0x3002, 0x00);
+
+        dsp.decodeBRR(0);
+
+        assertEquals(32, dsp.voiceSample(0, 10));
+        assertEquals(32, dsp.voiceSample(0, 11));
+        assertEquals(32, dsp.voiceSample(0, 0));
+        assertEquals(32, dsp.voiceSample(0, 1));
+        assertEquals(2, dsp.voiceSampleOffset(0));
+    }
+
+    @Test
+    void apuBackedDspReadsApuRamForBrrDecode() {
+        SNES snes = new SNES(new NoRenderer(0, 0, 0));
+        snes.apu._internalWrite(0x4002, 0x34);
+        snes.apu.dsp().setBrrState(0x00, 0x12);
+        snes.apu.dsp().setVoiceBrrState(0, 0x4000, 1, 0);
+
+        snes.apu.dsp().decodeBRR(0);
+
+        assertEquals(32, snes.apu.dsp().voiceSample(0, 3));
+    }
 }

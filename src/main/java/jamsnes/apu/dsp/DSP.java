@@ -2,9 +2,17 @@ package jamsnes.apu.dsp;
 
 import jamsnes.exceptions.InvalidAddress;
 
+import java.util.function.IntUnaryOperator;
+
+import static jamsnes.models.Unsigned.u16;
 import static jamsnes.models.Unsigned.u8;
 
 public class DSP {
+    @FunctionalInterface
+    public interface RamWriter {
+        void write(int address, int value);
+    }
+
     enum EnvelopeMode {
         RELEASE,
         ATTACK,
@@ -37,10 +45,23 @@ public class DSP {
     private final Latch latch = new Latch();
     private final Timer timer = new Timer();
     private final short[] soundBuffer = new short[0x10000];
+    private final IntUnaryOperator ramReader;
+    private final RamWriter ramWriter;
     private int voicePhase;
     private int bufferOffset;
 
     public DSP() {
+        int[] ram = new int[0x10000];
+        ramReader = address -> ram[u16(address)];
+        ramWriter = (address, value) -> ram[u16(address)] = u8(value);
+        for (int i = 0; i < voices.length; i++) {
+            voices[i] = new Voice();
+        }
+    }
+
+    public DSP(IntUnaryOperator ramReader, RamWriter ramWriter) {
+        this.ramReader = address -> u8(ramReader.applyAsInt(u16(address)));
+        this.ramWriter = (address, value) -> ramWriter.write(u16(address), u8(value));
         for (int i = 0; i < voices.length; i++) {
             voices[i] = new Voice();
         }
@@ -251,6 +272,42 @@ public class DSP {
         return soundBuffer;
     }
 
+    int readRam(int address) {
+        return u8(ramReader.applyAsInt(u16(address)));
+    }
+
+    void writeRam(int address, int value) {
+        ramWriter.write(u16(address), u8(value));
+    }
+
+    void decodeBRR(int voiceIndex) {
+        decodeBRR(voices[voiceIndex]);
+    }
+
+    void setBrrState(int header, int value) {
+        brr.header = u8(header);
+        brr.value = u8(value);
+    }
+
+    void setVoiceBrrState(int voiceIndex, int brrAddress, int brrOffset, int sampleOffset) {
+        Voice voice = voices[voiceIndex];
+        voice.brrAddress = u16(brrAddress);
+        voice.brrOffset = u8(brrOffset);
+        voice.sampleOffset = sampleOffset;
+    }
+
+    void setVoiceSample(int voiceIndex, int index, int value) {
+        voices[voiceIndex].samples[index] = value;
+    }
+
+    int voiceSample(int voiceIndex, int index) {
+        return voices[voiceIndex].samples[index];
+    }
+
+    int voiceSampleOffset(int voiceIndex) {
+        return voices[voiceIndex].sampleOffset;
+    }
+
     void runEnvelope(int voiceIndex) {
         runEnvelope(voices[voiceIndex]);
     }
@@ -385,6 +442,61 @@ public class DSP {
         }
     }
 
+    private void decodeBRR(Voice voice) {
+        int value = (brr.value << 8) | readRam(voice.brrAddress + voice.brrOffset + 1);
+        int filter = (brr.header >>> 2) & 0b11;
+        int range = (brr.header >>> 4) & 0b1111;
+
+        for (int i = 0; i < 4; i++) {
+            int sample = value >> 12;
+            value <<= 4;
+
+            if (range <= 12) {
+                sample <<= range;
+                sample >>= 1;
+            } else {
+                sample &= ~0x7ff;
+            }
+
+            int offset = voice.sampleOffset;
+            if (--offset < 0) {
+                offset = 11;
+            }
+            int lastSample = voice.samples[offset];
+            if (--offset < 0) {
+                offset = 11;
+            }
+            int afterLastSample = voice.samples[offset];
+
+            switch (filter) {
+                case 1 -> {
+                    sample += lastSample;
+                    sample += lastSample >> 4;
+                }
+                case 2 -> {
+                    sample += lastSample << 1;
+                    sample += -((lastSample << 1) + lastSample) >> 5;
+                    sample -= afterLastSample;
+                    sample += afterLastSample >> 4;
+                }
+                case 3 -> {
+                    sample += lastSample << 1;
+                    sample += -(lastSample + (lastSample << 2) + (lastSample << 3)) >> 6;
+                    sample -= afterLastSample;
+                    sample += ((afterLastSample << 1) + afterLastSample) >> 4;
+                }
+                default -> {
+                }
+            }
+            sample = Math.max(0, Math.min(16, sample));
+            sample <<= 1;
+            voice.samples[voice.sampleOffset] = sample;
+            if (++voice.sampleOffset >= voice.samples.length) {
+                voice.sampleOffset = 0;
+            }
+        }
+    }
+
     private int packedVoiceFlags(Flag flag) {
         int packed = 0;
         for (int i = 0; i < voices.length; i++) {
@@ -442,6 +554,10 @@ public class DSP {
         private int envelope;
         private int hiddenEnvelope;
         private EnvelopeMode envelopeMode = EnvelopeMode.RELEASE;
+        private int brrAddress;
+        private int brrOffset = 1;
+        private final int[] samples = new int[12];
+        private int sampleOffset;
         private boolean kon;
         private boolean kof;
         private boolean pmon;
@@ -464,6 +580,12 @@ public class DSP {
             envelope = 0;
             hiddenEnvelope = 0;
             envelopeMode = EnvelopeMode.RELEASE;
+            brrAddress = 0;
+            brrOffset = 1;
+            for (int i = 0; i < samples.length; i++) {
+                samples[i] = 0;
+            }
+            sampleOffset = 0;
             kon = false;
             kof = false;
             pmon = false;
@@ -524,10 +646,14 @@ public class DSP {
     private static final class BRR {
         private int offset;
         private int offsetAddress;
+        private int header;
+        private int value;
 
         private void reset() {
             offset = 0;
             offsetAddress = 0;
+            header = 0;
+            value = 0;
         }
     }
 
