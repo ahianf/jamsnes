@@ -113,6 +113,65 @@ class CpuOpcodeDispatchTest {
     }
 
     @Test
+    void executesPullAccumulatorAndDirectRegisterOpcodes() {
+        SNES snes = init();
+        snes.cpu.setEmulationMode(false);
+        snes.cpu.registers().p.m = false;
+        snes.cpu.registers().setPc(0x0200);
+        snes.cpu.registers().s = 0x01ff;
+        writeProgram(snes, 0x0200, 0x68, 0x2b);
+
+        snes.cpu._push16(0x8123);
+        assertEquals(5, snes.cpu.executeInstruction());
+        assertEquals(0x8123, snes.cpu.registers().a);
+        assertTrue(snes.cpu.registers().p.n);
+
+        snes.cpu._push16(0);
+        assertEquals(5, snes.cpu.executeInstruction());
+        assertEquals(0, snes.cpu.registers().d);
+        assertTrue(snes.cpu.registers().p.z);
+    }
+
+    @Test
+    void executesPullDataBankAndIndexOpcodes() {
+        SNES snes = init();
+        snes.cpu.setEmulationMode(false);
+        snes.cpu.registers().p.x_b = false;
+        snes.cpu.registers().setPc(0x0200);
+        snes.cpu.registers().s = 0x01ff;
+        writeProgram(snes, 0x0200, 0xab, 0xfa, 0x7a);
+
+        snes.cpu._push16(0x8001);
+        snes.cpu._push16(0x1234);
+        snes.cpu._push8(0x80);
+
+        assertEquals(4, snes.cpu.executeInstruction());
+        assertEquals(0x80, snes.cpu.registers().dbr);
+        assertTrue(snes.cpu.registers().p.n);
+
+        assertEquals(5, snes.cpu.executeInstruction());
+        assertEquals(0x1234, snes.cpu.registers().x);
+
+        assertEquals(5, snes.cpu.executeInstruction());
+        assertEquals(0x8001, snes.cpu.registers().y);
+        assertTrue(snes.cpu.registers().p.n);
+    }
+
+    @Test
+    void plpForcesWidthFlagsInEmulationMode() {
+        SNES snes = init();
+        snes.cpu.registers().setPc(0x0200);
+        snes.cpu.registers().s = 0x01ff;
+        snes.wram.data()[0x0200] = 0x28;
+        snes.cpu._push8(0);
+
+        assertEquals(4, snes.cpu.executeInstruction());
+        assertFalse(snes.cpu.registers().p.c);
+        assertTrue(snes.cpu.registers().p.m);
+        assertTrue(snes.cpu.registers().p.x_b);
+    }
+
+    @Test
     void executesRegisterTransferOpcodes() {
         SNES snes = init();
         snes.cpu.setEmulationMode(false);

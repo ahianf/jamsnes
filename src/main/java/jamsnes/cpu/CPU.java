@@ -125,7 +125,9 @@ public class CPU extends AMemory {
             case 0x1b -> 2 + TCS(0);
             case 0x20 -> 6 + JSR(_getAbsoluteAddr());
             case 0x22 -> 8 + JSL(_getAbsoluteLongAddr());
+            case 0x28 -> 4 + PLP(0);
             case 0x2a -> 2 + ROL(0, AddressingMode.IMPLIED);
+            case 0x2b -> 5 + PLD(0);
             case 0x30 -> 2 + BMI(_getImmediateAddr8Bits());
             case 0x38 -> 2 + SEC(0);
             case 0x3a -> 2 + DEA(0);
@@ -139,11 +141,13 @@ public class CPU extends AMemory {
             case 0x5a -> 3 + PHY(0);
             case 0x5b -> 2 + TCD(0);
             case 0x60 -> 6 + RTS(0);
+            case 0x68 -> 4 + PLA(0);
             case 0x6b -> 6 + RTL(0);
             case 0x6a -> 2 + ROR(0, AddressingMode.IMPLIED);
             case 0x6c -> 5 + JMP(_getAbsoluteIndirectAddr());
             case 0x70 -> 2 + BVS(_getImmediateAddr8Bits());
             case 0x78 -> 2 + SEI(0);
+            case 0x7a -> 4 + PLY(0);
             case 0x7b -> 2 + TDC(0);
             case 0x7c -> 6 + JMP(_getAbsoluteIndirectIndexedByXAddr());
             case 0x80 -> 3 + BRA(_getImmediateAddr8Bits());
@@ -156,6 +160,7 @@ public class CPU extends AMemory {
             case 0x9b -> 2 + TXY(0);
             case 0xa8 -> 2 + TAY(0);
             case 0xaa -> 2 + TAX(0);
+            case 0xab -> 4 + PLB(0);
             case 0xb0 -> 2 + BCS(_getImmediateAddr8Bits());
             case 0xb8 -> 7 + CLV(0);
             case 0xba -> 2 + TSX(0);
@@ -174,6 +179,7 @@ public class CPU extends AMemory {
             case 0xeb -> 3 + XBA(0);
             case 0xf0 -> 2 + BEQ(_getImmediateAddr8Bits());
             case 0xf8 -> 2 + SED(0);
+            case 0xfa -> 4 + PLX(0);
             case 0xfb -> 2 + XCE(0);
             case 0xfc -> 8 + JSR(_getAbsoluteIndirectIndexedByXAddr());
             default -> throw new InvalidOpcode("CPU opcode 0x%02x is not implemented".formatted(opcode));
@@ -474,6 +480,61 @@ public class CPU extends AMemory {
         } else {
             _push16(registers.y);
         }
+        return registers.p.x_b ? 0 : 1;
+    }
+
+    public int PLA(int valueAddr) {
+        if (registers.p.m) {
+            registers.a = _pop();
+        } else {
+            registers.a = _pop16();
+        }
+        registers.p.z = registers.a == 0;
+        registers.p.n = (registers.a & 0x8000) != 0;
+        return registers.p.m ? 0 : 1;
+    }
+
+    public int PLB(int valueAddr) {
+        registers.dbr = _pop();
+        registers.p.z = registers.dbr == 0;
+        registers.p.n = (registers.dbr & 0x80) != 0;
+        return 0;
+    }
+
+    public int PLD(int valueAddr) {
+        registers.d = _pop16();
+        setZN16(registers.d);
+        return 0;
+    }
+
+    public int PLP(int valueAddr) {
+        registers.p.setFlags(_pop());
+        if (emulationMode) {
+            registers.p.m = true;
+            registers.p.x_b = true;
+        }
+        return 0;
+    }
+
+    public int PLX(int valueAddr) {
+        if (registers.p.x_b) {
+            registers.x = _pop();
+        } else {
+            registers.x = _pop16();
+        }
+        registers.p.z = registers.x == 0;
+        registers.p.n = (registers.x & 0x8000) != 0;
+        return registers.p.x_b ? 0 : 1;
+    }
+
+    public int PLY(int valueAddr) {
+        if (registers.p.x_b) {
+            registers.y = _pop();
+        } else {
+            registers.y = _pop16();
+        }
+        registers.p.z = registers.y == 0;
+        registers.p.n = (registers.y & 0x8000) != 0;
         return registers.p.x_b ? 0 : 1;
     }
 
