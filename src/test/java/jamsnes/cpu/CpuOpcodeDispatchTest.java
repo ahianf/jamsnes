@@ -17,7 +17,7 @@ class CpuOpcodeDispatchTest {
         SNES snes = init();
         snes.cpu.registers().setPc(0x0200);
         snes.wram.data()[0x0200] = 0xea;
-        snes.wram.data()[0x0201] = 0x01;
+        snes.wram.data()[0x0201] = 0x02;
 
         assertEquals(2, snes.cpu.executeInstruction());
         assertEquals(0x0201, snes.cpu.registers().pc);
@@ -378,6 +378,110 @@ class CpuOpcodeDispatchTest {
         assertEquals(8, snes.cpu.executeInstruction());
         assertEquals(0x81, snes.wram.data()[0x0500]);
         assertEquals(0x020a, snes.cpu.registers().pc);
+    }
+
+    @Test
+    void executesIndirectLoadAndArithmeticOpcodes() {
+        SNES snes = init();
+        snes.cpu.registers().setPc(0x0200);
+        snes.cpu.registers().d = 0x0100;
+        snes.cpu.registers().s = 0x0300;
+        snes.cpu.registers().x = 0x02;
+        snes.cpu.registers().y = 0x03;
+        snes.wram.data()[0x0112] = 0x00;
+        snes.wram.data()[0x0113] = 0x04;
+        snes.wram.data()[0x0120] = 0x10;
+        snes.wram.data()[0x0121] = 0x04;
+        snes.wram.data()[0x0130] = 0x01;
+        snes.wram.data()[0x0131] = 0x04;
+        snes.wram.data()[0x0400] = 0x10;
+        snes.wram.data()[0x0413] = 0x01;
+        snes.wram.data()[0x0401] = 0x0f;
+        snes.wram.data()[0x0313] = 0x02;
+        writeProgram(snes, 0x0200, 0xa1, 0x10, 0x11, 0x20, 0x32, 0x30, 0x73, 0x10);
+
+        assertEquals(6, snes.cpu.executeInstruction());
+        assertEquals(0x10, snes.cpu.registers().a);
+
+        assertEquals(6, snes.cpu.executeInstruction());
+        assertEquals(0x11, snes.cpu.registers().a);
+
+        assertEquals(5, snes.cpu.executeInstruction());
+        assertEquals(0x01, snes.cpu.registers().a);
+
+        assertEquals(7, snes.cpu.executeInstruction());
+        assertEquals(0x03, snes.cpu.registers().a);
+        assertEquals(0x0208, snes.cpu.registers().pc);
+    }
+
+    @Test
+    void executesIndirectStoreOpcodes() {
+        SNES snes = init();
+        snes.cpu.registers().setPc(0x0200);
+        snes.cpu.registers().d = 0x0100;
+        snes.cpu.registers().s = 0x0300;
+        snes.cpu.registers().x = 0x02;
+        snes.cpu.registers().y = 0x03;
+        snes.cpu.registers().a = 0x77;
+        snes.wram.data()[0x0112] = 0x00;
+        snes.wram.data()[0x0113] = 0x04;
+        snes.wram.data()[0x0120] = 0x10;
+        snes.wram.data()[0x0121] = 0x04;
+        snes.wram.data()[0x0130] = 0x20;
+        snes.wram.data()[0x0131] = 0x04;
+        snes.wram.data()[0x0140] = 0x00;
+        snes.wram.data()[0x0141] = 0x05;
+        writeProgram(snes, 0x0200, 0x81, 0x10, 0x83, 0x05, 0x91, 0x20, 0x92, 0x30, 0x93, 0x06, 0x97, 0x40);
+
+        assertEquals(6, snes.cpu.executeInstruction());
+        assertEquals(0x77, snes.wram.data()[0x0400]);
+
+        assertEquals(4, snes.cpu.executeInstruction());
+        assertEquals(0x77, snes.wram.data()[0x0305]);
+
+        assertEquals(6, snes.cpu.executeInstruction());
+        assertEquals(0x77, snes.wram.data()[0x0413]);
+
+        assertEquals(5, snes.cpu.executeInstruction());
+        assertEquals(0x77, snes.wram.data()[0x0420]);
+
+        assertEquals(7, snes.cpu.executeInstruction());
+        assertEquals(0x77, snes.wram.data()[0x0309]);
+
+        assertEquals(6, snes.cpu.executeInstruction());
+        assertEquals(0x77, snes.wram.data()[0x0500]);
+        assertEquals(0x020c, snes.cpu.registers().pc);
+    }
+
+    @Test
+    void executesIndirectCompareAndSubtractOpcodes() {
+        SNES snes = init();
+        snes.cpu.registers().setPc(0x0200);
+        snes.cpu.registers().d = 0x0100;
+        snes.cpu.registers().s = 0x0300;
+        snes.cpu.registers().x = 0x02;
+        snes.cpu.registers().y = 0x03;
+        snes.cpu.registers().a = 0x05;
+        snes.wram.data()[0x0112] = 0x00;
+        snes.wram.data()[0x0113] = 0x04;
+        snes.wram.data()[0x0120] = 0x10;
+        snes.wram.data()[0x0121] = 0x04;
+        snes.wram.data()[0x0400] = 0x05;
+        snes.wram.data()[0x0413] = 0x06;
+        snes.wram.data()[0x0305] = 0x01;
+        writeProgram(snes, 0x0200, 0xc1, 0x10, 0xd1, 0x20, 0xe3, 0x05);
+
+        assertEquals(6, snes.cpu.executeInstruction());
+        assertTrue(snes.cpu.registers().p.z);
+        assertTrue(snes.cpu.registers().p.c);
+
+        assertEquals(6, snes.cpu.executeInstruction());
+        assertFalse(snes.cpu.registers().p.c);
+
+        snes.cpu.registers().p.c = true;
+        assertEquals(4, snes.cpu.executeInstruction());
+        assertEquals(0x04, snes.cpu.registers().a);
+        assertEquals(0x0206, snes.cpu.registers().pc);
     }
 
     @Test
