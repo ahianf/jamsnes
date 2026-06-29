@@ -76,4 +76,53 @@ class DSPTest {
 
         assertEquals(1, snes.apu.dsp().voicePhase());
     }
+
+    @Test
+    void releaseEnvelopeFallsToZero() {
+        DSP dsp = new DSP();
+        dsp.setVoiceEnvelopeState(0, 0x04, 0, DSP.EnvelopeMode.RELEASE);
+
+        dsp.runEnvelope(0);
+
+        assertEquals(0, dsp.voiceEnvelope(0));
+    }
+
+    @Test
+    void adsrAttackClampsAndTransitionsToDecay() {
+        DSP dsp = new DSP();
+        dsp.write(0x05, 0x8f);
+        dsp.setVoiceEnvelopeState(0, 0x400, 0, DSP.EnvelopeMode.ATTACK);
+
+        dsp.runEnvelope(0);
+
+        assertEquals(0x7ff, dsp.voiceEnvelope(0));
+        assertEquals(0x800, dsp.voiceHiddenEnvelope(0));
+        assertEquals(DSP.EnvelopeMode.DECAY, dsp.voiceEnvelopeMode(0));
+    }
+
+    @Test
+    void adsrDecayCanTransitionToSustain() {
+        DSP dsp = new DSP();
+        dsp.write(0x05, 0x80);
+        dsp.write(0x06, 0x40);
+        dsp.setVoiceEnvelopeState(0, 0x300, 0, DSP.EnvelopeMode.DECAY);
+
+        dsp.runEnvelope(0);
+
+        assertEquals(0x2fd, dsp.voiceEnvelope(0));
+        assertEquals(0x2fd, dsp.voiceHiddenEnvelope(0));
+        assertEquals(DSP.EnvelopeMode.SUSTAIN, dsp.voiceEnvelopeMode(0));
+    }
+
+    @Test
+    void gainDirectModeSetsEnvelopeFromGainData() {
+        DSP dsp = new DSP();
+        dsp.write(0x07, 0x1f);
+        dsp.setVoiceEnvelopeState(0, 0, 0, DSP.EnvelopeMode.SUSTAIN);
+
+        dsp.runEnvelope(0);
+
+        assertEquals(0x1f0, dsp.voiceEnvelope(0));
+        assertEquals(0x1f0, dsp.voiceHiddenEnvelope(0));
+    }
 }

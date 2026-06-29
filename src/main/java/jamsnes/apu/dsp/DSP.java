@@ -5,6 +5,13 @@ import jamsnes.exceptions.InvalidAddress;
 import static jamsnes.models.Unsigned.u8;
 
 public class DSP {
+    enum EnvelopeMode {
+        RELEASE,
+        ATTACK,
+        DECAY,
+        SUSTAIN
+    }
+
     private static final int[] RATE_MODULUS = {
             0, 2048, 1536, 1280, 1024, 768,
             640, 512, 384, 320, 256, 192,
@@ -244,6 +251,30 @@ public class DSP {
         return soundBuffer;
     }
 
+    void runEnvelope(int voiceIndex) {
+        runEnvelope(voices[voiceIndex]);
+    }
+
+    void setVoiceEnvelopeState(int voiceIndex, int envelope, int hiddenEnvelope, EnvelopeMode mode) {
+        Voice voice = voices[voiceIndex];
+        voice.envelope = envelope;
+        voice.hiddenEnvelope = hiddenEnvelope;
+        voice.envelopeMode = mode;
+        latch.adsr1 = voice.adsr1;
+    }
+
+    int voiceEnvelope(int voiceIndex) {
+        return voices[voiceIndex].envelope;
+    }
+
+    int voiceHiddenEnvelope(int voiceIndex) {
+        return voices[voiceIndex].hiddenEnvelope;
+    }
+
+    EnvelopeMode voiceEnvelopeMode(int voiceIndex) {
+        return voices[voiceIndex].envelopeMode;
+    }
+
     private void misc27() {
         for (Voice voice : voices) {
             voice.prevPmon = voice.pmon;
@@ -280,6 +311,78 @@ public class DSP {
         }
         int feedback = (noise.lfsr << 13) ^ (noise.lfsr << 14);
         noise.lfsr = (feedback & 0x4000) ^ (noise.lfsr >>> 1);
+    }
+
+    private void runEnvelope(Voice voice) {
+        int envelope = voice.envelope;
+
+        if (voice.envelopeMode == EnvelopeMode.RELEASE) {
+            envelope -= 0x08;
+            if (envelope < 0) {
+                envelope = 0;
+            }
+            voice.envelope = envelope;
+            return;
+        }
+
+        int rate;
+        int data = voice.adsr2;
+        if ((latch.adsr1 & 0x80) != 0) {
+            if (voice.envelopeMode.ordinal() >= EnvelopeMode.DECAY.ordinal()) {
+                envelope -= 1;
+                envelope -= envelope >> 8;
+                rate = data & 0b11111;
+                if (voice.envelopeMode == EnvelopeMode.DECAY) {
+                    rate = ((latch.adsr1 >>> 3) & 0x0e) + 0x10;
+                }
+            } else {
+                rate = ((latch.adsr1 & 0x0f) << 1) + 1;
+                if (rate < 0b11111) {
+                    envelope += 0x20;
+                } else {
+                    envelope += 0x400;
+                }
+            }
+        } else {
+            data = voice.gain;
+            int mode = data >>> 5;
+            if (mode < 4) {
+                envelope = data << 4;
+                rate = 0b11111;
+            } else {
+                rate = data & 0b11111;
+                if (mode == 4) {
+                    envelope -= 0x20;
+                } else if (mode < 6) {
+                    envelope -= 1;
+                    envelope -= envelope >> 8;
+                } else {
+                    envelope += 0x20;
+                    if (mode > 6 && voice.hiddenEnvelope >= 0x600) {
+                        envelope += 0x08 - 0x20;
+                    }
+                }
+            }
+        }
+
+        if ((envelope >> 8) == (data >> 5) && voice.envelopeMode == EnvelopeMode.DECAY) {
+            voice.envelopeMode = EnvelopeMode.SUSTAIN;
+        }
+        voice.hiddenEnvelope = envelope;
+        if (Integer.compareUnsigned(envelope, 0x7ff) > 0) {
+            if (envelope < 0) {
+                envelope = 0;
+            } else {
+                envelope = 0x7ff;
+            }
+            if (voice.envelopeMode == EnvelopeMode.ATTACK) {
+                voice.envelopeMode = EnvelopeMode.DECAY;
+            }
+        }
+
+        if (timerPoll(rate)) {
+            voice.envelope = envelope;
+        }
     }
 
     private int packedVoiceFlags(Flag flag) {
@@ -336,6 +439,9 @@ public class DSP {
         private int adsr2;
         private int gain;
         private int envx;
+        private int envelope;
+        private int hiddenEnvelope;
+        private EnvelopeMode envelopeMode = EnvelopeMode.RELEASE;
         private boolean kon;
         private boolean kof;
         private boolean pmon;
@@ -355,6 +461,9 @@ public class DSP {
             adsr2 = 0;
             gain = 0;
             envx = 0;
+            envelope = 0;
+            hiddenEnvelope = 0;
+            envelopeMode = EnvelopeMode.RELEASE;
             kon = false;
             kof = false;
             pmon = false;
@@ -423,10 +532,12 @@ public class DSP {
     }
 
     private static final class Latch {
+        private int adsr1;
         private int envx;
         private int outx;
 
         private void reset() {
+            adsr1 = 0;
             envx = 0;
             outx = 0;
         }
