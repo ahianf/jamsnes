@@ -270,4 +270,71 @@ class DSPTest {
         dsp.voice5(0);
         assertFalse(dsp.voiceEndx(0));
     }
+
+    @Test
+    void loadEchoReadsSignedSampleFromRam() {
+        DSP dsp = new DSP();
+        dsp.setEchoRuntimeState(0x3000, 0, 0, 0, 0, false);
+        dsp.writeRam(0x3000, 0x00);
+        dsp.writeRam(0x3001, 0xf0);
+
+        dsp.loadEcho(0);
+
+        assertEquals(-2048, dsp.echoHistory(0, 0));
+    }
+
+    @Test
+    void writeEchoWritesSignedSampleAndClearsOutput() {
+        DSP dsp = new DSP();
+        dsp.setEchoRuntimeState(0x3000, 0, 0, 0, 0, false);
+        dsp.setEchoOutput(1, 0xf234);
+
+        dsp.writeEcho(1);
+
+        assertEquals(0x34, dsp.readRam(0x3002));
+        assertEquals(0xf2, dsp.readRam(0x3003));
+        assertEquals(0, dsp.echoOutput(1));
+    }
+
+    @Test
+    void writeEchoDoesNotWriteRamWhenToggled() {
+        DSP dsp = new DSP();
+        dsp.setEchoRuntimeState(0x3000, 0, 0, 0, 0, true);
+        dsp.writeRam(0x3000, 0xaa);
+        dsp.writeRam(0x3001, 0xbb);
+        dsp.setEchoOutput(0, 0x1234);
+
+        dsp.writeEcho(0);
+
+        assertEquals(0xaa, dsp.readRam(0x3000));
+        assertEquals(0xbb, dsp.readRam(0x3001));
+        assertEquals(0, dsp.echoOutput(0));
+    }
+
+    @Test
+    void echoOutputUsesMasterVolumeAndSquaredEchoInputFormula() {
+        DSP dsp = new DSP();
+        dsp.write(0x1c, 0x40);
+        dsp.setMasterOutput(1, 0x0100);
+        dsp.setEchoInput(1, 0x20);
+
+        assertEquals(136, dsp.outputEcho(1));
+    }
+
+    @Test
+    void echoTwentySevenWritesStereoSamplesAndClearsMasterOutput() {
+        DSP dsp = new DSP();
+        dsp.write(0x1c, 0x40);
+        dsp.setMasterOutput(0, 0x1234);
+        dsp.setMasterOutput(1, 0x0100);
+        dsp.setEchoInput(1, 0x20);
+
+        dsp.echo27();
+
+        assertEquals(0x1234, dsp.soundBuffer()[0]);
+        assertEquals(136, dsp.soundBuffer()[1]);
+        assertEquals(2, dsp.getSamplesCount());
+        assertEquals(0, dsp.masterOutput(0));
+        assertEquals(0, dsp.masterOutput(1));
+    }
 }

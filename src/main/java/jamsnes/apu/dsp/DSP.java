@@ -422,6 +422,66 @@ public class DSP {
         return master.output[channel];
     }
 
+    void setMasterOutput(int channel, int output) {
+        master.output[channel] = u16(output);
+    }
+
+    void setEchoRuntimeState(
+            int address,
+            int offset,
+            int length,
+            int historyOffset,
+            int value,
+            boolean toggle
+    ) {
+        echo.address = u16(address);
+        echo.offset = u16(offset);
+        echo.length = u16(length);
+        echo.historyOffset = u8(historyOffset);
+        echo.value = u8(value);
+        echo.toggle = toggle;
+    }
+
+    int echoAddress() {
+        return echo.address;
+    }
+
+    int echoOffset() {
+        return echo.offset;
+    }
+
+    int echoLength() {
+        return echo.length;
+    }
+
+    int echoHistoryOffset() {
+        return echo.historyOffset;
+    }
+
+    int echoHistory(int channel, int index) {
+        return echo.history[channel][index & 0x0f];
+    }
+
+    void setEchoHistory(int channel, int index, int value) {
+        echo.history[channel][index & 0x0f] = (short) value;
+    }
+
+    int echoInput(int channel) {
+        return echo.input[channel];
+    }
+
+    void setEchoInput(int channel, int value) {
+        echo.input[channel] = u16(value);
+    }
+
+    int echoOutput(int channel) {
+        return echo.output[channel];
+    }
+
+    void setEchoOutput(int channel, int value) {
+        echo.output[channel] = u16(value);
+    }
+
     int voiceOutx(int voiceIndex) {
         return voices[voiceIndex].outx;
     }
@@ -679,6 +739,118 @@ public class DSP {
 
     private void voice9(Voice voice) {
         voice.envx = latch.envx;
+    }
+
+    int loadFIR(int channel, int fir) {
+        int sample = echo.history[channel][(echo.historyOffset + fir + 1) & 0x0f];
+
+        return sample * echo.fir[fir] >> 6;
+    }
+
+    void loadEcho(int channel) {
+        int address = echo.address + channel * 2;
+        int low = readRam(address++);
+        int high = readRam(address);
+        short echoSample = (short) ((high << 8) + low);
+
+        echo.history[channel][echo.historyOffset & 0x0f] = (short) (echoSample >> 1);
+    }
+
+    void writeEcho(int channel) {
+        if (!echo.toggle) {
+            int address = echo.address + channel * 2;
+            short sample = (short) echo.output[channel];
+
+            writeRam(address++, sample);
+            writeRam(address, sample >> 8);
+        }
+        echo.output[channel] = 0;
+    }
+
+    int outputEcho(int channel) {
+        short masterSample = (short) (master.output[channel] * master.volume[channel] >> 7);
+        short echoSample = (short) (echo.input[channel] * echo.input[channel] >> 7);
+
+        return (short) (masterSample + echoSample);
+    }
+
+    void echo22() {
+        echo.historyOffset = u8(echo.historyOffset + 1);
+        echo.address = u16((echo.value << 8) + echo.offset);
+
+        loadEcho(0);
+
+        echo.input[0] = u16(loadFIR(0, 0));
+        echo.input[1] = u16(loadFIR(1, 0));
+    }
+
+    void echo23() {
+        loadEcho(1);
+
+        echo.input[0] = u16(echo.input[0] + loadFIR(0, 1) + loadFIR(0, 2));
+        echo.input[1] = u16(echo.input[1] + loadFIR(1, 1) + loadFIR(1, 2));
+    }
+
+    void echo24() {
+        echo.input[0] = u16(echo.input[0] + loadFIR(0, 3) + loadFIR(0, 4) + loadFIR(0, 5));
+        echo.input[1] = u16(echo.input[1] + loadFIR(1, 3) + loadFIR(1, 4) + loadFIR(1, 5));
+    }
+
+    void echo25() {
+        echo.input[0] = u16(echo.input[0] + loadFIR(0, 6) + loadFIR(0, 7));
+        echo.input[1] = u16(echo.input[1] + loadFIR(1, 6) + loadFIR(1, 7));
+    }
+
+    void echo26() {
+        master.output[0] = u16(outputEcho(0));
+
+        echo.output[0] = u16(echo.output[0] + (echo.input[0] * echo.feedback >> 7));
+        echo.output[1] = u16(echo.output[1] + (echo.input[1] * echo.feedback >> 7));
+    }
+
+    void echo27() {
+        short outputLeft = (short) master.output[0];
+        short outputRight = (short) outputEcho(1);
+
+        master.output[0] = 0;
+        master.output[1] = 0;
+
+        if (master.mute) {
+            outputLeft = 0;
+            outputRight = 0;
+        }
+
+        soundBuffer[bufferOffset] = outputLeft;
+        soundBuffer[bufferOffset + 1] = outputRight;
+        bufferOffset += 2;
+        if (bufferOffset >= soundBuffer.length / 2) {
+            bufferOffset = 0;
+        }
+    }
+
+    void echo28() {
+        echo.toggle = echo.enabled;
+    }
+
+    void echo29() {
+        echo.value = echo.data;
+
+        if (echo.offset == 0) {
+            echo.length = echo.delay << 11;
+        }
+
+        echo.offset += 4;
+        if (echo.offset >= echo.length) {
+            echo.offset = 0;
+        }
+
+        writeEcho(0);
+
+        echo28();
+    }
+
+    void echo30() {
+        writeEcho(1);
     }
 
     private void runEnvelope(Voice voice) {
@@ -963,8 +1135,17 @@ public class DSP {
         private int feedback;
         private final int[] fir = new int[8];
         private int data;
+        private int offset;
+        private int length;
         private int delay;
         private boolean enabled = true;
+        private boolean toggle;
+        private final short[][] history = new short[2][16];
+        private int historyOffset;
+        private int address;
+        private int value;
+        private final int[] input = new int[2];
+        private final int[] output = new int[2];
 
         private void reset() {
             volume[0] = 0;
@@ -974,8 +1155,23 @@ public class DSP {
                 fir[i] = 0;
             }
             data = 0;
+            offset = 0;
+            length = 0;
             delay = 0;
             enabled = true;
+            toggle = false;
+            for (int channel = 0; channel < history.length; channel++) {
+                for (int i = 0; i < history[channel].length; i++) {
+                    history[channel][i] = 0;
+                }
+            }
+            historyOffset = 0;
+            address = 0;
+            value = 0;
+            input[0] = 0;
+            input[1] = 0;
+            output[0] = 0;
+            output[1] = 0;
         }
     }
 
