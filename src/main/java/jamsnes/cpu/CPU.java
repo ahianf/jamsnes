@@ -117,16 +117,21 @@ public class CPU extends AMemory {
         hasIndexCrossedPageBoundary = false;
         return switch (opcode) {
             case 0x08 -> 3 + PHP(0);
+            case 0x0a -> 2 + ASL(0, AddressingMode.IMPLIED);
             case 0x0b -> 4 + PHD(0);
             case 0x10 -> 7 + BPL(_getImmediateAddr8Bits());
             case 0x18 -> 2 + CLC(0);
+            case 0x1a -> 2 + INA(0);
             case 0x1b -> 2 + TCS(0);
             case 0x20 -> 6 + JSR(_getAbsoluteAddr());
             case 0x22 -> 8 + JSL(_getAbsoluteLongAddr());
+            case 0x2a -> 2 + ROL(0, AddressingMode.IMPLIED);
             case 0x30 -> 2 + BMI(_getImmediateAddr8Bits());
             case 0x38 -> 2 + SEC(0);
+            case 0x3a -> 2 + DEA(0);
             case 0x3b -> 2 + TSC(0);
             case 0x48 -> 3 + PHA(0);
+            case 0x4a -> 2 + LSR(0, AddressingMode.IMPLIED);
             case 0x4b -> 3 + PHK(0);
             case 0x4c -> 3 + JMP(_getAbsoluteAddr());
             case 0x50 -> 2 + BVC(_getImmediateAddr8Bits());
@@ -135,6 +140,7 @@ public class CPU extends AMemory {
             case 0x5b -> 2 + TCD(0);
             case 0x60 -> 6 + RTS(0);
             case 0x6b -> 6 + RTL(0);
+            case 0x6a -> 2 + ROR(0, AddressingMode.IMPLIED);
             case 0x6c -> 5 + JMP(_getAbsoluteIndirectAddr());
             case 0x70 -> 2 + BVS(_getImmediateAddr8Bits());
             case 0x78 -> 2 + SEI(0);

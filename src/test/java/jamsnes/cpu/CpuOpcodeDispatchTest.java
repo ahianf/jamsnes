@@ -7,6 +7,7 @@ import jamsnes.renderer.NoRenderer;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -184,6 +185,49 @@ class CpuOpcodeDispatchTest {
         assertEquals(0x1280, snes.cpu.registers().a);
         assertTrue(snes.cpu.registers().p.n);
         assertEquals(0x0205, snes.cpu.registers().pc);
+    }
+
+    @Test
+    void executesAccumulatorShiftRotateOpcodes() {
+        SNES snes = init();
+        snes.cpu.registers().p.m = true;
+        snes.cpu.registers().setPc(0x0200);
+        snes.cpu.registers().a = 0x81;
+        writeProgram(snes, 0x0200, 0x0a, 0x2a, 0x4a, 0x6a);
+
+        assertEquals(2, snes.cpu.executeInstruction());
+        assertEquals(0x02, snes.cpu.registers().al());
+        assertTrue(snes.cpu.registers().p.c);
+
+        assertEquals(2, snes.cpu.executeInstruction());
+        assertEquals(0x05, snes.cpu.registers().al());
+
+        assertEquals(2, snes.cpu.executeInstruction());
+        assertEquals(0x02, snes.cpu.registers().al());
+        assertTrue(snes.cpu.registers().p.c);
+
+        assertEquals(2, snes.cpu.executeInstruction());
+        assertEquals(0x81, snes.cpu.registers().al());
+        assertFalse(snes.cpu.registers().p.n);
+        assertEquals(0x0204, snes.cpu.registers().pc);
+    }
+
+    @Test
+    void executesAccumulatorIncrementDecrementOpcodes() {
+        SNES snes = init();
+        snes.cpu.registers().p.m = false;
+        snes.cpu.registers().setPc(0x0200);
+        snes.cpu.registers().a = 0xffff;
+        writeProgram(snes, 0x0200, 0x1a, 0x3a);
+
+        assertEquals(2, snes.cpu.executeInstruction());
+        assertEquals(0, snes.cpu.registers().a);
+        assertTrue(snes.cpu.registers().p.z);
+
+        assertEquals(2, snes.cpu.executeInstruction());
+        assertEquals(0xffff, snes.cpu.registers().a);
+        assertTrue(snes.cpu.registers().p.n);
+        assertEquals(0x0202, snes.cpu.registers().pc);
     }
 
     private static void writeProgram(SNES snes, int start, int... opcodes) {
