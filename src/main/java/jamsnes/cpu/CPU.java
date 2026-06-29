@@ -141,6 +141,7 @@ public class CPU extends AMemory {
             case 0x5a -> 3 + PHY(0);
             case 0x5b -> 2 + TCD(0);
             case 0x60 -> 6 + RTS(0);
+            case 0x62 -> 6 + PER(_getImmediateAddr16Bits());
             case 0x68 -> 4 + PLA(0);
             case 0x6b -> 6 + RTL(0);
             case 0x6a -> 2 + ROR(0, AddressingMode.IMPLIED);
@@ -170,6 +171,7 @@ public class CPU extends AMemory {
             case 0xca -> 2 + DEX(0);
             case 0xcb -> 3 + WAI(0);
             case 0xd0 -> 2 + BNE(_getImmediateAddr8Bits());
+            case 0xd4 -> 6 + PEI(_getDirectAddr());
             case 0xd8 -> 2 + CLD(0);
             case 0xda -> 3 + PHX(0);
             case 0xdb -> 3 + STP(0);
@@ -178,6 +180,7 @@ public class CPU extends AMemory {
             case 0xea -> 2 + NOP(0);
             case 0xeb -> 3 + XBA(0);
             case 0xf0 -> 2 + BEQ(_getImmediateAddr8Bits());
+            case 0xf4 -> 5 + PEA(_getImmediateAddr16Bits());
             case 0xf8 -> 2 + SED(0);
             case 0xfa -> 4 + PLX(0);
             case 0xfb -> 2 + XCE(0);

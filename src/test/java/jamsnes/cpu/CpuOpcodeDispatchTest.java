@@ -172,6 +172,25 @@ class CpuOpcodeDispatchTest {
     }
 
     @Test
+    void executesEffectiveOperandPushOpcodes() {
+        SNES snes = init();
+        snes.cpu.registers().setPc(0x0200);
+        snes.cpu.registers().s = 0x01ff;
+        snes.cpu.registers().d = 0x1000;
+        writeProgram(snes, 0x0200, 0x62, 0xff, 0xff, 0xd4, 0x10, 0xf4, 0x34, 0x12);
+
+        assertEquals(6, snes.cpu.executeInstruction());
+        assertEquals(0x0202, snes.cpu._pop16());
+
+        assertEquals(6, snes.cpu.executeInstruction());
+        assertEquals(0x1010, snes.cpu._pop16());
+
+        assertEquals(5, snes.cpu.executeInstruction());
+        assertEquals(0x0206, snes.cpu._pop16());
+        assertEquals(0x0208, snes.cpu.registers().pc);
+    }
+
+    @Test
     void executesRegisterTransferOpcodes() {
         SNES snes = init();
         snes.cpu.setEmulationMode(false);
