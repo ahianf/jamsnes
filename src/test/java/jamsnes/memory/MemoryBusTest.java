@@ -124,11 +124,37 @@ class MemoryBusTest {
         assertEquals(0xa5, snes.sram.data()[0x8000 * 0x10 - 1]);
     }
 
+    @Test
+    void hiromMapsRomBanksAndUpperHalfMirrors() {
+        SNES snes = initHirom();
+        snes.cartridge.data()[0x00000] = 0x11;
+        snes.cartridge.data()[0x08000] = 0x22;
+        snes.cartridge.data()[0x10000] = 0x33;
+
+        assertSame(snes.cartridge, snes.bus.getAccessor(0xc00000));
+        assertSame(snes.cartridge, snes.bus.getAccessor(0xc10000));
+        assertMirrors(snes.cartridge, snes.bus.getAccessor(0x008000));
+        assertMirrors(snes.cartridge, snes.bus.getAccessor(0x808000));
+
+        assertEquals(0x11, snes.bus.read(0xc00000));
+        assertEquals(0x22, snes.bus.read(0x008000));
+        assertEquals(0x22, snes.bus.read(0x808000));
+        assertEquals(0x33, snes.bus.read(0xc10000));
+    }
+
     private static SNES init() {
         SNES snes = new SNES(new NoRenderer(0, 0, 0));
         snes.cartridge.setSize(100);
         snes.cartridge.header.addMappingMode(MappingMode.LOROM);
         snes.sram.setSize(100);
+        snes.bus.mapComponents(snes);
+        return snes;
+    }
+
+    private static SNES initHirom() {
+        SNES snes = new SNES(new NoRenderer(0, 0, 0));
+        snes.cartridge.setSize(0x20000);
+        snes.cartridge.header.addMappingMode(MappingMode.HIROM);
         snes.bus.mapComponents(snes);
         return snes;
     }

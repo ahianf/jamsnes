@@ -100,6 +100,14 @@ public class MemoryBus implements IMemoryBus {
             console.sram.setMemoryRegion(0xf0, 0xff, 0x0000, 0x7fff);
             memoryAccessors.add(console.sram);
             rectangleShadows.add(new RectangleShadow(console.sram, 0x70, 0x7d, 0x0000, 0x7fff));
+        } else if (console.cartridge.header.hasMappingMode(MappingMode.HIROM)) {
+            console.cartridge.setMemoryRegion(0xc0, 0xff, 0x0000, 0xffff);
+            memoryAccessors.add(console.cartridge);
+
+            rectangleShadows.add(new RectangleShadow(console.cartridge, 0x00, 0x3f, 0x8000, 0xffff)
+                    .setBankOffset(1));
+            rectangleShadows.add(new RectangleShadow(console.cartridge, 0x80, 0xbf, 0x8000, 0xffff)
+                    .setBankOffset(1));
         }
 
         memoryAccessors.addAll(shadows);
