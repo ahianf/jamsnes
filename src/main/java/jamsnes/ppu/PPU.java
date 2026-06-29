@@ -81,13 +81,17 @@ public class PPU extends AMemory {
                 updateVramReadBuffer();
             }
             case 0x18 -> {
-                vram.write(getVramAddress(), value);
+                if (!ppuRegisters.inidispFblank()) {
+                    vram.write(getVramAddress(), value);
+                }
                 if (!isVramIncrementAfterHighByte()) {
                     incrementVramAddress();
                 }
             }
             case 0x19 -> {
-                vram.write(u16(getVramAddress() + 1), value);
+                if (!ppuRegisters.inidispFblank()) {
+                    vram.write(u16(getVramAddress() + 1), value);
+                }
                 if (isVramIncrementAfterHighByte()) {
                     incrementVramAddress();
                 }

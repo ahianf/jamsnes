@@ -120,6 +120,33 @@ class PpuRegisterWriteTest {
     }
 
     @Test
+    void vramDataWriteIsSkippedDuringForcedBlankButStillIncrementsLowByteMode() {
+        SNES snes = init();
+
+        snes.bus.write(0x2100, 0x80);
+        snes.bus.write(0x2116, 0x00);
+        snes.bus.write(0x2117, 0x00);
+        snes.bus.write(0x2118, 0x42);
+
+        assertEquals(0, snes.ppu.vram.read(0));
+        assertEquals(1, snes.ppu.getVramAddressRegister());
+    }
+
+    @Test
+    void vramDataWriteIsSkippedDuringForcedBlankButStillIncrementsHighByteMode() {
+        SNES snes = init();
+
+        snes.bus.write(0x2100, 0x80);
+        snes.bus.write(0x2115, 0x80);
+        snes.bus.write(0x2116, 0x00);
+        snes.bus.write(0x2117, 0x00);
+        snes.bus.write(0x2119, 0x42);
+
+        assertEquals(0, snes.ppu.vram.read(1));
+        assertEquals(1, snes.ppu.getVramAddressRegister());
+    }
+
+    @Test
     void writesCgAddressAndData() {
         SNES snes = init();
 
