@@ -65,6 +65,10 @@ public class APU extends AMemory {
         return internalRegisters;
     }
 
+    public DSP dsp() {
+        return dsp;
+    }
+
     public StateMode getState() {
         return state;
     }
@@ -790,6 +794,7 @@ public class APU extends AMemory {
         if (state == StateMode.RUNNING) {
             paddingCycles = total - remainingCycles;
         }
+        dsp.update();
     }
 
     public void loadFromSPC(Cartridge cartridge) {

@@ -5,12 +5,33 @@ import jamsnes.exceptions.InvalidAddress;
 import static jamsnes.models.Unsigned.u8;
 
 public class DSP {
+    private static final int[] RATE_MODULUS = {
+            0, 2048, 1536, 1280, 1024, 768,
+            640, 512, 384, 320, 256, 192,
+            160, 128, 96, 80, 64, 48,
+            40, 32, 24, 20, 16, 12,
+            10, 8, 6, 5, 4, 3,
+            2, 1
+    };
+    private static final int[] COUNTER_OFFSET = {
+            0, 0, 1040, 536, 0, 1040,
+            536, 0, 1040, 536, 0, 1040,
+            536, 0, 1040, 536, 0, 1040,
+            536, 0, 1040, 536, 0, 1040,
+            536, 0, 1040, 536, 0, 1040,
+            0, 0
+    };
+
     private final Voice[] voices = new Voice[8];
     private final Master master = new Master();
     private final Echo echo = new Echo();
     private final Noise noise = new Noise();
     private final BRR brr = new BRR();
     private final Latch latch = new Latch();
+    private final Timer timer = new Timer();
+    private final short[] soundBuffer = new short[0x10000];
+    private int voicePhase;
+    private int bufferOffset;
 
     public DSP() {
         for (int i = 0; i < voices.length; i++) {
@@ -27,6 +48,9 @@ public class DSP {
         noise.reset();
         brr.reset();
         latch.reset();
+        timer.reset();
+        voicePhase = 0;
+        bufferOffset = 0;
     }
 
     public int read(int address) {
@@ -166,6 +190,98 @@ public class DSP {
         }
     }
 
+    public void update() {
+        switch (voicePhase) {
+            case 27 -> misc27();
+            case 28 -> misc28();
+            case 29 -> misc29();
+            case 30 -> misc30();
+            default -> {
+            }
+        }
+        voicePhase = (voicePhase + 1) % 32;
+    }
+
+    public void timerTick() {
+        if (timer.counter == 0) {
+            timer.counter = 0x7800;
+        }
+        timer.counter -= 1;
+    }
+
+    public boolean timerPoll(int rate) {
+        if (rate == 0) {
+            return false;
+        }
+        return (timer.counter + COUNTER_OFFSET[rate]) % RATE_MODULUS[rate] == 0;
+    }
+
+    public int getSize() {
+        return 0x7f;
+    }
+
+    public int getSamplesCount() {
+        return bufferOffset;
+    }
+
+    public int voicePhase() {
+        return voicePhase;
+    }
+
+    public int timerCounter() {
+        return timer.counter;
+    }
+
+    public boolean timerSample() {
+        return timer.sample;
+    }
+
+    public int noiseLfsr() {
+        return noise.lfsr;
+    }
+
+    public short[] soundBuffer() {
+        return soundBuffer;
+    }
+
+    private void misc27() {
+        for (Voice voice : voices) {
+            voice.prevPmon = voice.pmon;
+        }
+    }
+
+    private void misc28() {
+        for (Voice voice : voices) {
+            voice.tempNon = voice.non;
+        }
+        brr.offsetAddress = brr.offset;
+    }
+
+    private void misc29() {
+        timer.sample = !timer.sample;
+        if (timer.sample) {
+            for (Voice voice : voices) {
+                voice.kon = false;
+            }
+        }
+    }
+
+    private void misc30() {
+        if (timer.sample) {
+            for (Voice voice : voices) {
+                voice.kof = false;
+            }
+        }
+
+        timerTick();
+
+        if (!timerPoll(noise.clock)) {
+            return;
+        }
+        int feedback = (noise.lfsr << 13) ^ (noise.lfsr << 14);
+        noise.lfsr = (feedback & 0x4000) ^ (noise.lfsr >>> 1);
+    }
+
     private int packedVoiceFlags(Flag flag) {
         int packed = 0;
         for (int i = 0; i < voices.length; i++) {
@@ -226,6 +342,8 @@ public class DSP {
         private boolean non;
         private boolean eon;
         private boolean endx;
+        private boolean prevPmon;
+        private boolean tempNon;
 
         private void reset() {
             volume[0] = 0;
@@ -243,6 +361,8 @@ public class DSP {
             non = false;
             eon = false;
             endx = false;
+            prevPmon = false;
+            tempNon = false;
         }
     }
 
@@ -284,17 +404,21 @@ public class DSP {
 
     private static final class Noise {
         private int clock;
+        private int lfsr = 0x4000;
 
         private void reset() {
             clock = 0;
+            lfsr = 0x4000;
         }
     }
 
     private static final class BRR {
         private int offset;
+        private int offsetAddress;
 
         private void reset() {
             offset = 0;
+            offsetAddress = 0;
         }
     }
 
@@ -305,6 +429,16 @@ public class DSP {
         private void reset() {
             envx = 0;
             outx = 0;
+        }
+    }
+
+    private static final class Timer {
+        private int counter;
+        private boolean sample = true;
+
+        private void reset() {
+            counter = 0;
+            sample = true;
         }
     }
 }
