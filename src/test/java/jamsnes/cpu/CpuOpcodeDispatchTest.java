@@ -264,6 +264,65 @@ class CpuOpcodeDispatchTest {
     }
 
     @Test
+    void executesImmediateLogicalAndCompareOpcodes() {
+        SNES snes = init();
+        snes.cpu.registers().setPc(0x0200);
+        snes.cpu.registers().a = 0x80;
+        writeProgram(snes, 0x0200, 0x09, 0x0f, 0x29, 0x0f, 0x49, 0x0f, 0xc9, 0x00);
+
+        assertEquals(2, snes.cpu.executeInstruction());
+        assertEquals(0x8f, snes.cpu.registers().a);
+
+        assertEquals(2, snes.cpu.executeInstruction());
+        assertEquals(0x0f, snes.cpu.registers().a);
+
+        assertEquals(2, snes.cpu.executeInstruction());
+        assertEquals(0, snes.cpu.registers().a);
+        assertTrue(snes.cpu.registers().p.z);
+
+        assertEquals(2, snes.cpu.executeInstruction());
+        assertTrue(snes.cpu.registers().p.z);
+        assertTrue(snes.cpu.registers().p.c);
+        assertEquals(0x0208, snes.cpu.registers().pc);
+    }
+
+    @Test
+    void executesDirectAndAbsoluteMathOpcodes() {
+        SNES snes = init();
+        snes.cpu.registers().setPc(0x0200);
+        snes.cpu.registers().d = 0x0101;
+        snes.cpu.registers().a = 0x01;
+        snes.cpu.registers().x = 0x22;
+        snes.cpu.registers().y = 0x33;
+        snes.wram.data()[0x0111] = 0x01;
+        snes.wram.data()[0x0112] = 0x22;
+        snes.wram.data()[0x0113] = 0x7f;
+        snes.wram.data()[0x0400] = 0x01;
+        snes.wram.data()[0x0401] = 0x40;
+        snes.wram.data()[0x0402] = 0x81;
+        writeProgram(snes, 0x0200, 0x65, 0x10, 0xed, 0x00, 0x04, 0xe4, 0x11, 0xcc, 0x01, 0x04, 0xe6, 0x12, 0xce, 0x02, 0x04);
+
+        assertEquals(4, snes.cpu.executeInstruction());
+        assertEquals(0x02, snes.cpu.registers().a);
+
+        assertEquals(4, snes.cpu.executeInstruction());
+        assertEquals(0, snes.cpu.registers().a);
+
+        assertEquals(4, snes.cpu.executeInstruction());
+        assertTrue(snes.cpu.registers().p.z);
+
+        assertEquals(4, snes.cpu.executeInstruction());
+        assertFalse(snes.cpu.registers().p.c);
+
+        assertEquals(6, snes.cpu.executeInstruction());
+        assertEquals(0x80, snes.wram.data()[0x0113]);
+
+        assertEquals(6, snes.cpu.executeInstruction());
+        assertEquals(0x80, snes.wram.data()[0x0402]);
+        assertEquals(0x020f, snes.cpu.registers().pc);
+    }
+
+    @Test
     void executesRegisterTransferOpcodes() {
         SNES snes = init();
         snes.cpu.setEmulationMode(false);
