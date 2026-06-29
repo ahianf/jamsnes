@@ -1,6 +1,7 @@
 package jamsnes.ppu;
 
 import jamsnes.memory.AMemory;
+import jamsnes.exceptions.InvalidAddress;
 import jamsnes.models.Component;
 import jamsnes.models.Vector2;
 import jamsnes.ram.Ram;
@@ -48,9 +49,13 @@ public class PPU extends AMemory {
     @Override
     public int read(int address) {
         return switch (address) {
+            case 0x34, 0x35, 0x36, 0x37 -> registers[address];
+            case 0x38 -> 0;
             case 0x39 -> readVramLow();
             case 0x3a -> readVramHigh();
-            default -> registers[address];
+            case 0x3b -> readCgData();
+            case 0x3c, 0x3d, 0x3e, 0x3f -> 0;
+            default -> throw new InvalidAddress("PPU Internal Registers read ", address + start);
         };
     }
 
@@ -206,6 +211,14 @@ public class PPU extends AMemory {
         return new Vector2<>(ppuRegisters.bgOffset(index), ppuRegisters.bgOffset(index + 1));
     }
 
+    public int getBgMode() {
+        return ppuRegisters.bgMode();
+    }
+
+    public int cgramRead(int address) {
+        return cgram.read(u16(address));
+    }
+
     Background background(int index) {
         return backgrounds[index];
     }
@@ -259,6 +272,12 @@ public class PPU extends AMemory {
 
     private void updateVramReadBuffer() {
         vramReadBuffer = vram.read(getVramAddress()) | (vram.read(u16(getVramAddress() + 1)) << 8);
+    }
+
+    private int readCgData() {
+        int value = cgram.read(ppuRegisters.cgAddress());
+        ppuRegisters.incrementCgAddress();
+        return value;
     }
 
     private void writeCgData(int value) {
