@@ -191,6 +191,79 @@ class CpuOpcodeDispatchTest {
     }
 
     @Test
+    void executesImmediateAndAbsoluteLoadOpcodes() {
+        SNES snes = init();
+        snes.cpu.registers().setPc(0x0200);
+        writeProgram(snes, 0x0200, 0xa9, 0x11, 0xa2, 0x22, 0xa0, 0x33, 0xad, 0x00, 0x04);
+        snes.wram.data()[0x0400] = 0x44;
+
+        assertEquals(2, snes.cpu.executeInstruction());
+        assertEquals(0x11, snes.cpu.registers().a);
+
+        assertEquals(2, snes.cpu.executeInstruction());
+        assertEquals(0x22, snes.cpu.registers().x);
+
+        assertEquals(2, snes.cpu.executeInstruction());
+        assertEquals(0x33, snes.cpu.registers().y);
+
+        assertEquals(4, snes.cpu.executeInstruction());
+        assertEquals(0x44, snes.cpu.registers().a);
+        assertEquals(0x0209, snes.cpu.registers().pc);
+    }
+
+    @Test
+    void executesDirectAndAbsoluteStoreOpcodes() {
+        SNES snes = init();
+        snes.cpu.registers().setPc(0x0200);
+        snes.cpu.registers().a = 0x12ab;
+        snes.cpu.registers().x = 0x34cd;
+        snes.cpu.registers().y = 0x56ef;
+        snes.wram.data()[0x13] = 0xff;
+        writeProgram(snes, 0x0200, 0x85, 0x10, 0x86, 0x11, 0x84, 0x12, 0x64, 0x13, 0x8d, 0x00, 0x04, 0x9c, 0x02, 0x04);
+
+        assertEquals(3, snes.cpu.executeInstruction());
+        assertEquals(0xab, snes.wram.data()[0x10]);
+
+        assertEquals(3, snes.cpu.executeInstruction());
+        assertEquals(0xcd, snes.wram.data()[0x11]);
+
+        assertEquals(3, snes.cpu.executeInstruction());
+        assertEquals(0xef, snes.wram.data()[0x12]);
+
+        assertEquals(3, snes.cpu.executeInstruction());
+        assertEquals(0, snes.wram.data()[0x13]);
+
+        assertEquals(4, snes.cpu.executeInstruction());
+        assertEquals(0xab, snes.wram.data()[0x0400]);
+
+        assertEquals(4, snes.cpu.executeInstruction());
+        assertEquals(0, snes.wram.data()[0x0402]);
+        assertEquals(0x020e, snes.cpu.registers().pc);
+    }
+
+    @Test
+    void executesIndexedLoadStoreOpcodesWithCycleExtras() {
+        SNES snes = init();
+        snes.cpu.registers().setPc(0x0200);
+        snes.cpu.registers().d = 0x0101;
+        snes.cpu.registers().x = 0x02;
+        snes.cpu.registers().y = 0x03;
+        snes.wram.data()[0x0113] = 0x55;
+        snes.wram.data()[0x0302] = 0x66;
+        writeProgram(snes, 0x0200, 0xb5, 0x10, 0x95, 0x11, 0xb9, 0xff, 0x02);
+
+        assertEquals(5, snes.cpu.executeInstruction());
+        assertEquals(0x55, snes.cpu.registers().a);
+
+        assertEquals(5, snes.cpu.executeInstruction());
+        assertEquals(0x55, snes.wram.data()[0x0114]);
+
+        assertEquals(5, snes.cpu.executeInstruction());
+        assertEquals(0x66, snes.cpu.registers().a);
+        assertEquals(0x0207, snes.cpu.registers().pc);
+    }
+
+    @Test
     void executesRegisterTransferOpcodes() {
         SNES snes = init();
         snes.cpu.setEmulationMode(false);

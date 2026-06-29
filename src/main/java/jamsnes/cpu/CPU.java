@@ -142,30 +142,65 @@ public class CPU extends AMemory {
             case 0x5b -> 2 + TCD(0);
             case 0x60 -> 6 + RTS(0);
             case 0x62 -> 6 + PER(_getImmediateAddr16Bits());
+            case 0x64 -> 3 + STZ(_getDirectAddr()) + directPageExtraCycle();
             case 0x68 -> 4 + PLA(0);
             case 0x6b -> 6 + RTL(0);
             case 0x6a -> 2 + ROR(0, AddressingMode.IMPLIED);
             case 0x6c -> 5 + JMP(_getAbsoluteIndirectAddr());
             case 0x70 -> 2 + BVS(_getImmediateAddr8Bits());
+            case 0x74 -> 4 + STZ(_getDirectIndexedByXAddr()) + directPageExtraCycle();
             case 0x78 -> 2 + SEI(0);
             case 0x7a -> 4 + PLY(0);
             case 0x7b -> 2 + TDC(0);
             case 0x7c -> 6 + JMP(_getAbsoluteIndirectIndexedByXAddr());
             case 0x80 -> 3 + BRA(_getImmediateAddr8Bits());
+            case 0x84 -> 3 + STY(_getDirectAddr()) + directPageExtraCycle();
+            case 0x85 -> 3 + STA(_getDirectAddr()) + directPageExtraCycle();
+            case 0x86 -> 3 + STX(_getDirectAddr()) + directPageExtraCycle();
             case 0x88 -> 2 + DEY(0);
             case 0x8a -> 2 + TXA(0);
             case 0x8b -> 3 + PHB(0);
+            case 0x8c -> 4 + STY(_getAbsoluteAddr());
+            case 0x8d -> 4 + STA(_getAbsoluteAddr());
+            case 0x8e -> 4 + STX(_getAbsoluteAddr());
+            case 0x8f -> 5 + STA(_getAbsoluteLongAddr());
             case 0x90 -> 2 + BCC(_getImmediateAddr8Bits());
+            case 0x94 -> 4 + STY(_getDirectIndexedByXAddr()) + directPageExtraCycle();
+            case 0x95 -> 4 + STA(_getDirectIndexedByXAddr()) + directPageExtraCycle();
+            case 0x96 -> 4 + STX(_getDirectIndexedByYAddr()) + directPageExtraCycle();
             case 0x98 -> 2 + TYA(0);
+            case 0x99 -> 5 + STA(_getAbsoluteIndexedByYAddr());
             case 0x9a -> 2 + TXS(0);
             case 0x9b -> 2 + TXY(0);
+            case 0x9c -> 4 + STZ(_getAbsoluteAddr());
+            case 0x9d -> 5 + STA(_getAbsoluteIndexedByXAddr());
+            case 0x9e -> 5 + STZ(_getAbsoluteIndexedByXAddr());
+            case 0x9f -> 5 + STA(_getAbsoluteIndexedByXLongAddr());
+            case 0xa0 -> 2 + LDY(_getImmediateAddrForX());
+            case 0xa2 -> 2 + LDX(_getImmediateAddrForX());
+            case 0xa4 -> 3 + LDY(_getDirectAddr()) + directPageExtraCycle();
+            case 0xa5 -> 3 + LDA(_getDirectAddr()) + directPageExtraCycle();
+            case 0xa6 -> 3 + LDX(_getDirectAddr()) + directPageExtraCycle();
             case 0xa8 -> 2 + TAY(0);
+            case 0xa9 -> 2 + LDA(_getImmediateAddrForA());
             case 0xaa -> 2 + TAX(0);
             case 0xab -> 4 + PLB(0);
+            case 0xac -> 4 + LDY(_getAbsoluteAddr());
+            case 0xad -> 4 + LDA(_getAbsoluteAddr());
+            case 0xae -> 4 + LDX(_getAbsoluteAddr());
+            case 0xaf -> 5 + LDA(_getAbsoluteLongAddr());
             case 0xb0 -> 2 + BCS(_getImmediateAddr8Bits());
+            case 0xb4 -> 4 + LDY(_getDirectIndexedByXAddr()) + directPageExtraCycle();
+            case 0xb5 -> 4 + LDA(_getDirectIndexedByXAddr()) + directPageExtraCycle();
+            case 0xb6 -> 4 + LDX(_getDirectIndexedByYAddr()) + directPageExtraCycle();
             case 0xb8 -> 7 + CLV(0);
+            case 0xb9 -> 4 + LDA(_getAbsoluteIndexedByYAddr()) + indexBoundaryExtraCycle();
             case 0xba -> 2 + TSX(0);
             case 0xbb -> 2 + TYX(0);
+            case 0xbc -> 4 + LDY(_getAbsoluteIndexedByXAddr());
+            case 0xbd -> 4 + LDA(_getAbsoluteIndexedByXAddr()) + indexBoundaryExtraCycle();
+            case 0xbe -> 4 + LDX(_getAbsoluteIndexedByYAddr()) + indexBoundaryExtraCycle();
+            case 0xbf -> 5 + LDA(_getAbsoluteIndexedByXLongAddr());
             case 0xc2 -> 3 + REP(_getImmediateAddr8Bits());
             case 0xc8 -> 2 + INY(0);
             case 0xca -> 2 + DEX(0);
@@ -1192,6 +1227,14 @@ public class CPU extends AMemory {
             registers.setPbr(0);
             registers.setPc(nativeHandler);
         }
+    }
+
+    private int directPageExtraCycle() {
+        return registers.dl() != 0 ? 1 : 0;
+    }
+
+    private int indexBoundaryExtraCycle() {
+        return hasIndexCrossedPageBoundary ? 1 : 0;
     }
 
     private void setZN16(int value) {
