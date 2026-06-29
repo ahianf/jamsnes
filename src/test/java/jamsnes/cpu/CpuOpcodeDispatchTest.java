@@ -111,6 +111,87 @@ class CpuOpcodeDispatchTest {
         assertEquals(snes.cpu.registers().p.flags(), snes.cpu._pop());
     }
 
+    @Test
+    void executesRegisterTransferOpcodes() {
+        SNES snes = init();
+        snes.cpu.setEmulationMode(false);
+        snes.cpu.registers().p.m = false;
+        snes.cpu.registers().p.x_b = false;
+        snes.cpu.registers().setPc(0x0200);
+        snes.cpu.registers().a = 0x8123;
+        writeProgram(snes, 0x0200, 0xaa, 0x9b, 0xbb, 0x8a, 0xa8, 0x98, 0x1b, 0x3b, 0x5b, 0x7b, 0xba);
+
+        assertEquals(2, snes.cpu.executeInstruction());
+        assertEquals(0x8123, snes.cpu.registers().x);
+
+        assertEquals(2, snes.cpu.executeInstruction());
+        assertEquals(0x8123, snes.cpu.registers().y);
+
+        assertEquals(2, snes.cpu.executeInstruction());
+        assertEquals(0x8123, snes.cpu.registers().x);
+
+        assertEquals(2, snes.cpu.executeInstruction());
+        assertEquals(0x8123, snes.cpu.registers().a);
+
+        assertEquals(2, snes.cpu.executeInstruction());
+        assertEquals(0x8123, snes.cpu.registers().y);
+
+        assertEquals(2, snes.cpu.executeInstruction());
+        assertEquals(0x8123, snes.cpu.registers().a);
+
+        assertEquals(2, snes.cpu.executeInstruction());
+        assertEquals(0x8123, snes.cpu.registers().s);
+
+        assertEquals(2, snes.cpu.executeInstruction());
+        assertEquals(0x8123, snes.cpu.registers().a);
+
+        assertEquals(2, snes.cpu.executeInstruction());
+        assertEquals(0x8123, snes.cpu.registers().d);
+
+        assertEquals(2, snes.cpu.executeInstruction());
+        assertEquals(0x8123, snes.cpu.registers().a);
+
+        assertEquals(2, snes.cpu.executeInstruction());
+        assertEquals(0x8123, snes.cpu.registers().x);
+        assertEquals(0x020b, snes.cpu.registers().pc);
+    }
+
+    @Test
+    void executesIndexUpdateAndXbaOpcodes() {
+        SNES snes = init();
+        snes.cpu.registers().p.x_b = true;
+        snes.cpu.registers().setPc(0x0200);
+        snes.cpu.registers().x = 0x00ff;
+        snes.cpu.registers().y = 0x0001;
+        snes.cpu.registers().a = 0x8012;
+        writeProgram(snes, 0x0200, 0xe8, 0xc8, 0xca, 0x88, 0xeb);
+
+        assertEquals(2, snes.cpu.executeInstruction());
+        assertEquals(0, snes.cpu.registers().x);
+        assertTrue(snes.cpu.registers().p.z);
+
+        assertEquals(2, snes.cpu.executeInstruction());
+        assertEquals(2, snes.cpu.registers().y);
+
+        assertEquals(2, snes.cpu.executeInstruction());
+        assertEquals(0xff, snes.cpu.registers().x);
+        assertTrue(snes.cpu.registers().p.n);
+
+        assertEquals(2, snes.cpu.executeInstruction());
+        assertEquals(1, snes.cpu.registers().y);
+
+        assertEquals(3, snes.cpu.executeInstruction());
+        assertEquals(0x1280, snes.cpu.registers().a);
+        assertTrue(snes.cpu.registers().p.n);
+        assertEquals(0x0205, snes.cpu.registers().pc);
+    }
+
+    private static void writeProgram(SNES snes, int start, int... opcodes) {
+        for (int i = 0; i < opcodes.length; i++) {
+            snes.wram.data()[start + i] = opcodes[i];
+        }
+    }
+
     private static SNES init() {
         SNES snes = new SNES(new NoRenderer(0, 0, 0));
         snes.cartridge.setSize(0x10000);
