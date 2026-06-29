@@ -20,6 +20,10 @@ public class CPU extends AMemory {
     private boolean emulationMode = true;
     private boolean stopped;
     private boolean waitingForInterrupt;
+    public boolean isNMIRequested;
+    public boolean isIRQRequested;
+    public boolean isAbortRequested;
+    public boolean isDisabled;
 
     public CPU(IMemoryBus bus, Header cartridgeHeader) {
         this.bus = bus;
@@ -110,6 +114,40 @@ public class CPU extends AMemory {
 
     public DMA[] dmaChannels() {
         return dmaChannels;
+    }
+
+    public int update(int maxCycles) {
+        if (isDisabled) {
+            return 0xff;
+        }
+        int cycles = runDMA(maxCycles);
+
+        while (cycles < maxCycles) {
+            if (stopped) {
+                cycles++;
+                continue;
+            }
+
+            checkInterrupts();
+
+            if (!waitingForInterrupt) {
+                cycles += executeInstruction();
+            } else {
+                return 0xff;
+            }
+        }
+        return cycles;
+    }
+
+    public int runDMA(int maxCycles) {
+        int cycles = 0;
+        for (DMA dmaChannel : dmaChannels) {
+            if (!dmaChannel.isEnabled()) {
+                continue;
+            }
+            cycles += dmaChannel.run(maxCycles - cycles);
+        }
+        return cycles;
     }
 
     public int executeInstruction() {
@@ -1392,6 +1430,21 @@ public class CPU extends AMemory {
             registers.setPc(registers.pc + (byte) bus.read(valueAddr));
         }
         return (condition ? 1 : 0) + (emulationMode ? 1 : 0);
+    }
+
+    private void checkInterrupts() {
+        if (!isNMIRequested && !isIRQRequested && !isAbortRequested) {
+            return;
+        }
+        waitingForInterrupt = false;
+
+        if (isNMIRequested) {
+            runInterrupt(cartridgeHeader.nativeInterrupts.nmi, cartridgeHeader.emulationInterrupts.nmi);
+            return;
+        }
+        if (isIRQRequested && !registers.p.i) {
+            runInterrupt(cartridgeHeader.nativeInterrupts.irq, cartridgeHeader.emulationInterrupts.irq);
+        }
     }
 
     private void runInterrupt(int nativeHandler, int emulationHandler) {
