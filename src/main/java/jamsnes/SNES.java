@@ -42,6 +42,9 @@ public class SNES {
         bus.mapComponents(this);
         cpu.RESB();
         apu.reset();
+        if (cartridge.getType() == CartridgeType.AUDIO) {
+            apu.loadFromSPC(cartridge);
+        }
     }
 
     public void update() {

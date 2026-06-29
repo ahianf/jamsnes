@@ -1,6 +1,7 @@
 package jamsnes.apu;
 
 import jamsnes.apu.dsp.DSP;
+import jamsnes.cartridge.Cartridge;
 import jamsnes.exceptions.InvalidAddress;
 import jamsnes.exceptions.InvalidOpcode;
 import jamsnes.memory.AMemory;
@@ -788,6 +789,88 @@ public class APU extends AMemory {
         }
         if (state == StateMode.RUNNING) {
             paddingCycles = total - remainingCycles;
+        }
+    }
+
+    public void loadFromSPC(Cartridge cartridge) {
+        int size = cartridge.getSize();
+        if (size < 0x101c0) {
+            throw new InvalidAddress("Cartridge is not the right size", size);
+        }
+
+        internalRegisters.setPcLow(cartridge.read(0x25));
+        internalRegisters.setPcHigh(cartridge.read(0x26));
+        internalRegisters.a = cartridge.read(0x27);
+        internalRegisters.x = cartridge.read(0x28);
+        internalRegisters.y = cartridge.read(0x29);
+        internalRegisters.setPsw(cartridge.read(0x2a));
+        internalRegisters.sp = cartridge.read(0x2b);
+
+        for (int i = 0; i < 0x00f0; i++) {
+            internalMemory[i] = cartridge.read(0x100 + i);
+        }
+        for (int i = 0; i < 0x0100; i++) {
+            internalMemory[0x0100 + i] = cartridge.read(0x200 + i);
+        }
+        for (int i = 0; i < 0xfdc0; i++) {
+            internalMemory[0x0200 + i] = cartridge.read(0x300 + i);
+        }
+
+        unknownRegister = cartridge.read(0x100 + 0x00f0);
+        controlRegister = cartridge.read(0x100 + 0x00f1);
+        dspRegisterAddress = cartridge.read(0x100 + 0x00f2);
+        dsp.write(dspRegisterAddress, cartridge.read(0x100 + 0x00f3));
+        ports[0] = cartridge.read(0x100 + 0x00f4);
+        ports[1] = cartridge.read(0x100 + 0x00f5);
+        ports[2] = cartridge.read(0x100 + 0x00f6);
+        ports[3] = cartridge.read(0x100 + 0x00f7);
+        registerMemory1 = cartridge.read(0x100 + 0x00f8);
+        registerMemory2 = cartridge.read(0x100 + 0x00f9);
+        timers[0] = cartridge.read(0x100 + 0x00fa);
+        timers[1] = cartridge.read(0x100 + 0x00fb);
+        timers[2] = cartridge.read(0x100 + 0x00fc);
+        counters[0] = cartridge.read(0x100 + 0x00fd);
+        counters[1] = cartridge.read(0x100 + 0x00fe);
+        counters[2] = cartridge.read(0x100 + 0x00ff);
+
+        for (int register = 0x00; register < 0x80; register += 0x10) {
+            dsp.write(register, cartridge.read(0x10100 + register));
+        }
+        for (int register = 0x01; register < 0x80; register += 0x10) {
+            dsp.write(register, cartridge.read(0x10100 + register));
+        }
+        for (int register = 0x02; register < 0x80; register += 0x10) {
+            dsp.write(register, cartridge.read(0x10100 + register));
+        }
+        for (int register = 0x03; register < 0x80; register += 0x10) {
+            dsp.write(register, cartridge.read(0x10100 + register));
+        }
+        for (int register = 0x04; register < 0x80; register += 0x10) {
+            dsp.write(register, cartridge.read(0x10100 + register));
+        }
+        for (int register = 0x05; register < 0x80; register += 0x10) {
+            dsp.write(register, cartridge.read(0x10100 + register));
+        }
+        for (int register = 0x06; register < 0x80; register += 0x10) {
+            dsp.write(register, cartridge.read(0x10100 + register));
+        }
+        for (int register = 0x07; register < 0x80; register += 0x10) {
+            dsp.write(register, cartridge.read(0x10100 + register));
+        }
+        for (int register = 0x08; register < 0x80; register += 0x10) {
+            dsp.write(register, cartridge.read(0x10100 + register));
+        }
+        for (int register = 0x09; register < 0x80; register += 0x10) {
+            dsp.write(register, cartridge.read(0x10100 + register));
+        }
+        for (int register = 0x0c; register < 0x80; register += 0x10) {
+            dsp.write(register, cartridge.read(0x10100 + register));
+        }
+        for (int register = 0x0d; register < 0x80; register += 0x10) {
+            dsp.write(register, cartridge.read(0x10100 + register));
+        }
+        for (int register = 0x0f; register < 0x80; register += 0x10) {
+            dsp.write(register, cartridge.read(0x10100 + register));
         }
     }
 

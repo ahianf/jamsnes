@@ -1,14 +1,24 @@
 package jamsnes.apu;
 
 import jamsnes.SNES;
+import jamsnes.cartridge.Cartridge;
 import jamsnes.exceptions.InvalidAddress;
 import jamsnes.renderer.NoRenderer;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class InternalMemoryMapTest {
+    @TempDir
+    Path tempDir;
+
     @Test
     void internalReadUsesApuMemoryRegionsAndRegisters() {
         SNES snes = init();
@@ -91,6 +101,46 @@ class InternalMemoryMapTest {
     }
 
     @Test
+    void loadFromSpcCopiesCpuMemoryRegistersAndDspState() throws IOException {
+        SNES snes = init();
+        Cartridge cartridge = new Cartridge(writeSpcFile().toString());
+
+        snes.apu.loadFromSPC(cartridge);
+
+        assertEquals(0x1234, snes.apu.internalRegisters().pc);
+        assertEquals(0x56, snes.apu.internalRegisters().a);
+        assertEquals(0x78, snes.apu.internalRegisters().x);
+        assertEquals(0x9a, snes.apu.internalRegisters().y);
+        assertEquals(0xa5, snes.apu.internalRegisters().psw());
+        assertEquals(0xef, snes.apu.internalRegisters().sp);
+        assertEquals(0x11, snes.apu._internalRead(0x0000));
+        assertEquals(0x22, snes.apu._internalRead(0x0100));
+        assertEquals(0x33, snes.apu._internalRead(0x0200));
+        assertEquals(0x44, snes.apu._internalRead(0xffbf));
+        assertEquals(0xaa, snes.apu._internalRead(0x00f4));
+        assertEquals(0xbb, snes.apu._internalRead(0x00f8));
+        assertEquals(0xcc, snes.apu._internalRead(0x00fd));
+
+        snes.apu._internalWrite(0x00f2, 0x00);
+        assertEquals(0x66, snes.apu._internalRead(0x00f3));
+        snes.apu._internalWrite(0x00f2, 0x10);
+        assertEquals(0x77, snes.apu._internalRead(0x00f3));
+        snes.apu._internalWrite(0x00f2, 0x6c);
+        assertEquals(0xe5, snes.apu._internalRead(0x00f3));
+    }
+
+    @Test
+    void loadFromSpcRejectsShortCartridge() throws IOException {
+        SNES snes = init();
+        byte[] spc = spcHeader(0x25);
+        Path path = tempDir.resolve("short.spc");
+        Files.write(path, spc);
+        Cartridge cartridge = new Cartridge(path.toString());
+
+        assertThrows(InvalidAddress.class, () -> snes.apu.loadFromSPC(cartridge));
+    }
+
+    @Test
     void invalidInternalReadsAndWritesThrow() {
         SNES snes = init();
 
@@ -113,5 +163,44 @@ class InternalMemoryMapTest {
 
     private static SNES init() {
         return new SNES(new NoRenderer(0, 0, 0));
+    }
+
+    private Path writeSpcFile() throws IOException {
+        byte[] spc = spcHeader(0x101c0);
+        spc[0x25] = 0x34;
+        spc[0x26] = 0x12;
+        spc[0x27] = 0x56;
+        spc[0x28] = 0x78;
+        spc[0x29] = (byte) 0x9a;
+        spc[0x2a] = (byte) 0xa5;
+        spc[0x2b] = (byte) 0xef;
+
+        spc[0x100] = 0x11;
+        spc[0x200] = 0x22;
+        spc[0x300] = 0x33;
+        spc[0x100bf] = 0x44;
+        spc[0x1f2] = 0x00;
+        spc[0x1f3] = 0x55;
+        spc[0x1f4] = (byte) 0xaa;
+        spc[0x1f8] = (byte) 0xbb;
+        spc[0x1fd] = (byte) 0xcc;
+        spc[0x10100] = 0x66;
+        spc[0x10110] = 0x77;
+        spc[0x1016c] = (byte) 0xe5;
+
+        Path path = tempDir.resolve("state.spc");
+        Files.write(path, spc);
+        return path;
+    }
+
+    private static byte[] spcHeader(int size) {
+        byte[] spc = new byte[size];
+        byte[] magic = "SNES-SPC700 Sound File Data v0.30".getBytes(StandardCharsets.ISO_8859_1);
+        System.arraycopy(magic, 0, spc, 0, magic.length);
+        spc[0x21] = 0x1a;
+        spc[0x22] = 0x1a;
+        spc[0x23] = 0x1a;
+        spc[0x24] = 0x1e;
+        return spc;
     }
 }

@@ -74,7 +74,7 @@ class SNESTest {
     }
 
     private Path writeSpcFile() throws IOException {
-        byte[] spc = new byte[0x25];
+        byte[] spc = new byte[0x101c0];
         byte[] magic = "SNES-SPC700 Sound File Data v0.30".getBytes(StandardCharsets.ISO_8859_1);
         System.arraycopy(magic, 0, spc, 0, magic.length);
         spc[0x21] = 0x1a;
