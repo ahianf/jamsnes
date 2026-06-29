@@ -6,6 +6,8 @@ import jamsnes.models.Vector2;
 import jamsnes.ram.Ram;
 import jamsnes.renderer.IRenderer;
 
+import java.util.Arrays;
+
 import static jamsnes.models.Unsigned.u16;
 import static jamsnes.models.Unsigned.u8;
 
@@ -19,6 +21,13 @@ public class PPU extends AMemory {
     public final Ram cgram = new Ram(CGRAM_SIZE, Component.CGRAM, "CGRAM");
     private final int[] registers = new int[0x40];
     private final PPURegisters ppuRegisters = new PPURegisters(registers);
+    private final IRenderer renderer;
+    private final Background[] backgrounds;
+    private final int[][] mainScreen = new int[Background.BUFFER_SIZE][Background.BUFFER_SIZE];
+    private final int[][] subScreen = new int[Background.BUFFER_SIZE][Background.BUFFER_SIZE];
+    private final int[][] screen = new int[Background.BUFFER_SIZE][Background.BUFFER_SIZE];
+    private final int[][] mainScreenLevelMap = new int[Background.BUFFER_SIZE][Background.BUFFER_SIZE];
+    private final int[][] subScreenLevelMap = new int[Background.BUFFER_SIZE][Background.BUFFER_SIZE];
     private int vramAddress;
     private int vmain;
     private int vramIncrementAmount = 1;
@@ -27,6 +36,13 @@ public class PPU extends AMemory {
     private int hScrollPreviousValue;
 
     public PPU(IRenderer renderer) {
+        this.renderer = renderer;
+        this.backgrounds = new Background[]{
+                new Background(this, 1),
+                new Background(this, 2),
+                new Background(this, 3),
+                new Background(this, 4)
+        };
     }
 
     @Override
@@ -44,6 +60,10 @@ public class PPU extends AMemory {
         registers[address] = value;
         switch (address) {
             case 0x04 -> writeOamData(value);
+            case 0x05 -> updateBackgroundModes();
+            case 0x07, 0x08, 0x09, 0x0a -> updateBackgroundTileMap(address - 0x07);
+            case 0x0b -> updateBackgroundTilesets(0, 1);
+            case 0x0c -> updateBackgroundTilesets(2, 3);
             case 0x0d, 0x0f, 0x11, 0x13 -> writeBgHorizontalOffset(address, value);
             case 0x0e, 0x10, 0x12, 0x14 -> writeBgVerticalOffset(address, value);
             case 0x15 -> setVmain(value);
@@ -98,6 +118,52 @@ public class PPU extends AMemory {
         };
     }
 
+    public void update(int cycles) {
+        renderMainAndSubScreen();
+        clearBuffer(screen);
+        addBuffer(screen, subScreen);
+        addBuffer(screen, mainScreen);
+
+        for (int y = 0; y < screen.length; y++) {
+            for (int x = 0; x < screen[y].length; x++) {
+                renderer.putPixel(y, x, screen[y][x]);
+            }
+        }
+        renderer.drawScreen();
+        clearBuffer(mainScreen);
+        clearBuffer(subScreen);
+    }
+
+    public void renderMainAndSubScreen() {
+        for (Background background : backgrounds) {
+            background.renderBackground();
+        }
+
+        int colorPalette = cgram.read(0) | (cgram.read(1) << 8);
+        int color = PPUUtils.cgramColorToRGBA(colorPalette);
+        fillBuffer(subScreen, color);
+        clearBuffer(mainScreen);
+        clearBuffer(mainScreenLevelMap);
+        clearBuffer(subScreenLevelMap);
+
+        switch (ppuRegisters.bgMode()) {
+            case 0 -> {
+                addToMainSubScreen(backgrounds[3], 0, 15);
+                addToMainSubScreen(backgrounds[2], 10, 16);
+                addToMainSubScreen(backgrounds[1], 20, 35);
+                addToMainSubScreen(backgrounds[0], 30, 36);
+            }
+            case 1 -> {
+                addToMainSubScreen(backgrounds[2], 0, ppuRegisters.bgMode1Bg3PriorityBit() ? 30 : 5);
+                addToMainSubScreen(backgrounds[1], 10, 25);
+                addToMainSubScreen(backgrounds[0], 20, 26);
+            }
+            case 7 -> throw new IllegalStateException("not implemented");
+            default -> throw new IllegalStateException("Bg mode not implemented or commented (bg nb "
+                    + ppuRegisters.bgMode() + ")");
+        }
+    }
+
     public int getBpp(int backgroundNumber) {
         return switch (ppuRegisters.bgMode()) {
             case 0 -> 2;
@@ -138,6 +204,22 @@ public class PPU extends AMemory {
     public Vector2<Integer> getBgScroll(int backgroundNumber) {
         int index = (backgroundNumber - 1) * 2;
         return new Vector2<>(ppuRegisters.bgOffset(index), ppuRegisters.bgOffset(index + 1));
+    }
+
+    Background background(int index) {
+        return backgrounds[index];
+    }
+
+    int[][] mainScreen() {
+        return mainScreen;
+    }
+
+    int[][] subScreen() {
+        return subScreen;
+    }
+
+    int[][] screen() {
+        return screen;
     }
 
     private void setVmain(int value) {
@@ -208,6 +290,53 @@ public class PPU extends AMemory {
         int offset = ((value << 8) | hvSharedScrollPreviousValue) & 0x3ff;
         ppuRegisters.setBgOffset(address - 0x0e, offset);
         hvSharedScrollPreviousValue = value;
+    }
+
+    private void updateBackgroundModes() {
+        for (int i = 0; i < backgrounds.length; i++) {
+            backgrounds[i].setBpp(getBpp(i + 1));
+            backgrounds[i].setCharacterSize(getCharacterSize(i + 1));
+        }
+    }
+
+    private void updateBackgroundTileMap(int index) {
+        backgrounds[index].setTileMapStartAddress(getTileMapStartAddress(index + 1));
+        backgrounds[index].setTileMapMirroring(getBackgroundMirroring(index + 1));
+    }
+
+    private void updateBackgroundTilesets(int firstIndex, int secondIndex) {
+        backgrounds[firstIndex].setTilesetAddress(getTilesetAddress(firstIndex + 1));
+        backgrounds[secondIndex].setTilesetAddress(getTilesetAddress(secondIndex + 1));
+    }
+
+    private void addToMainSubScreen(Background background, int levelLow, int levelHigh) {
+        int backgroundBit = 1 << (background.getBackgroundNumber() - 1);
+        if ((registers[0x2c] & backgroundBit) != 0) {
+            Background.mergeBackgroundBuffer(mainScreen, mainScreenLevelMap, background, levelLow, levelHigh);
+        }
+        if ((registers[0x2d] & backgroundBit) != 0) {
+            Background.mergeBackgroundBuffer(subScreen, subScreenLevelMap, background, levelLow, levelHigh);
+        }
+    }
+
+    private void addBuffer(int[][] destination, int[][] source) {
+        for (int y = 0; y < source.length; y++) {
+            for (int x = 0; x < source[y].length; x++) {
+                if (Integer.compareUnsigned(source[y][x], 0xff) > 0) {
+                    destination[y][x] = source[y][x];
+                }
+            }
+        }
+    }
+
+    private void clearBuffer(int[][] buffer) {
+        fillBuffer(buffer, 0);
+    }
+
+    private void fillBuffer(int[][] buffer, int value) {
+        for (int[] row : buffer) {
+            Arrays.fill(row, value);
+        }
     }
 
     @Override

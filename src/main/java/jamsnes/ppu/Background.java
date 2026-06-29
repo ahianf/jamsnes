@@ -109,7 +109,7 @@ public class Background {
             int width = Math.min(bufferDest[y].length, backgroundSrc.buffer[y].length);
             for (int x = 0; x < width; x++) {
                 int pixel = backgroundSrc.buffer[y][x];
-                if (pixel <= 0xff) {
+                if (Integer.compareUnsigned(pixel, 0xff) <= 0) {
                     continue;
                 }
                 int pixelLevel = backgroundSrc.isPriorityPixel(x, y) ? levelHigh : levelLow;
