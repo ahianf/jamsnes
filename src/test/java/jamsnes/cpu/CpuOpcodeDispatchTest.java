@@ -323,6 +323,64 @@ class CpuOpcodeDispatchTest {
     }
 
     @Test
+    void executesBitTestAndMemoryBitOpcodes() {
+        SNES snes = init();
+        snes.cpu.registers().setPc(0x0200);
+        snes.cpu.registers().a = 0x0f;
+        snes.wram.data()[0x10] = 0xf0;
+        snes.wram.data()[0x11] = 0x01;
+        snes.wram.data()[0x12] = 0xff;
+        snes.wram.data()[0x0400] = 0x40;
+        writeProgram(snes, 0x0200, 0x89, 0x0f, 0x24, 0x10, 0x2c, 0x00, 0x04, 0x04, 0x11, 0x14, 0x12);
+
+        assertEquals(2, snes.cpu.executeInstruction());
+        assertFalse(snes.cpu.registers().p.z);
+
+        assertEquals(3, snes.cpu.executeInstruction());
+        assertTrue(snes.cpu.registers().p.z);
+        assertTrue(snes.cpu.registers().p.n);
+
+        assertEquals(4, snes.cpu.executeInstruction());
+        assertTrue(snes.cpu.registers().p.v);
+
+        assertEquals(5, snes.cpu.executeInstruction());
+        assertEquals(0x0f, snes.wram.data()[0x11]);
+
+        assertEquals(5, snes.cpu.executeInstruction());
+        assertEquals(0xf0, snes.wram.data()[0x12]);
+        assertEquals(0x020b, snes.cpu.registers().pc);
+    }
+
+    @Test
+    void executesMemoryShiftRotateOpcodesWithCycleExtras() {
+        SNES snes = init();
+        snes.cpu.registers().setPc(0x0200);
+        snes.cpu.registers().d = 0x0101;
+        snes.cpu.registers().x = 1;
+        snes.wram.data()[0x0111] = 0x80;
+        snes.wram.data()[0x0112] = 0x40;
+        snes.wram.data()[0x0400] = 0x03;
+        snes.wram.data()[0x0500] = 0x02;
+        writeProgram(snes, 0x0200, 0x06, 0x10, 0x26, 0x11, 0x4e, 0x00, 0x04, 0x7e, 0xff, 0x04);
+
+        assertEquals(6, snes.cpu.executeInstruction());
+        assertEquals(0, snes.wram.data()[0x0111]);
+        assertTrue(snes.cpu.registers().p.c);
+
+        assertEquals(6, snes.cpu.executeInstruction());
+        assertEquals(0x81, snes.wram.data()[0x0112]);
+        assertFalse(snes.cpu.registers().p.c);
+
+        assertEquals(6, snes.cpu.executeInstruction());
+        assertEquals(0x01, snes.wram.data()[0x0400]);
+        assertTrue(snes.cpu.registers().p.c);
+
+        assertEquals(8, snes.cpu.executeInstruction());
+        assertEquals(0x81, snes.wram.data()[0x0500]);
+        assertEquals(0x020a, snes.cpu.registers().pc);
+    }
+
+    @Test
     void executesRegisterTransferOpcodes() {
         SNES snes = init();
         snes.cpu.setEmulationMode(false);
