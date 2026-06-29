@@ -1,5 +1,6 @@
 package jamsnes.apu;
 
+import jamsnes.exceptions.InvalidAddress;
 import jamsnes.exceptions.InvalidOpcode;
 import jamsnes.memory.AMemory;
 import jamsnes.models.Component;
@@ -18,7 +19,15 @@ public class APU extends AMemory {
     private final APURegisters internalRegisters = new APURegisters();
     private final int[] internalMemory = new int[0x10000];
     private final int[] ports = new int[4];
+    private final int[] timers = new int[3];
+    private final int[] counters = new int[3];
     private StateMode state = StateMode.RUNNING;
+    private int unknownRegister;
+    private int controlRegister;
+    private int dspRegisterAddress;
+    private int dspRegisterData;
+    private int registerMemory1;
+    private int registerMemory2;
     private int paddingCycles;
     public boolean isDisabled;
 
@@ -28,16 +37,26 @@ public class APU extends AMemory {
 
     @Override
     public int read(int address) {
-        return ports[address];
+        return switch (address) {
+            case 0x00, 0x01, 0x02, 0x03 -> ports[address];
+            default -> throw new InvalidAddress("APU Registers read", address);
+        };
     }
 
     @Override
     public void write(int address, int data) {
-        ports[address] = u8(data);
+        switch (address) {
+            case 0x00, 0x01, 0x02, 0x03 -> ports[address] = u8(data);
+            default -> throw new InvalidAddress("APU Registers write", address);
+        }
     }
 
     public int[] ports() {
         return ports;
+    }
+
+    public int[] counters() {
+        return counters;
     }
 
     public APURegisters internalRegisters() {
@@ -53,11 +72,44 @@ public class APU extends AMemory {
     }
 
     public int _internalRead(int address) {
-        return internalMemory[u16(address)];
+        validateInternalAddress(address, "APU Registers read");
+        return switch (address) {
+            case 0x00f0 -> unknownRegister;
+            case 0x00f2 -> dspRegisterAddress;
+            case 0x00f3 -> dspRegisterData;
+            case 0x00f4, 0x00f5, 0x00f6, 0x00f7 -> ports[address - 0x00f4];
+            case 0x00f8 -> registerMemory1;
+            case 0x00f9 -> registerMemory2;
+            case 0x00fd, 0x00fe, 0x00ff -> counters[address - 0x00fd];
+            default -> {
+                if (address <= 0x00ef || address >= 0x0100) {
+                    yield internalMemory[address];
+                }
+                throw new InvalidAddress("APU Registers read", address);
+            }
+        };
     }
 
     public void _internalWrite(int address, int data) {
-        internalMemory[u16(address)] = u8(data);
+        validateInternalAddress(address, "APU Registers write");
+        int value = u8(data);
+        switch (address) {
+            case 0x00f0 -> unknownRegister = value;
+            case 0x00f1 -> controlRegister = value;
+            case 0x00f2 -> dspRegisterAddress = value;
+            case 0x00f3 -> dspRegisterData = value;
+            case 0x00f4, 0x00f5, 0x00f6, 0x00f7 -> ports[address - 0x00f4] = value;
+            case 0x00f8 -> registerMemory1 = value;
+            case 0x00f9 -> registerMemory2 = value;
+            case 0x00fa, 0x00fb, 0x00fc -> timers[address - 0x00fa] = value;
+            default -> {
+                if (address <= 0x00ef || address >= 0x0100) {
+                    internalMemory[address] = value;
+                    return;
+                }
+                throw new InvalidAddress("APU Registers write", address);
+            }
+        }
     }
 
     public int _getImmediateData() {
@@ -1478,7 +1530,29 @@ public class APU extends AMemory {
         return _internalRead(0x0100 + internalRegisters.sp);
     }
 
+    private void validateInternalAddress(int address, String where) {
+        if (address < 0 || address > 0xffff) {
+            throw new InvalidAddress(where, address);
+        }
+    }
+
     private void reset() {
+        ports[0] = 0;
+        ports[1] = 0;
+        ports[2] = 0;
+        ports[3] = 0;
+        timers[0] = 0;
+        timers[1] = 0;
+        timers[2] = 0;
+        counters[0] = 0;
+        counters[1] = 0;
+        counters[2] = 0;
+        unknownRegister = 0;
+        controlRegister = 0;
+        dspRegisterAddress = 0;
+        dspRegisterData = 0;
+        registerMemory1 = 0;
+        registerMemory2 = 0;
         internalRegisters.a = 0;
         internalRegisters.y = 0;
         internalRegisters.x = 0;
