@@ -116,7 +116,9 @@ public class CPU extends AMemory {
         int opcode = readPC();
         hasIndexCrossedPageBoundary = false;
         return switch (opcode) {
+            case 0x00 -> 7 + BRK(_getImmediateAddr8Bits());
             case 0x01 -> 6 + ORA(_getDirectIndirectIndexedXAddr()) + directPageExtraCycle();
+            case 0x02 -> 7 + COP(_getImmediateAddr8Bits());
             case 0x03 -> 4 + ORA(_getStackRelativeAddr());
             case 0x04 -> 5 + TSB(_getDirectAddr()) + directPageExtraCycle();
             case 0x05 -> 3 + ORA(_getDirectAddr()) + directPageExtraCycle();
@@ -178,8 +180,11 @@ public class CPU extends AMemory {
             case 0x3d -> 4 + AND(_getAbsoluteIndexedByXAddr()) + indexBoundaryExtraCycle();
             case 0x3e -> 7 + ROL(_getAbsoluteIndexedByXAddr(), AddressingMode.ABSOLUTE_INDEXED_BY_X) + indexBoundaryExtraCycle();
             case 0x3f -> 5 + AND(_getAbsoluteIndexedByXLongAddr());
+            case 0x40 -> 6 + RTI(0);
             case 0x41 -> 6 + EOR(_getDirectIndirectIndexedXAddr()) + directPageExtraCycle();
+            case 0x42 -> 2 + WDM(_getImmediateAddr8Bits());
             case 0x43 -> 4 + EOR(_getStackRelativeAddr());
+            case 0x44 -> MVP(_getImmediateAddr16Bits());
             case 0x45 -> 3 + EOR(_getDirectAddr()) + directPageExtraCycle();
             case 0x46 -> 5 + LSR(_getDirectAddr(), AddressingMode.DIRECT_PAGE) + directPageExtraCycle();
             case 0x47 -> 6 + EOR(_getDirectIndirectLongAddr()) + directPageExtraCycle();
@@ -195,6 +200,7 @@ public class CPU extends AMemory {
             case 0x51 -> 5 + EOR(_getDirectIndirectIndexedYAddr()) + directPageIndexedYExtraCycle();
             case 0x52 -> 5 + EOR(_getDirectIndirectAddr()) + directPageExtraCycle();
             case 0x53 -> 4 + EOR(_getStackRelativeIndirectIndexedYAddr());
+            case 0x54 -> MVN(_getImmediateAddr16Bits());
             case 0x55 -> 4 + EOR(_getDirectIndexedByXAddr()) + directPageExtraCycle();
             case 0x56 -> 6 + LSR(_getDirectIndexedByXAddr(), AddressingMode.DIRECT_PAGE_INDEXED_BY_X) + directPageExtraCycle();
             case 0x57 -> 6 + EOR(_getDirectIndirectIndexedYLongAddr()) + directPageExtraCycle();
@@ -202,6 +208,7 @@ public class CPU extends AMemory {
             case 0x59 -> 4 + EOR(_getAbsoluteIndexedByYAddr()) + indexBoundaryExtraCycle();
             case 0x5a -> 3 + PHY(0);
             case 0x5b -> 2 + TCD(0);
+            case 0x5c -> 4 + JML(_getAbsoluteLongAddr());
             case 0x5d -> 4 + EOR(_getAbsoluteIndexedByXAddr()) + indexBoundaryExtraCycle();
             case 0x5e -> 7 + LSR(_getAbsoluteIndexedByXAddr(), AddressingMode.ABSOLUTE_INDEXED_BY_X) + indexBoundaryExtraCycle();
             case 0x5f -> 5 + EOR(_getAbsoluteIndexedByXLongAddr());
@@ -239,6 +246,7 @@ public class CPU extends AMemory {
             case 0x7f -> 5 + ADC(_getAbsoluteIndexedByXLongAddr());
             case 0x80 -> 3 + BRA(_getImmediateAddr8Bits());
             case 0x81 -> 6 + STA(_getDirectIndirectIndexedXAddr()) + directPageExtraCycle();
+            case 0x82 -> 4 + BRL(_getImmediateAddr16Bits());
             case 0x83 -> 4 + STA(_getStackRelativeAddr());
             case 0x84 -> 3 + STY(_getDirectAddr()) + directPageExtraCycle();
             case 0x85 -> 3 + STA(_getDirectAddr()) + directPageExtraCycle();
@@ -328,6 +336,7 @@ public class CPU extends AMemory {
             case 0xd9 -> 4 + CMP(_getAbsoluteIndexedByYAddr()) + indexBoundaryExtraCycle();
             case 0xda -> 3 + PHX(0);
             case 0xdb -> 3 + STP(0);
+            case 0xdc -> 7 + JML(_getAbsoluteIndirectLongAddr());
             case 0xdd -> 4 + CMP(_getAbsoluteIndexedByXAddr()) + indexBoundaryExtraCycle();
             case 0xde -> 7 + DEC(_getAbsoluteIndexedByXAddr()) + indexBoundaryExtraCycle();
             case 0xdf -> 5 + CMP(_getAbsoluteIndexedByXLongAddr());
@@ -992,6 +1001,38 @@ public class CPU extends AMemory {
         registers.p.n = (registers.y & negativeFlag) != 0;
         registers.p.z = registers.y == 0;
         return 0;
+    }
+
+    public int MVN(int valueAddr) {
+        int srcBank = bus.read(valueAddr);
+        int destBank = bus.read(valueAddr + 1);
+        int length = registers.a + 1;
+
+        registers.dbr = destBank;
+        while (registers.a != 0xffff) {
+            int data = bus.read(u24((srcBank << 16) | registers.x));
+            bus.write(u24((destBank << 16) | registers.y), data);
+            registers.x = u16(registers.x + 1);
+            registers.y = u16(registers.y + 1);
+            registers.a = u16(registers.a - 1);
+        }
+        return 7 * length;
+    }
+
+    public int MVP(int valueAddr) {
+        int srcBank = bus.read(valueAddr);
+        int destBank = bus.read(valueAddr + 1);
+        int length = registers.a + 1;
+
+        registers.dbr = destBank;
+        while (registers.a != 0xffff) {
+            int data = bus.read(u24((srcBank << 16) | registers.x));
+            bus.write(u24((destBank << 16) | registers.y), data);
+            registers.x = u16(registers.x - 1);
+            registers.y = u16(registers.y - 1);
+            registers.a = u16(registers.a - 1);
+        }
+        return 7 * length;
     }
 
     public int INX(int valueAddr) {
