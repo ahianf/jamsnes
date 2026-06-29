@@ -72,6 +72,47 @@ class PpuRenderIntegrationTest {
     }
 
     @Test
+    void composesModeTwoBackgrounds() {
+        SNES snes = init(new TestRenderer());
+        writeColor(snes, 1, 0x001f);
+        writeColor(snes, 2, 0x03e0);
+        snes.bus.write(0x2105, 0x02);
+        snes.bus.write(0x2107, 0x04);
+        snes.bus.write(0x2108, 0x08);
+        snes.bus.write(0x210b, 0x01);
+        snes.bus.write(0x212c, 0x03);
+        snes.ppu.vram.write(0x0800, 0x00);
+        snes.ppu.vram.write(0x0801, 0x00);
+        snes.ppu.vram.write(0x1000, 0x00);
+        snes.ppu.vram.write(0x1001, 0x00);
+        snes.ppu.vram.write(0x0000, 0x80);
+        snes.ppu.vram.write(0x0001, 0x00);
+        snes.ppu.vram.write(0x2000, 0x00);
+        snes.ppu.vram.write(0x2001, 0x80);
+
+        snes.ppu.renderMainAndSubScreen();
+
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), snes.ppu.mainScreen()[0][0]);
+    }
+
+    @Test
+    void modeSixComposesOnlyBackgroundOne() {
+        SNES snes = init(new TestRenderer());
+        writeColor(snes, 1, 0x001f);
+        snes.bus.write(0x2105, 0x06);
+        snes.bus.write(0x2108, 0x08);
+        snes.bus.write(0x212c, 0x02);
+        snes.ppu.vram.write(0x1000, 0x00);
+        snes.ppu.vram.write(0x1001, 0x00);
+        snes.ppu.vram.write(0x0000, 0x80);
+        snes.ppu.vram.write(0x0001, 0x00);
+
+        snes.ppu.renderMainAndSubScreen();
+
+        assertEquals(0, snes.ppu.mainScreen()[0][0]);
+    }
+
+    @Test
     void updateDrawsComposedScreenToRenderer() {
         TestRenderer renderer = new TestRenderer();
         SNES snes = init(renderer);

@@ -167,6 +167,11 @@ public class PPU extends AMemory {
                 addToMainSubScreen(backgrounds[1], 10, 25);
                 addToMainSubScreen(backgrounds[0], 20, 26);
             }
+            case 2, 3, 4, 5 -> {
+                addToMainSubScreen(backgrounds[1], 10, 25);
+                addToMainSubScreen(backgrounds[0], 20, 26);
+            }
+            case 6 -> addToMainSubScreen(backgrounds[0], 20, 26);
             case 7 -> throw new IllegalStateException("not implemented");
             default -> throw new IllegalStateException("Bg mode not implemented or commented (bg nb "
                     + ppuRegisters.bgMode() + ")");
