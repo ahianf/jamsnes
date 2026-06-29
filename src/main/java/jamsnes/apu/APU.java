@@ -1,5 +1,6 @@
 package jamsnes.apu;
 
+import jamsnes.apu.dsp.DSP;
 import jamsnes.exceptions.InvalidAddress;
 import jamsnes.exceptions.InvalidOpcode;
 import jamsnes.memory.AMemory;
@@ -18,6 +19,7 @@ public class APU extends AMemory {
 
     private final APURegisters internalRegisters = new APURegisters();
     private final int[] internalMemory = new int[0x10000];
+    private final DSP dsp = new DSP();
     private final int[] ports = new int[4];
     private final int[] timers = new int[3];
     private final int[] counters = new int[3];
@@ -25,7 +27,6 @@ public class APU extends AMemory {
     private int unknownRegister;
     private int controlRegister;
     private int dspRegisterAddress;
-    private int dspRegisterData;
     private int registerMemory1;
     private int registerMemory2;
     private int paddingCycles;
@@ -76,7 +77,7 @@ public class APU extends AMemory {
         return switch (address) {
             case 0x00f0 -> unknownRegister;
             case 0x00f2 -> dspRegisterAddress;
-            case 0x00f3 -> dspRegisterData;
+            case 0x00f3 -> dsp.read(dspRegisterAddress);
             case 0x00f4, 0x00f5, 0x00f6, 0x00f7 -> ports[address - 0x00f4];
             case 0x00f8 -> registerMemory1;
             case 0x00f9 -> registerMemory2;
@@ -97,7 +98,7 @@ public class APU extends AMemory {
             case 0x00f0 -> unknownRegister = value;
             case 0x00f1 -> controlRegister = value;
             case 0x00f2 -> dspRegisterAddress = value;
-            case 0x00f3 -> dspRegisterData = value;
+            case 0x00f3 -> dsp.write(dspRegisterAddress, value);
             case 0x00f4, 0x00f5, 0x00f6, 0x00f7 -> ports[address - 0x00f4] = value;
             case 0x00f8 -> registerMemory1 = value;
             case 0x00f9 -> registerMemory2 = value;
@@ -1547,10 +1548,10 @@ public class APU extends AMemory {
         counters[0] = 0;
         counters[1] = 0;
         counters[2] = 0;
+        dsp.reset();
         unknownRegister = 0;
         controlRegister = 0;
         dspRegisterAddress = 0;
-        dspRegisterData = 0;
         registerMemory1 = 0;
         registerMemory2 = 0;
         internalRegisters.a = 0;

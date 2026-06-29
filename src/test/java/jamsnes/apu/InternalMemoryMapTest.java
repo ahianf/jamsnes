@@ -49,6 +49,48 @@ class InternalMemoryMapTest {
     }
 
     @Test
+    void dspRegisterDataUsesSelectedDspRegister() {
+        SNES snes = init();
+
+        snes.apu._internalWrite(0x00f2, 0x00);
+        snes.apu._internalWrite(0x00f3, 0x12);
+        snes.apu._internalWrite(0x00f2, 0x10);
+        snes.apu._internalWrite(0x00f3, 0x34);
+
+        snes.apu._internalWrite(0x00f2, 0x00);
+        assertEquals(0x12, snes.apu._internalRead(0x00f3));
+        snes.apu._internalWrite(0x00f2, 0x10);
+        assertEquals(0x34, snes.apu._internalRead(0x00f3));
+    }
+
+    @Test
+    void dspRegisterDataDecodesGlobalFlagsAndFirRegisters() {
+        SNES snes = init();
+
+        snes.apu._internalWrite(0x00f2, 0x6c);
+        snes.apu._internalWrite(0x00f3, 0b1110_0101);
+        assertEquals(0b1110_0101, snes.apu._internalRead(0x00f3));
+
+        snes.apu._internalWrite(0x00f2, 0x4c);
+        snes.apu._internalWrite(0x00f3, 0b1010_0101);
+        assertEquals(0b1010_0101, snes.apu._internalRead(0x00f3));
+
+        snes.apu._internalWrite(0x00f2, 0x3f);
+        snes.apu._internalWrite(0x00f3, 0x5a);
+        assertEquals(0x5a, snes.apu._internalRead(0x00f3));
+    }
+
+    @Test
+    void invalidDspRegisterAccessThrowsThroughApuDataRegister() {
+        SNES snes = init();
+
+        snes.apu._internalWrite(0x00f2, 0x0a);
+
+        assertThrows(InvalidAddress.class, () -> snes.apu._internalRead(0x00f3));
+        assertThrows(InvalidAddress.class, () -> snes.apu._internalWrite(0x00f3, 0x12));
+    }
+
+    @Test
     void invalidInternalReadsAndWritesThrow() {
         SNES snes = init();
 
