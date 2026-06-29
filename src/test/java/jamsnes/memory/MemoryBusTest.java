@@ -27,6 +27,8 @@ class MemoryBusTest {
         assertMirrors(snes.sram, snes.bus.getAccessor(0x700000));
         assertMirrors(snes.sram, snes.bus.getAccessor(0x7d7fff));
         assertSame(snes.sram, snes.bus.getAccessor(0xf00123));
+        assertSame(snes.sram, snes.bus.getAccessor(0xfe0000));
+        assertSame(snes.sram, snes.bus.getAccessor(0xff7fff));
 
         assertSame(snes.apu, snes.bus.getAccessor(0x002140));
         assertSame(snes.apu, snes.bus.getAccessor(0x002143));
@@ -105,6 +107,21 @@ class MemoryBusTest {
 
         snes.bus.write(0x700009, 123);
         assertEquals(123, snes.sram.data()[9]);
+    }
+
+    @Test
+    void loromSramMapsUpperBanksFeAndFf() {
+        SNES snes = init();
+        snes.sram.setSize(0x8000 * 0x10);
+        snes.bus.mapComponents(snes);
+
+        snes.bus.write(0xfe0000, 0x5a);
+        snes.bus.write(0xff7fff, 0xa5);
+
+        assertEquals(0x5a, snes.bus.read(0xfe0000));
+        assertEquals(0xa5, snes.bus.read(0xff7fff));
+        assertEquals(0x5a, snes.sram.data()[0x8000 * 0x0e]);
+        assertEquals(0xa5, snes.sram.data()[0x8000 * 0x10 - 1]);
     }
 
     private static SNES init() {
