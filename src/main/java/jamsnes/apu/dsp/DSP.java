@@ -342,12 +342,140 @@ public class DSP {
         return voices[voiceIndex].sampleOffset;
     }
 
+    int voiceBrrAddress(int voiceIndex) {
+        return voices[voiceIndex].brrAddress;
+    }
+
+    int voiceBrrOffset(int voiceIndex) {
+        return voices[voiceIndex].brrOffset;
+    }
+
+    int voiceGaussOffset(int voiceIndex) {
+        return voices[voiceIndex].gaussOffset;
+    }
+
     void setVoiceGaussOffset(int voiceIndex, int gaussOffset) {
         voices[voiceIndex].gaussOffset = u16(gaussOffset);
     }
 
+    void setVoiceRuntimeState(
+            int voiceIndex,
+            int konDelay,
+            boolean loop,
+            boolean echoEnabled,
+            boolean tempKon,
+            boolean tempKof
+    ) {
+        Voice voice = voices[voiceIndex];
+        voice.konDelay = u8(konDelay);
+        voice.loop = loop;
+        voice.echo = echoEnabled;
+        voice.tempKon = tempKon;
+        voice.tempKof = tempKof;
+    }
+
     int interpolate(int voiceIndex) {
         return interpolate(voices[voiceIndex]);
+    }
+
+    void setBrrDirectoryState(int offsetAddress, int source, int address, int nextAddress) {
+        brr.offsetAddress = u8(offsetAddress);
+        brr.source = u8(source);
+        brr.address = u16(address);
+        brr.nextAddress = u16(nextAddress);
+    }
+
+    int brrAddress() {
+        return brr.address;
+    }
+
+    int brrNextAddress() {
+        return brr.nextAddress;
+    }
+
+    int brrHeader() {
+        return brr.header;
+    }
+
+    int brrValue() {
+        return brr.value;
+    }
+
+    int brrSource() {
+        return brr.source;
+    }
+
+    void setLatchState(int pitch, int output) {
+        latch.pitch = u16(pitch);
+        latch.output = u16(output);
+    }
+
+    int latchPitch() {
+        return latch.pitch;
+    }
+
+    int latchOutput() {
+        return latch.output;
+    }
+
+    int masterOutput(int channel) {
+        return master.output[channel];
+    }
+
+    int voiceOutx(int voiceIndex) {
+        return voices[voiceIndex].outx;
+    }
+
+    boolean voiceEndx(int voiceIndex) {
+        return voices[voiceIndex].endx;
+    }
+
+    void voice1(int voiceIndex) {
+        voice1(voices[voiceIndex]);
+    }
+
+    void voice2(int voiceIndex) {
+        voice2(voices[voiceIndex]);
+    }
+
+    void voice3(int voiceIndex) {
+        voice3(voices[voiceIndex]);
+    }
+
+    void voice3a(int voiceIndex) {
+        voice3a(voices[voiceIndex]);
+    }
+
+    void voice3b(int voiceIndex) {
+        voice3b(voices[voiceIndex]);
+    }
+
+    void voice3c(int voiceIndex) {
+        voice3c(voices[voiceIndex]);
+    }
+
+    void voice4(int voiceIndex) {
+        voice4(voices[voiceIndex]);
+    }
+
+    void voice5(int voiceIndex) {
+        voice5(voices[voiceIndex]);
+    }
+
+    void voice6(int voiceIndex) {
+        voice6(voices[voiceIndex]);
+    }
+
+    void voice7(int voiceIndex) {
+        voice7(voices[voiceIndex]);
+    }
+
+    void voice8(int voiceIndex) {
+        voice8(voices[voiceIndex]);
+    }
+
+    void voice9(int voiceIndex) {
+        voice9(voices[voiceIndex]);
     }
 
     void runEnvelope(int voiceIndex) {
@@ -410,6 +538,147 @@ public class DSP {
         }
         int feedback = (noise.lfsr << 13) ^ (noise.lfsr << 14);
         noise.lfsr = (feedback & 0x4000) ^ (noise.lfsr >>> 1);
+    }
+
+    private void voiceOutput(Voice voice, int channel) {
+        int out = latch.output * (byte) voice.volume[channel] >> 7;
+
+        master.output[channel] = u16(master.output[channel] + out);
+        if (!voice.echo) {
+            return;
+        }
+        echo.volume[channel] = u8(echo.volume[channel] + out);
+    }
+
+    private void voice1(Voice voice) {
+        brr.address = u16((brr.offsetAddress << 8) + (brr.source << 2));
+        brr.source = voice.sourceNumber;
+    }
+
+    private void voice2(Voice voice) {
+        int address = brr.address;
+
+        if (voice.konDelay == 0) {
+            address += 2;
+        }
+        brr.nextAddress = readRam(address++);
+        brr.nextAddress = u16(brr.nextAddress + (readRam(address) << 8));
+        latch.adsr1 = voice.adsr1;
+        latch.pitch = voice.pitchLow;
+    }
+
+    private void voice3(Voice voice) {
+        voice3a(voice);
+        voice3b(voice);
+        voice3c(voice);
+    }
+
+    private void voice3a(Voice voice) {
+        latch.pitch = u16(latch.pitch | ((voice.pitchHigh & 0x3f) << 8));
+    }
+
+    private void voice3b(Voice voice) {
+        brr.header = readRam(brr.address);
+        brr.value = readRam(brr.address + voice.brrOffset);
+    }
+
+    private void voice3c(Voice voice) {
+        if (voice.prevPmon) {
+            latch.pitch = u16(latch.pitch + ((latch.output >> 5) * latch.pitch >> 10));
+        }
+
+        if (voice.konDelay != 0) {
+            if (voice.konDelay == 5) {
+                voice.brrAddress = brr.nextAddress;
+                voice.brrOffset = 1;
+                voice.sampleOffset = 0;
+                brr.header = 0;
+            }
+
+            voice.envelope = 0;
+            voice.hiddenEnvelope = 0;
+            voice.gaussOffset = 0;
+            voice.konDelay -= 1;
+            if ((voice.konDelay & 3) != 0) {
+                voice.gaussOffset = 0x4000;
+            }
+            latch.pitch = 0;
+        }
+
+        int interpolated = interpolate(voice);
+
+        if (voice.tempNon) {
+            interpolated = noise.lfsr << 1;
+        }
+
+        latch.output = u16((interpolated * voice.envelope >> 11) & ~1);
+        voice.envx = voice.envelope >> 4;
+
+        if (master.reset || (brr.header & 3) == 1) {
+            voice.envelope = 0;
+            voice.envelopeMode = EnvelopeMode.RELEASE;
+        }
+
+        if (timer.sample) {
+            if (voice.tempKof) {
+                voice.envelopeMode = EnvelopeMode.RELEASE;
+            }
+            if (voice.tempKon) {
+                voice.konDelay = 5;
+                voice.envelopeMode = EnvelopeMode.ATTACK;
+            }
+        }
+
+        if (voice.konDelay == 0) {
+            runEnvelope(voice);
+        }
+    }
+
+    private void voice4(Voice voice) {
+        voice.loop = false;
+        if (voice.gaussOffset >= 0x4000) {
+            decodeBRR(voice);
+            voice.brrOffset += 2;
+            if (voice.brrOffset >= 9) {
+                voice.brrOffset = voice.brrAddress + 9;
+                if ((brr.header & 1) != 0) {
+                    voice.brrAddress = brr.nextAddress;
+                    voice.loop = true;
+                }
+                voice.brrOffset = 1;
+            }
+        }
+
+        voice.gaussOffset = (voice.gaussOffset & 0x3fff) + latch.pitch;
+        if (voice.gaussOffset > 0x7fff) {
+            voice.gaussOffset = 0x7fff;
+        }
+        voiceOutput(voice, 0);
+    }
+
+    private void voice5(Voice voice) {
+        voiceOutput(voice, 1);
+
+        voice.endx |= voice.loop;
+        if (voice.konDelay == 5) {
+            voice.endx = false;
+        }
+    }
+
+    private void voice6(Voice voice) {
+        latch.outx = latch.output >> 8;
+    }
+
+    private void voice7(Voice voice) {
+        latch.envx = voice.envx;
+    }
+
+    private void voice8(Voice voice) {
+        voice.outx = latch.outx;
+    }
+
+    private void voice9(Voice voice) {
+        voice.envx = latch.envx;
     }
 
     private void runEnvelope(Voice voice) {
@@ -611,6 +880,7 @@ public class DSP {
         private int adsr2;
         private int gain;
         private int envx;
+        private int outx;
         private int envelope;
         private int hiddenEnvelope;
         private EnvelopeMode envelopeMode = EnvelopeMode.RELEASE;
@@ -625,8 +895,13 @@ public class DSP {
         private boolean non;
         private boolean eon;
         private boolean endx;
+        private int konDelay;
+        private boolean echo;
+        private boolean loop;
         private boolean prevPmon;
         private boolean tempNon;
+        private boolean tempKon;
+        private boolean tempKof;
 
         private void reset() {
             volume[0] = 0;
@@ -638,6 +913,7 @@ public class DSP {
             adsr2 = 0;
             gain = 0;
             envx = 0;
+            outx = 0;
             envelope = 0;
             hiddenEnvelope = 0;
             envelopeMode = EnvelopeMode.RELEASE;
@@ -654,13 +930,19 @@ public class DSP {
             non = false;
             eon = false;
             endx = false;
+            konDelay = 0;
+            echo = false;
+            loop = false;
             prevPmon = false;
             tempNon = false;
+            tempKon = false;
+            tempKof = false;
         }
     }
 
     private static final class Master {
         private final int[] volume = new int[2];
+        private final int[] output = new int[2];
         private boolean mute;
         private boolean reset;
         private int unused;
@@ -668,6 +950,8 @@ public class DSP {
         private void reset() {
             volume[0] = 0;
             volume[1] = 0;
+            output[0] = 0;
+            output[1] = 0;
             mute = false;
             reset = false;
             unused = 0;
@@ -708,14 +992,20 @@ public class DSP {
     private static final class BRR {
         private int offset;
         private int offsetAddress;
+        private int address;
+        private int nextAddress;
         private int header;
         private int value;
+        private int source;
 
         private void reset() {
             offset = 0;
             offsetAddress = 0;
+            address = 0;
+            nextAddress = 0;
             header = 0;
             value = 0;
+            source = 0;
         }
     }
 
@@ -723,11 +1013,15 @@ public class DSP {
         private int adsr1;
         private int envx;
         private int outx;
+        private int pitch;
+        private int output;
 
         private void reset() {
             adsr1 = 0;
             envx = 0;
             outx = 0;
+            pitch = 0;
+            output = 0;
         }
     }
 

@@ -206,4 +206,68 @@ class DSPTest {
 
         assertEquals(6, dsp.interpolate(0));
     }
+
+    @Test
+    void voicePhasesLoadBrrDirectoryAndHeaderState() {
+        DSP dsp = new DSP();
+        dsp.setBrrDirectoryState(0x12, 0x05, 0, 0);
+        dsp.write(0x04, 0x07);
+        dsp.write(0x05, 0x8f);
+        dsp.write(0x02, 0x34);
+        dsp.write(0x03, 0x12);
+        dsp.writeRam(0x1216, 0xcd);
+        dsp.writeRam(0x1217, 0xab);
+        dsp.writeRam(0x1214, 0x60);
+        dsp.writeRam(0x1215, 0xee);
+
+        dsp.voice1(0);
+        dsp.voice2(0);
+        dsp.voice3a(0);
+        dsp.voice3b(0);
+
+        assertEquals(0x1214, dsp.brrAddress());
+        assertEquals(0x07, dsp.brrSource());
+        assertEquals(0xabcd, dsp.brrNextAddress());
+        assertEquals(0x1234, dsp.latchPitch());
+        assertEquals(0x60, dsp.brrHeader());
+        assertEquals(0xee, dsp.brrValue());
+    }
+
+    @Test
+    void voiceFourDecodesBrrAndAdvancesGaussOffset() {
+        DSP dsp = new DSP();
+        dsp.setBrrState(0x00, 0x12);
+        dsp.setVoiceBrrState(0, 0x2000, 1, 0);
+        dsp.setVoiceGaussOffset(0, 0x4000);
+        dsp.setLatchState(0x0111, 0);
+        dsp.writeRam(0x2002, 0x34);
+
+        dsp.voice4(0);
+
+        assertEquals(4, dsp.voiceSampleOffset(0));
+        assertEquals(3, dsp.voiceBrrOffset(0));
+        assertEquals(0x0111, dsp.voiceGaussOffset(0));
+    }
+
+    @Test
+    void voiceFiveThroughNineTransferLatchedOutputAndEnvelope() {
+        DSP dsp = new DSP();
+        dsp.setLatchState(0, 0x1234);
+        dsp.voice6(0);
+        dsp.voice8(0);
+        dsp.write(0x08, 0x2a);
+        dsp.voice7(0);
+        dsp.voice9(1);
+
+        assertEquals(0x12, dsp.voiceOutx(0));
+        assertEquals(0x2a, dsp.read(0x18));
+
+        dsp.setVoiceRuntimeState(0, 0, true, false, false, false);
+        dsp.voice5(0);
+        assertTrue(dsp.voiceEndx(0));
+
+        dsp.setVoiceRuntimeState(0, 5, true, false, false, false);
+        dsp.voice5(0);
+        assertFalse(dsp.voiceEndx(0));
+    }
 }
