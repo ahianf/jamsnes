@@ -2,6 +2,7 @@ package jamsnes;
 
 import jamsnes.apu.APU;
 import jamsnes.cartridge.Cartridge;
+import jamsnes.cartridge.CartridgeType;
 import jamsnes.cpu.CPU;
 import jamsnes.memory.MemoryBus;
 import jamsnes.models.Component;
@@ -39,6 +40,19 @@ public class SNES {
         cartridge.loadRom(path);
         sram.setSize(cartridge.header.sramSize);
         bus.mapComponents(this);
+        cpu.RESB();
+        apu.reset();
+    }
+
+    public void update() {
+        if (cartridge.getType() == CartridgeType.AUDIO) {
+            apu.update(0x01);
+            return;
+        }
+
+        int cycleCount = cpu.update(0x0c);
+        ppu.update(cycleCount);
+        apu.update(cycleCount);
     }
 
     public IRenderer getRenderer() {

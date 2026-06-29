@@ -1537,7 +1537,7 @@ public class APU extends AMemory {
         }
     }
 
-    private void reset() {
+    public void reset() {
         ports[0] = 0;
         ports[1] = 0;
         ports[2] = 0;
