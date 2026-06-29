@@ -254,10 +254,155 @@ public class DSP {
 
     public void update() {
         switch (voicePhase) {
-            case 27 -> misc27();
-            case 28 -> misc28();
-            case 29 -> misc29();
-            case 30 -> misc30();
+            case 0 -> {
+                voice5(voices[0]);
+                voice2(voices[1]);
+            }
+            case 1 -> {
+                voice6(voices[0]);
+                voice3(voices[1]);
+            }
+            case 2 -> {
+                voice7(voices[0]);
+                voice4(voices[1]);
+                voice1(voices[3]);
+            }
+            case 3 -> {
+                voice8(voices[0]);
+                voice5(voices[1]);
+                voice2(voices[2]);
+            }
+            case 4 -> {
+                voice9(voices[0]);
+                voice6(voices[1]);
+                voice3(voices[2]);
+            }
+            case 5 -> {
+                voice7(voices[1]);
+                voice4(voices[2]);
+                voice1(voices[4]);
+            }
+            case 6 -> {
+                voice8(voices[1]);
+                voice5(voices[2]);
+                voice2(voices[3]);
+            }
+            case 7 -> {
+                voice9(voices[1]);
+                voice6(voices[2]);
+                voice3(voices[3]);
+            }
+            case 8 -> {
+                voice7(voices[2]);
+                voice4(voices[3]);
+                voice1(voices[5]);
+            }
+            case 9 -> {
+                voice8(voices[2]);
+                voice5(voices[3]);
+                voice2(voices[4]);
+            }
+            case 10 -> {
+                voice9(voices[2]);
+                voice6(voices[3]);
+                voice3(voices[4]);
+            }
+            case 11 -> {
+                voice7(voices[3]);
+                voice4(voices[4]);
+                voice1(voices[6]);
+            }
+            case 12 -> {
+                voice8(voices[3]);
+                voice5(voices[4]);
+                voice2(voices[5]);
+            }
+            case 13 -> {
+                voice9(voices[3]);
+                voice6(voices[4]);
+                voice3(voices[5]);
+            }
+            case 14 -> {
+                voice7(voices[4]);
+                voice4(voices[5]);
+                voice1(voices[7]);
+            }
+            case 15 -> {
+                voice8(voices[4]);
+                voice5(voices[5]);
+                voice2(voices[6]);
+            }
+            case 16 -> {
+                voice9(voices[4]);
+                voice6(voices[5]);
+                voice3(voices[6]);
+            }
+            case 17 -> {
+                voice1(voices[0]);
+                voice7(voices[5]);
+                voice4(voices[6]);
+            }
+            case 18 -> {
+                voice8(voices[5]);
+                voice5(voices[6]);
+                voice2(voices[7]);
+            }
+            case 19 -> {
+                voice9(voices[5]);
+                voice6(voices[6]);
+                voice3(voices[7]);
+            }
+            case 20 -> {
+                voice1(voices[1]);
+                voice7(voices[6]);
+                voice4(voices[7]);
+            }
+            case 21 -> {
+                voice8(voices[6]);
+                voice5(voices[7]);
+                voice2(voices[0]);
+            }
+            case 22 -> {
+                voice3a(voices[0]);
+                voice9(voices[6]);
+                voice6(voices[7]);
+                echo22();
+            }
+            case 23 -> {
+                voice7(voices[7]);
+                echo23();
+            }
+            case 24 -> {
+                voice8(voices[7]);
+                echo24();
+            }
+            case 25 -> {
+                voice3b(voices[0]);
+                voice9(voices[7]);
+                echo25();
+            }
+            case 26 -> echo26();
+            case 27 -> {
+                misc27();
+                echo27();
+            }
+            case 28 -> {
+                misc28();
+                echo28();
+            }
+            case 29 -> {
+                misc29();
+                echo29();
+            }
+            case 30 -> {
+                misc30();
+                voice3c(voices[0]);
+                echo30();
+            }
+            case 31 -> {
+                voice4(voices[0]);
+                voice1(voices[2]);
+            }
             default -> {
             }
         }

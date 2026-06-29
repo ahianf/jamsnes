@@ -337,4 +337,34 @@ class DSPTest {
         assertEquals(0, dsp.masterOutput(0));
         assertEquals(0, dsp.masterOutput(1));
     }
+
+    @Test
+    void updateRunsScheduledVoiceOnePhase() {
+        DSP dsp = new DSP();
+        dsp.setBrrDirectoryState(0x12, 0, 0, 0);
+        dsp.write(0x74, 0x05);
+        dsp.write(0x04, 0x07);
+
+        for (int i = 0; i < 18; i++) {
+            dsp.update();
+        }
+
+        assertEquals(0x1214, dsp.brrAddress());
+        assertEquals(0x07, dsp.brrSource());
+    }
+
+    @Test
+    void updateRunsScheduledEchoOutputPhase() {
+        DSP dsp = new DSP();
+        dsp.write(0x0c, 0x7f);
+        dsp.setMasterOutput(0, 0x2222);
+
+        for (int i = 0; i < 28; i++) {
+            dsp.update();
+        }
+
+        assertEquals(8669, dsp.soundBuffer()[0]);
+        assertEquals(2, dsp.getSamplesCount());
+        assertEquals(0, dsp.masterOutput(0));
+    }
 }
