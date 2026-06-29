@@ -1,6 +1,7 @@
 package jamsnes.cpu;
 
 import jamsnes.cartridge.Header;
+import jamsnes.exceptions.InvalidOpcode;
 import jamsnes.memory.AMemory;
 import jamsnes.memory.IMemoryBus;
 import jamsnes.models.Component;
@@ -109,6 +110,51 @@ public class CPU extends AMemory {
 
     public DMA[] dmaChannels() {
         return dmaChannels;
+    }
+
+    public int executeInstruction() {
+        int opcode = readPC();
+        hasIndexCrossedPageBoundary = false;
+        return switch (opcode) {
+            case 0x08 -> 3 + PHP(0);
+            case 0x0b -> 4 + PHD(0);
+            case 0x10 -> 7 + BPL(_getImmediateAddr8Bits());
+            case 0x18 -> 2 + CLC(0);
+            case 0x20 -> 6 + JSR(_getAbsoluteAddr());
+            case 0x22 -> 8 + JSL(_getAbsoluteLongAddr());
+            case 0x30 -> 2 + BMI(_getImmediateAddr8Bits());
+            case 0x38 -> 2 + SEC(0);
+            case 0x48 -> 3 + PHA(0);
+            case 0x4b -> 3 + PHK(0);
+            case 0x4c -> 3 + JMP(_getAbsoluteAddr());
+            case 0x50 -> 2 + BVC(_getImmediateAddr8Bits());
+            case 0x58 -> 2 + CLI(0);
+            case 0x5a -> 3 + PHY(0);
+            case 0x60 -> 6 + RTS(0);
+            case 0x6b -> 6 + RTL(0);
+            case 0x6c -> 5 + JMP(_getAbsoluteIndirectAddr());
+            case 0x70 -> 2 + BVS(_getImmediateAddr8Bits());
+            case 0x78 -> 2 + SEI(0);
+            case 0x7c -> 6 + JMP(_getAbsoluteIndirectIndexedByXAddr());
+            case 0x80 -> 3 + BRA(_getImmediateAddr8Bits());
+            case 0x8b -> 3 + PHB(0);
+            case 0x90 -> 2 + BCC(_getImmediateAddr8Bits());
+            case 0xb0 -> 2 + BCS(_getImmediateAddr8Bits());
+            case 0xb8 -> 7 + CLV(0);
+            case 0xc2 -> 3 + REP(_getImmediateAddr8Bits());
+            case 0xcb -> 3 + WAI(0);
+            case 0xd0 -> 2 + BNE(_getImmediateAddr8Bits());
+            case 0xd8 -> 2 + CLD(0);
+            case 0xda -> 3 + PHX(0);
+            case 0xdb -> 3 + STP(0);
+            case 0xe2 -> 3 + SEP(_getImmediateAddr8Bits());
+            case 0xea -> 2 + NOP(0);
+            case 0xf0 -> 2 + BEQ(_getImmediateAddr8Bits());
+            case 0xf8 -> 2 + SED(0);
+            case 0xfb -> 2 + XCE(0);
+            case 0xfc -> 8 + JSR(_getAbsoluteIndirectIndexedByXAddr());
+            default -> throw new InvalidOpcode("CPU opcode 0x%02x is not implemented".formatted(opcode));
+        };
     }
 
     @Override
