@@ -180,4 +180,30 @@ class DSPTest {
 
         assertEquals(32, snes.apu.dsp().voiceSample(0, 3));
     }
+
+    @Test
+    void interpolateUsesGaussianTableAndRoundsToEvenSample() {
+        DSP dsp = new DSP();
+        dsp.setVoiceBrrState(0, 0, 1, 0);
+        dsp.setVoiceSample(0, 0, 8);
+        dsp.setVoiceSample(0, 1, 8);
+        dsp.setVoiceSample(0, 2, 8);
+        dsp.setVoiceSample(0, 3, 8);
+        dsp.setVoiceGaussOffset(0, 0);
+
+        assertEquals(6, dsp.interpolate(0));
+    }
+
+    @Test
+    void interpolateWrapsVoiceSampleRingFromGaussOffset() {
+        DSP dsp = new DSP();
+        dsp.setVoiceBrrState(0, 0, 1, 11);
+        dsp.setVoiceSample(0, 0, 8);
+        dsp.setVoiceSample(0, 1, 8);
+        dsp.setVoiceSample(0, 2, 8);
+        dsp.setVoiceSample(0, 3, 8);
+        dsp.setVoiceGaussOffset(0, 0x1000);
+
+        assertEquals(6, dsp.interpolate(0));
+    }
 }
