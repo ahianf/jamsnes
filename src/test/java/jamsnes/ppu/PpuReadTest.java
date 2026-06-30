@@ -53,15 +53,27 @@ class PpuReadTest {
     }
 
     @Test
+    void oamDataReadReturnsCurrentAddressAndIncrements() {
+        SNES snes = init();
+        snes.bus.write(0x2102, 0x0b);
+        snes.bus.write(0x2103, 0x80);
+        snes.ppu.oamram.write(0x0b, 0x42);
+        snes.ppu.oamram.write(0x0c, 0x24);
+
+        assertEquals(0x42, snes.bus.read(0x2138));
+        assertEquals(0x0c, snes.ppu.ppuRegisters().oamAddress());
+        assertEquals(0x24, snes.bus.read(0x2138));
+        assertEquals(0x0d, snes.ppu.ppuRegisters().oamAddress());
+    }
+
+    @Test
     void placeholderPpuReadRegistersReturnZero() {
         SNES snes = init();
-        snes.ppu.registers()[0x38] = 0xff;
         snes.ppu.registers()[0x3c] = 0xff;
         snes.ppu.registers()[0x3d] = 0xff;
         snes.ppu.registers()[0x3e] = 0xff;
         snes.ppu.registers()[0x3f] = 0xff;
 
-        assertEquals(0, snes.bus.read(0x2138));
         assertEquals(0, snes.bus.read(0x213c));
         assertEquals(0, snes.bus.read(0x213d));
         assertEquals(0, snes.bus.read(0x213e));

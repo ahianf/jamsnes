@@ -50,7 +50,7 @@ public class PPU extends AMemory {
     public int read(int address) {
         return switch (address) {
             case 0x34, 0x35, 0x36, 0x37 -> registers[address];
-            case 0x38 -> 0;
+            case 0x38 -> readOamData();
             case 0x39 -> readVramLow();
             case 0x3a -> readVramHigh();
             case 0x3b -> readCgData();
@@ -286,6 +286,12 @@ public class PPU extends AMemory {
     private int readCgData() {
         int value = cgram.read(ppuRegisters.cgAddress());
         ppuRegisters.incrementCgAddress();
+        return value;
+    }
+
+    private int readOamData() {
+        int value = oamram.read(ppuRegisters.oamAddress());
+        ppuRegisters.incrementOamAddress();
         return value;
     }
 
