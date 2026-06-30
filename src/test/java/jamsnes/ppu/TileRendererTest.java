@@ -75,6 +75,71 @@ class TileRendererTest {
     }
 
     @Test
+    void getPixelReferenceFromTileRow8bpp() {
+        Ram vram = new Ram(100, Component.VRAM, "vramTest");
+        TileRenderer renderer = renderer(vram);
+        renderer.setBpp(8);
+        fill8BppTile(vram);
+
+        int[][] expected = expected8BppTile();
+
+        for (int row = 0; row < expected.length; row++) {
+            assertRow(renderer, row * 2, expected[row]);
+        }
+    }
+
+    @Test
+    void getPixelReferenceFromTile2bpp() {
+        Ram vram = new Ram(10, Component.VRAM, "vramTest");
+        TileRenderer renderer = renderer(vram);
+        renderer.setBpp(2);
+        vram.write(2, 0xd6);
+        vram.write(3, 0x00);
+
+        int[] actual = new int[8];
+        for (int i = 0; i < actual.length; i++) {
+            actual[i] = renderer.getPixelReferenceFromTile(2, i);
+        }
+
+        assertArrayEquals(new int[]{1, 1, 0, 1, 0, 1, 1, 0}, actual);
+    }
+
+    @Test
+    void getPixelReferenceFromTile4bpp() {
+        Ram vram = new Ram(40, Component.VRAM, "vramTest");
+        TileRenderer renderer = renderer(vram);
+        renderer.setBpp(4);
+        fillRam(vram,
+                "7C7C82EE82FE7C7C",
+                "0000D68254443838",
+                "7C00AA1082007C00",
+                "1000540038000000");
+
+        int[][] expected = {
+                {0, 7, 7, 7, 7, 7, 0, 0},
+                {7, 2, 6, 8, 6, 2, 7, 0},
+                {7, 2, 2, 2, 2, 2, 7, 0},
+                {0, 7, 7, 7, 7, 7, 0, 0},
+                {0, 0, 0, 4, 0, 0, 0, 0},
+                {3, 5, 0, 5, 0, 5, 3, 0},
+                {0, 3, 4, 5, 4, 3, 0, 0},
+                {0, 0, 3, 3, 3, 0, 0, 0}
+        };
+
+        assertTile(renderer, 0, expected);
+    }
+
+    @Test
+    void getPixelReferenceFromTile8bpp() {
+        Ram vram = new Ram(100, Component.VRAM, "vramTest");
+        TileRenderer renderer = renderer(vram);
+        renderer.setBpp(8);
+        fill8BppTile(vram);
+
+        assertTile(renderer, 0, expected8BppTile());
+    }
+
+    @Test
     void cgramColorToRGBA() {
         assertEquals(0x000000ff, PPUUtils.cgramColorToRGBA(0x0000));
         assertEquals(0xffffffff, PPUUtils.cgramColorToRGBA(0x7fff));
@@ -91,6 +156,37 @@ class TileRendererTest {
             actual[i] = renderer.getPixelReferenceFromTileRow(tileRowAddress, i);
         }
         assertArrayEquals(expected, actual);
+    }
+
+    private static void assertTile(TileRenderer renderer, int tileAddress, int[][] expected) {
+        for (int row = 0; row < expected.length; row++) {
+            int[] actual = new int[8];
+            for (int column = 0; column < actual.length; column++) {
+                actual[column] = renderer.getPixelReferenceFromTile(tileAddress, row * 8 + column);
+            }
+            assertArrayEquals(expected[row], actual);
+        }
+    }
+
+    private static void fill8BppTile(Ram ram) {
+        fillRam(ram,
+                "0C7C5CA0C0BC3C001010964038282018",
+                "0000020002007C000000820044003800",
+                "007C44927C82007C1010D6D67C7C3838",
+                "00002800000000000000000000000000");
+    }
+
+    private static int[][] expected8BppTile() {
+        return new int[][]{
+                {0x00, 0x22, 0x22, 0x22, 0x23, 0x23, 0x00, 0x00},
+                {0x22, 0x11, 0x42, 0x21, 0x41, 0x11, 0x24, 0x00},
+                {0x23, 0x11, 0x12, 0x12, 0x12, 0x12, 0x24, 0x00},
+                {0x00, 0x24, 0x25, 0x25, 0x25, 0x25, 0x00, 0x00},
+                {0x00, 0x00, 0x00, 0x33, 0x00, 0x00, 0x00, 0x00},
+                {0x35, 0x32, 0x00, 0x31, 0x00, 0x31, 0x35, 0x00},
+                {0x00, 0x34, 0x33, 0x31, 0x33, 0x34, 0x00, 0x00},
+                {0x00, 0x00, 0x35, 0x36, 0x36, 0x00, 0x00, 0x00}
+        };
     }
 
     private static void fillRam(Ram ram, String... values) {
