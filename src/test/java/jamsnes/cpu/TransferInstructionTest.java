@@ -138,6 +138,54 @@ class TransferInstructionTest {
         assertFalse(snes.cpu.registers().p.c);
     }
 
+    @Test
+    void mvnCopiesForwardAndUpdatesRegisters() {
+        SNES snes = init();
+        snes.cpu.registers().a = 0x10;
+        snes.cpu.registers().x = 0x0000;
+        snes.cpu.registers().y = 0x1000;
+        snes.wram.data()[0x1ff0] = 0x00;
+        snes.wram.data()[0x1ff1] = 0x00;
+        for (int i = 0; i <= snes.cpu.registers().a; i++) {
+            snes.wram.data()[i] = i;
+        }
+
+        int cycles = snes.cpu.MVN(0x1ff0);
+
+        assertEquals(0x77, cycles);
+        assertEquals(0x00, snes.cpu.registers().dbr);
+        assertEquals(0xffff, snes.cpu.registers().a);
+        assertEquals(0x0011, snes.cpu.registers().x);
+        assertEquals(0x1011, snes.cpu.registers().y);
+        for (int i = 0; i < 0x11; i++) {
+            assertEquals(i, snes.wram.data()[0x1000 + i]);
+        }
+    }
+
+    @Test
+    void mvpCopiesBackwardAndUpdatesRegisters() {
+        SNES snes = init();
+        snes.cpu.registers().a = 0x10;
+        snes.cpu.registers().x = 0x0010;
+        snes.cpu.registers().y = 0x1010;
+        snes.wram.data()[0x1ff0] = 0x00;
+        snes.wram.data()[0x1ff1] = 0x00;
+        for (int i = 0; i <= snes.cpu.registers().a; i++) {
+            snes.wram.data()[i] = i;
+        }
+
+        int cycles = snes.cpu.MVP(0x1ff0);
+
+        assertEquals(0x77, cycles);
+        assertEquals(0x00, snes.cpu.registers().dbr);
+        assertEquals(0xffff, snes.cpu.registers().a);
+        assertEquals(0xffff, snes.cpu.registers().x);
+        assertEquals(0x0fff, snes.cpu.registers().y);
+        for (int i = 0; i < 0x11; i++) {
+            assertEquals(i, snes.wram.data()[0x1000 + i]);
+        }
+    }
+
     private static SNES init() {
         SNES snes = new SNES(new NoRenderer(0, 0, 0));
         snes.cartridge.setSize(100);
