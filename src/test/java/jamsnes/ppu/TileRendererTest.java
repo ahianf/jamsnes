@@ -140,6 +140,83 @@ class TileRendererTest {
     }
 
     @Test
+    void render2bppUsesPaletteColors() {
+        Ram vram = new Ram(100, Component.VRAM, "vramTest");
+        Ram cgram = new Ram(512, Component.CGRAM, "cgramTest");
+        TileRenderer renderer = new TileRenderer(vram, cgram);
+        renderer.setBpp(2);
+        renderer.setPaletteIndex(1);
+        fillRam(vram,
+                "7C00BA7C827C7C00",
+                "1000D6007C003800");
+        writePalette(cgram, 1, 2, 0x0000, 0x67bf, 0x4298, 0x150e);
+
+        int[][] references = {
+                {0, 1, 1, 1, 1, 1, 0, 0},
+                {1, 2, 3, 3, 3, 2, 1, 0},
+                {1, 2, 2, 2, 2, 2, 1, 0},
+                {0, 1, 1, 1, 1, 1, 0, 0},
+                {0, 0, 0, 1, 0, 0, 0, 0},
+                {1, 1, 0, 1, 0, 1, 1, 0},
+                {0, 1, 1, 1, 1, 1, 0, 0},
+                {0, 0, 1, 1, 1, 0, 0, 0}
+        };
+
+        renderer.render(0);
+
+        assertRenderedReferences(renderer, 1, references);
+    }
+
+    @Test
+    void render4bppUsesPaletteColors() {
+        Ram vram = new Ram(100, Component.VRAM, "vramTest");
+        Ram cgram = new Ram(512, Component.CGRAM, "cgramTest");
+        TileRenderer renderer = new TileRenderer(vram, cgram);
+        renderer.setBpp(4);
+        renderer.setPaletteIndex(0);
+        fillRam(vram,
+                "7C7C82EE82FE7C7C",
+                "0000D68254443838",
+                "7C00AA1082007C00",
+                "1000540038000000");
+        writePalette(cgram, 0, 4,
+                0x0000, 0x0000, 0x7fff, 0x0e21,
+                0x0ee2, 0x0fe3, 0x0c79, 0x11fd,
+                0x079f, 0x4bbf, 0x01dd, 0x0ccb,
+                0x0000, 0x55df, 0x0c3c, 0x108b);
+
+        renderer.render(0);
+
+        assertRenderedReferences(renderer, 0, new int[][]{
+                {0, 7, 7, 7, 7, 7, 0, 0},
+                {7, 2, 6, 8, 6, 2, 7, 0},
+                {7, 2, 2, 2, 2, 2, 7, 0},
+                {0, 7, 7, 7, 7, 7, 0, 0},
+                {0, 0, 0, 4, 0, 0, 0, 0},
+                {3, 5, 0, 5, 0, 5, 3, 0},
+                {0, 3, 4, 5, 4, 3, 0, 0},
+                {0, 0, 3, 3, 3, 0, 0, 0}
+        });
+    }
+
+    @Test
+    void render8bppUsesPaletteColors() {
+        Ram vram = new Ram(100, Component.VRAM, "vramTest");
+        Ram cgram = new Ram(512, Component.CGRAM, "cgramTest");
+        TileRenderer renderer = new TileRenderer(vram, cgram);
+        renderer.setBpp(8);
+        renderer.setPaletteIndex(0);
+        fill8BppTile(vram);
+        for (int color = 0; color < 256; color++) {
+            writeCgramColor(cgram, color, (color * 97) & 0x7fff);
+        }
+
+        renderer.render(0);
+
+        assertRenderedReferences(renderer, 0, expected8BppTile());
+    }
+
+    @Test
     void cgramColorToRGBA() {
         assertEquals(0x000000ff, PPUUtils.cgramColorToRGBA(0x0000));
         assertEquals(0xffffffff, PPUUtils.cgramColorToRGBA(0x7fff));
@@ -187,6 +264,30 @@ class TileRendererTest {
                 {0x00, 0x34, 0x33, 0x31, 0x33, 0x34, 0x00, 0x00},
                 {0x00, 0x00, 0x35, 0x36, 0x36, 0x00, 0x00, 0x00}
         };
+    }
+
+    private static void assertRenderedReferences(TileRenderer renderer, int paletteIndex, int[][] references) {
+        int[] palette = renderer.getPalette(paletteIndex);
+        for (int y = 0; y < references.length; y++) {
+            for (int x = 0; x < references[y].length; x++) {
+                int reference = references[y][x];
+                int expected = reference == 0 ? 0 : PPUUtils.cgramColorToRGBA(palette[reference]);
+                assertEquals(expected, renderer.buffer[y][x]);
+            }
+        }
+    }
+
+    private static void writePalette(Ram cgram, int paletteIndex, int bpp, int... colors) {
+        int baseAddress = paletteIndex * bpp * bpp * 2;
+        for (int i = 0; i < colors.length; i++) {
+            writeCgramColor(cgram, baseAddress / 2 + i, colors[i]);
+        }
+    }
+
+    private static void writeCgramColor(Ram cgram, int colorIndex, int color) {
+        int address = colorIndex * 2;
+        cgram.write(address, color);
+        cgram.write(address + 1, color >>> 8);
     }
 
     private static void fillRam(Ram ram, String... values) {
