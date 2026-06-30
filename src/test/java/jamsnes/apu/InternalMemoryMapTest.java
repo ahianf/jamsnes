@@ -94,6 +94,21 @@ class InternalMemoryMapTest {
     }
 
     @Test
+    void counterReadsClearCounters() {
+        SNES snes = init();
+        snes.apu.counters()[0] = 0x12;
+        snes.apu.counters()[1] = 0x34;
+        snes.apu.counters()[2] = 0x56;
+
+        assertEquals(0x12, snes.apu._internalRead(0x00fd));
+        assertEquals(0x00, snes.apu._internalRead(0x00fd));
+        assertEquals(0x34, snes.apu._internalRead(0x00fe));
+        assertEquals(0x00, snes.apu._internalRead(0x00fe));
+        assertEquals(0x56, snes.apu._internalRead(0x00ff));
+        assertEquals(0x00, snes.apu._internalRead(0x00ff));
+    }
+
+    @Test
     void internalWriteUsesApuMemoryRegionsAndRegisters() {
         SNES snes = init();
 

@@ -98,7 +98,7 @@ public class APU extends AMemory {
             case 0x00f4, 0x00f5, 0x00f6, 0x00f7 -> ports[address - 0x00f4];
             case 0x00f8 -> registerMemory1;
             case 0x00f9 -> registerMemory2;
-            case 0x00fd, 0x00fe, 0x00ff -> counters[address - 0x00fd];
+            case 0x00fd, 0x00fe, 0x00ff -> readCounter(address - 0x00fd);
             default -> {
                 if (address >= 0xffc0 && iplRomEnabled) {
                     yield iplRom[address - 0xffc0];
@@ -135,6 +135,12 @@ public class APU extends AMemory {
                 throw new InvalidAddress("APU Registers write", address);
             }
         }
+    }
+
+    private int readCounter(int index) {
+        int value = counters[index];
+        counters[index] = 0;
+        return value;
     }
 
     private void writeControlRegister(int value) {
