@@ -62,6 +62,12 @@ public class PPU extends AMemory {
     @Override
     public void write(int address, int data) {
         int value = u8(data);
+        if (address == 0x3e) {
+            return;
+        }
+        if (!isWritableRegister(address)) {
+            throw new InvalidAddress("PPU Internal Registers write", address + start);
+        }
         registers[address] = value;
         switch (address) {
             case 0x04 -> writeOamData(value);
@@ -102,6 +108,10 @@ public class PPU extends AMemory {
             default -> {
             }
         }
+    }
+
+    private boolean isWritableRegister(int address) {
+        return address >= 0x00 && address <= 0x33;
     }
 
     public int[] registers() {

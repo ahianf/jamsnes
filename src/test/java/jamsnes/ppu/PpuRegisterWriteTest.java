@@ -1,11 +1,13 @@
 package jamsnes.ppu;
 
 import jamsnes.SNES;
+import jamsnes.exceptions.InvalidAddress;
 import jamsnes.renderer.NoRenderer;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PpuRegisterWriteTest {
@@ -278,6 +280,23 @@ class PpuRegisterWriteTest {
         assertFalse(snes.ppu.ppuRegisters().setiniOverscanMode());
         assertFalse(snes.ppu.ppuRegisters().setiniObjInterlace());
         assertTrue(snes.ppu.ppuRegisters().setiniScreenInterlace());
+    }
+
+    @Test
+    void stat77WriteIsNoop() {
+        SNES snes = init();
+
+        snes.bus.write(0x213e, 0xff);
+
+        assertEquals(0, snes.ppu.registers()[0x3e]);
+    }
+
+    @Test
+    void unsupportedPpuWriteRegisterThrows() {
+        SNES snes = init();
+
+        assertThrows(InvalidAddress.class, () -> snes.bus.write(0x2134, 0xff));
+        assertThrows(InvalidAddress.class, () -> snes.bus.write(0x213f, 0xff));
     }
 
     private static SNES init() {
