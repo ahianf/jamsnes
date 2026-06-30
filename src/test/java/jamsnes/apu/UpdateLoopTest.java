@@ -64,6 +64,69 @@ class UpdateLoopTest {
         assertEquals(0x200, snes.apu.internalRegisters().pc);
     }
 
+    @Test
+    void updateAdvancesTimersZeroAndOneEveryOneHundredTwentyEightCycles() {
+        SNES snes = init();
+        snes.apu.internalRegisters().pc = 0x200;
+        snes.apu._internalWrite(0x00fa, 0x02);
+        snes.apu._internalWrite(0x00fb, 0x02);
+        snes.apu._internalWrite(0x00f1, 0x03);
+
+        snes.apu.update(255);
+        assertEquals(0, snes.apu._internalRead(0x00fd));
+        assertEquals(0, snes.apu._internalRead(0x00fe));
+
+        snes.apu.update(1);
+        assertEquals(1, snes.apu._internalRead(0x00fd));
+        assertEquals(1, snes.apu._internalRead(0x00fe));
+    }
+
+    @Test
+    void updateAdvancesTimerTwoEverySixteenCycles() {
+        SNES snes = init();
+        snes.apu.internalRegisters().pc = 0x200;
+        snes.apu._internalWrite(0x00fc, 0x01);
+        snes.apu._internalWrite(0x00f1, 0x04);
+
+        snes.apu.update(15);
+        assertEquals(0, snes.apu._internalRead(0x00ff));
+
+        snes.apu.update(1);
+        assertEquals(1, snes.apu._internalRead(0x00ff));
+    }
+
+    @Test
+    void timerTargetZeroActsAsTwoHundredFiftySix() {
+        SNES snes = init();
+        snes.apu.internalRegisters().pc = 0x200;
+        snes.apu._internalWrite(0x00fa, 0x00);
+        snes.apu._internalWrite(0x00f1, 0x01);
+
+        snes.apu.update(128 * 255);
+        assertEquals(0, snes.apu._internalRead(0x00fd));
+
+        snes.apu.update(128);
+        assertEquals(1, snes.apu._internalRead(0x00fd));
+    }
+
+    @Test
+    void enablingTimerResetsDividerStageAndCounter() {
+        SNES snes = init();
+        snes.apu.internalRegisters().pc = 0x200;
+        snes.apu._internalWrite(0x00fa, 0x02);
+        snes.apu._internalWrite(0x00f1, 0x01);
+        snes.apu.update(128);
+        snes.apu.counters()[0] = 0x07;
+
+        snes.apu._internalWrite(0x00f1, 0x00);
+        snes.apu._internalWrite(0x00f1, 0x01);
+        snes.apu.update(128);
+
+        assertEquals(0, snes.apu._internalRead(0x00fd));
+        snes.apu.update(128);
+        assertEquals(1, snes.apu._internalRead(0x00fd));
+    }
+
     private static SNES init() {
         return new SNES(new NoRenderer(0, 0, 0));
     }

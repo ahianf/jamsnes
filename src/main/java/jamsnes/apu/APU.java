@@ -34,6 +34,9 @@ public class APU extends AMemory {
     private final int[] ports = new int[4];
     private final int[] timers = new int[3];
     private final int[] counters = new int[3];
+    private final boolean[] timerEnabled = new boolean[3];
+    private final int[] timerDividers = new int[3];
+    private final int[] timerStages = new int[3];
     private StateMode state = StateMode.RUNNING;
     private int unknownRegister;
     private int controlRegister;
@@ -145,6 +148,15 @@ public class APU extends AMemory {
 
     private void writeControlRegister(int value) {
         controlRegister = value;
+        for (int i = 0; i < timerEnabled.length; i++) {
+            boolean enabled = (value & (1 << i)) != 0;
+            if (enabled && !timerEnabled[i]) {
+                timerDividers[i] = 0;
+                timerStages[i] = 0;
+                counters[i] = 0;
+            }
+            timerEnabled[i] = enabled;
+        }
         iplRomEnabled = (value & 0x80) != 0;
         if ((value & 0x10) != 0) {
             ports[0] = 0;
@@ -154,6 +166,33 @@ public class APU extends AMemory {
             ports[2] = 0;
             ports[3] = 0;
         }
+    }
+
+    private void advanceTimers(int cycles) {
+        if (cycles <= 0) {
+            return;
+        }
+        for (int i = 0; i < timerEnabled.length; i++) {
+            if (!timerEnabled[i]) {
+                continue;
+            }
+            int dividerPeriod = i == 2 ? 16 : 128;
+            timerDividers[i] += cycles;
+            while (timerDividers[i] >= dividerPeriod) {
+                timerDividers[i] -= dividerPeriod;
+                tickTimer(i);
+            }
+        }
+    }
+
+    private void tickTimer(int index) {
+        int target = timers[index] == 0 ? 0x100 : timers[index];
+        timerStages[index] += 1;
+        if (timerStages[index] < target) {
+            return;
+        }
+        timerStages[index] = 0;
+        counters[index] = u8(counters[index] + 1) & 0x0f;
     }
 
     public int _getImmediateData() {
@@ -816,6 +855,7 @@ public class APU extends AMemory {
             return;
         }
 
+        advanceTimers(cycles);
         int remainingCycles = cycles;
         int total = 0;
 
@@ -1677,6 +1717,11 @@ public class APU extends AMemory {
         counters[0] = 0;
         counters[1] = 0;
         counters[2] = 0;
+        for (int i = 0; i < timerEnabled.length; i++) {
+            timerEnabled[i] = false;
+            timerDividers[i] = 0;
+            timerStages[i] = 0;
+        }
         dsp.reset();
         unknownRegister = 0;
         controlRegister = 0;
