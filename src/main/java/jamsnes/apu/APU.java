@@ -791,15 +791,15 @@ public class APU extends AMemory {
             case 0xe4:
                 return MOVmemToReg(_internalRead(_getDirectAddr()), "a", 3);
             case 0xe5:
-                return MOVregToMem("a", _getAbsoluteAddrByX(), 5);
+                return MOVmemToReg(_getAbsoluteAddrByX(), "a", 5);
             case 0xe6:
-                return MOVregToMem("a", _getIndexXAddr(), 3);
+                return MOVmemToReg(_getIndexXAddr(), "a", 3);
             case 0xe7:
-                return MOVregToMem("a", _getAbsoluteDirectByXAddr(), 6);
+                return MOVmemToReg(_getAbsoluteDirectByXAddr(), "a", 6);
             case 0xe8:
-                return MOVregToMem("a", _getImmediateData(), 2);
+                return MOVmemToReg(_getImmediateData(), "a", 2);
             case 0xe9:
-                return MOVregToMem("x", _getAbsoluteAddr(), 4);
+                return MOVmemToReg(_getAbsoluteAddr(), "x", 4);
             case 0xeb:
                 return MOVregToMem("y", _getDirectAddr(), 3);
             case 0xec:
@@ -823,20 +823,20 @@ public class APU extends AMemory {
             case 0xf5:
                 return MOVmemToReg(_internalRead(_getAbsoluteAddrByX()), "a", 5);
             case 0xf6:
-                return MOVregToMem("a", _getAbsoluteAddrByY(), 5);
+                return MOVmemToReg(_getAbsoluteAddrByY(), "a", 5);
             case 0xf7:
-                return MOVregToMem("a", _getAbsoluteDirectAddrByY(), 6);
+                return MOVmemToReg(_getAbsoluteDirectAddrByY(), "a", 6);
             case 0xf8:
-                return MOVregToMem("x", _getDirectAddr(), 3);
+                return MOVmemToReg(_getDirectAddr(), "x", 3);
             case 0xf9:
-                return MOVregToMem("x", _getDirectAddrByY(), 4);
+                return MOVmemToReg(_getDirectAddrByY(), "x", 4);
             case 0xfa: {
                 int to = _getDirectAddr();
                 int from = _getDirectAddr();
                 return MOVmemToMem(to, from);
             }
             case 0xfb:
-                return MOVregToMem("y", _getDirectAddrByX(), 4);
+                return MOVmemToReg(_getDirectAddrByX(), "y", 4);
             case 0xfc:
                 return INCreg("y");
             case 0xfd:

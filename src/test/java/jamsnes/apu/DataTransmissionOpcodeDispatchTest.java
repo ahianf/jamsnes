@@ -142,6 +142,87 @@ class DataTransmissionOpcodeDispatchTest {
         assertEquals(0x55, snes.apu.internalRegisters().a);
     }
 
+    @Test
+    void executesCppAddressOperandLoadOpcodes() {
+        SNES snes = init();
+        snes.apu.internalRegisters().pc = 0x200;
+        snes.apu.internalRegisters().x = 0x03;
+        snes.apu.internalRegisters().y = 0x04;
+        snes.apu._internalWrite(0x0343, 0xee);
+        snes.apu._internalWrite(0x13, 0x9a);
+        snes.apu._internalWrite(0x14, 0x02);
+        snes.apu._internalWrite(0x029a, 0xdd);
+        writeProgram(snes, 0x200,
+                0xe5, 0x40, 0x03,
+                0xe6,
+                0xe7, 0x10,
+                0xe8, 0x80,
+                0xe9, 0x21, 0x04);
+
+        assertEquals(5, snes.apu.executeInstruction());
+        assertEquals(0x43, snes.apu.internalRegisters().a);
+        assertEquals(0xee, snes.apu._internalRead(0x0343));
+
+        assertEquals(3, snes.apu.executeInstruction());
+        assertEquals(0x03, snes.apu.internalRegisters().a);
+
+        assertEquals(6, snes.apu.executeInstruction());
+        assertEquals(0x9a, snes.apu.internalRegisters().a);
+        assertEquals(0xdd, snes.apu._internalRead(0x029a));
+
+        assertEquals(2, snes.apu.executeInstruction());
+        assertEquals(0x80, snes.apu.internalRegisters().a);
+        assertTrue(snes.apu.internalRegisters().n);
+
+        assertEquals(4, snes.apu.executeInstruction());
+        assertEquals(0x21, snes.apu.internalRegisters().x);
+    }
+
+    @Test
+    void executesIndexedCppAddressOperandLoadOpcodes() {
+        SNES snes = init();
+        snes.apu.internalRegisters().pc = 0x300;
+        snes.apu.internalRegisters().x = 0x03;
+        snes.apu.internalRegisters().y = 0x04;
+        snes.apu._internalWrite(0x0344, 0xee);
+        snes.apu._internalWrite(0x20, 0x70);
+        snes.apu._internalWrite(0x21, 0x04);
+        snes.apu._internalWrite(0x0474, 0xdd);
+        snes.apu._internalWrite(0x14, 0xcc);
+        snes.apu._internalWrite(0x34, 0xbb);
+        writeProgram(snes, 0x300,
+                0xf6, 0x40, 0x03,
+                0xf7, 0x20,
+                0xf8, 0x06,
+                0xf9, 0x10,
+                0xfb, 0x20);
+
+        assertEquals(5, snes.apu.executeInstruction());
+        assertEquals(0x44, snes.apu.internalRegisters().a);
+        assertEquals(0xee, snes.apu._internalRead(0x0344));
+
+        assertEquals(6, snes.apu.executeInstruction());
+        assertEquals(0x74, snes.apu.internalRegisters().a);
+        assertEquals(0xdd, snes.apu._internalRead(0x0474));
+
+        assertEquals(3, snes.apu.executeInstruction());
+        assertEquals(0x06, snes.apu.internalRegisters().x);
+
+        assertEquals(4, snes.apu.executeInstruction());
+        assertEquals(0x14, snes.apu.internalRegisters().x);
+        assertEquals(0xcc, snes.apu._internalRead(0x14));
+
+        assertEquals(4, snes.apu.executeInstruction());
+        assertEquals(0x34, snes.apu.internalRegisters().y);
+        assertEquals(0xbb, snes.apu._internalRead(0x34));
+    }
+
+    private static void writeProgram(SNES snes, int start, int... bytes) {
+        for (int i = 0; i < bytes.length; i++) {
+            snes.apu._internalWrite(start + i, bytes[i]);
+        }
+    }
+
     private static SNES init() {
         return new SNES(new NoRenderer(0, 0, 0));
     }
