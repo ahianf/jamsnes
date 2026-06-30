@@ -801,9 +801,9 @@ public class APU extends AMemory {
             case 0xe9:
                 return MOVmemToReg(_getAbsoluteAddr(), "x", 4);
             case 0xeb:
-                return MOVregToMem("y", _getDirectAddr(), 3);
+                return MOVmemToReg(_getDirectAddr(), "y", 3);
             case 0xec:
-                return MOVregToMem("y", _getAbsoluteAddr(), 4);
+                return MOVmemToReg(_getAbsoluteAddr(), "y", 4);
             case 0xed:
                 return NOTC();
             case 0xee:

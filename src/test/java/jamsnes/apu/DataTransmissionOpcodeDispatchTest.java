@@ -77,10 +77,12 @@ class DataTransmissionOpcodeDispatchTest {
         assertEquals(0x88, snes.apu._internalRead(0x41));
 
         assertEquals(3, snes.apu.executeInstruction());
-        assertEquals(0x88, snes.apu._internalRead(0x42));
+        assertEquals(0x42, snes.apu.internalRegisters().y);
+        assertEquals(0, snes.apu._internalRead(0x42));
 
         assertEquals(4, snes.apu.executeInstruction());
-        assertEquals(0x88, snes.apu._internalRead(0x0310));
+        assertEquals(0x10, snes.apu.internalRegisters().y);
+        assertEquals(0, snes.apu._internalRead(0x0310));
     }
 
     @Test
