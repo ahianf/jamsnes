@@ -282,6 +282,16 @@ class PpuRegisterWriteTest {
         assertFalse(snes.ppu.ppuRegisters().coldataGreen());
         assertTrue(snes.ppu.ppuRegisters().coldataRed());
         assertEquals(0b1_1001, snes.ppu.ppuRegisters().coldataColorIntensity());
+        assertEquals(0b1_1001, snes.ppu.ppuRegisters().fixedColorRed());
+        assertEquals(0b0_0000, snes.ppu.ppuRegisters().fixedColorGreen());
+        assertEquals(0b1_1001, snes.ppu.ppuRegisters().fixedColorBlue());
+        assertEquals(0b1_1001_00000_1_1001, snes.ppu.ppuRegisters().fixedColor());
+
+        snes.bus.write(0x2132, 0b0100_0011);
+        assertEquals(0b1_1001, snes.ppu.ppuRegisters().fixedColorRed());
+        assertEquals(0b0_0011, snes.ppu.ppuRegisters().fixedColorGreen());
+        assertEquals(0b1_1001, snes.ppu.ppuRegisters().fixedColorBlue());
+        assertEquals(0b1_1001_00011_1_1001, snes.ppu.ppuRegisters().fixedColor());
 
         snes.bus.write(0x2133, 0b1011_1001);
         assertTrue(snes.ppu.ppuRegisters().setiniExternalSync());

@@ -106,6 +106,7 @@ public class PPU extends AMemory {
             case 0x1f, 0x20 -> ppuRegisters.writeM7Center(address - 0x1f, value);
             case 0x21 -> ppuRegisters.setCgAddress(value);
             case 0x22 -> writeCgData(value);
+            case 0x32 -> ppuRegisters.writeColdata(value);
             default -> {
             }
         }

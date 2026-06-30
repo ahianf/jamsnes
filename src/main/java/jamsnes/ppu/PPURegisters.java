@@ -8,6 +8,9 @@ public class PPURegisters {
     private final int[] m7 = new int[4];
     private final int[] m7Center = new int[2];
     private final int[] bgOffsets = new int[8];
+    private int fixedColorRed;
+    private int fixedColorGreen;
+    private int fixedColorBlue;
     private int cgAddress;
     private int cgData;
     private boolean cgLowByte = true;
@@ -284,6 +287,22 @@ public class PPURegisters {
         return bit(raw[0x32], 7);
     }
 
+    public int fixedColorRed() {
+        return fixedColorRed;
+    }
+
+    public int fixedColorGreen() {
+        return fixedColorGreen;
+    }
+
+    public int fixedColorBlue() {
+        return fixedColorBlue;
+    }
+
+    public int fixedColor() {
+        return fixedColorRed | (fixedColorGreen << 5) | (fixedColorBlue << 10);
+    }
+
     public boolean setiniScreenInterlace() {
         return bit(raw[0x33], 0);
     }
@@ -339,6 +358,19 @@ public class PPURegisters {
 
     void writeM7Center(int index, int value) {
         m7Center[index] = u16((m7Center[index] << 8) | u8(value));
+    }
+
+    void writeColdata(int value) {
+        int intensity = u8(value) & 0x1f;
+        if ((value & 0x20) != 0) {
+            fixedColorRed = intensity;
+        }
+        if ((value & 0x40) != 0) {
+            fixedColorGreen = intensity;
+        }
+        if ((value & 0x80) != 0) {
+            fixedColorBlue = intensity;
+        }
     }
 
     void incrementOamAddress() {
