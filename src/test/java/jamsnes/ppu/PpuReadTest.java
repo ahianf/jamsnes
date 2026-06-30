@@ -2,10 +2,13 @@ package jamsnes.ppu;
 
 import jamsnes.SNES;
 import jamsnes.exceptions.InvalidAddress;
+import jamsnes.memory.IMemory;
+import jamsnes.memory.MemoryShadow;
 import jamsnes.renderer.NoRenderer;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class PpuReadTest {
@@ -85,6 +88,28 @@ class PpuReadTest {
         SNES snes = init();
 
         assertThrows(InvalidAddress.class, () -> snes.bus.read(0x2100));
+    }
+
+    @Test
+    void returnsPpuRegisterValueNames() {
+        SNES snes = init();
+
+        assertEquals("INIDISP", snes.ppu.getValueName(0x00));
+        assertEquals("OAMDDH", snes.ppu.getValueName(0x03));
+        assertEquals("M7A", snes.ppu.getValueName(0x1b));
+        assertEquals("CGDATAREAD", snes.ppu.getValueName(0x3b));
+        assertEquals("STAT78", snes.ppu.getValueName(0x3f));
+        assertEquals("???", snes.ppu.getValueName(0x40));
+    }
+
+    @Test
+    void ppuMirrorForwardsRegisterValueNames() {
+        SNES snes = init();
+
+        IMemory accessor = snes.bus.getAccessor(0x80213f);
+        MemoryShadow shadow = assertInstanceOf(MemoryShadow.class, accessor);
+
+        assertEquals("STAT78", shadow.getValueName(0x3f));
     }
 
     private static SNES init() {

@@ -394,6 +394,77 @@ public class PPU extends AMemory {
     }
 
     @Override
+    public String getValueName(int address) {
+        return switch (address) {
+            case 0x00 -> "INIDISP";
+            case 0x01 -> "OBSEL";
+            case 0x02 -> "OAMADDL";
+            case 0x03 -> "OAMDDH";
+            case 0x04 -> "OAMDATA";
+            case 0x05 -> "BGMODE";
+            case 0x06 -> "MOSAIC";
+            case 0x07 -> "BG1SC";
+            case 0x08 -> "BG2SC";
+            case 0x09 -> "BG3SC";
+            case 0x0a -> "BG4SC";
+            case 0x0b -> "BG12NBA";
+            case 0x0c -> "BG34NBA";
+            case 0x0d -> "BG1HOFS";
+            case 0x0e -> "BG1VOFS";
+            case 0x0f -> "BG2HOFS";
+            case 0x10 -> "BG2VOFS";
+            case 0x11 -> "BG3HOFS";
+            case 0x12 -> "BG3VOFS";
+            case 0x13 -> "BG4HOFS";
+            case 0x14 -> "BG4VOFS";
+            case 0x15 -> "VMAIN";
+            case 0x16 -> "VMADDL";
+            case 0x17 -> "VMADDH";
+            case 0x18 -> "VMDATAL";
+            case 0x19 -> "VMDATAH";
+            case 0x1a -> "M7SEL";
+            case 0x1b -> "M7A";
+            case 0x1c -> "M7B";
+            case 0x1d -> "M7C";
+            case 0x1e -> "M7D";
+            case 0x1f -> "M7X";
+            case 0x20 -> "M7Y";
+            case 0x21 -> "CGADD";
+            case 0x22 -> "CGDATA";
+            case 0x23 -> "W12SEL";
+            case 0x24 -> "W34SEL";
+            case 0x25 -> "WOBJSEL";
+            case 0x26 -> "WH0";
+            case 0x27 -> "WH1";
+            case 0x28 -> "WH2";
+            case 0x29 -> "WH3";
+            case 0x2a -> "WBJLOG";
+            case 0x2b -> "WOBJLOG";
+            case 0x2c -> "TM";
+            case 0x2d -> "TS";
+            case 0x2e -> "TMW";
+            case 0x2f -> "TSW";
+            case 0x30 -> "CGWSEL";
+            case 0x31 -> "CGADDSUB";
+            case 0x32 -> "COLDATA";
+            case 0x33 -> "SETINI";
+            case 0x34 -> "MPYL";
+            case 0x35 -> "MPYM";
+            case 0x36 -> "MPYH";
+            case 0x37 -> "SLHV";
+            case 0x38 -> "OAMDATAREAD";
+            case 0x39 -> "VMDATALREAD";
+            case 0x3a -> "VMDATAHREAD";
+            case 0x3b -> "CGDATAREAD";
+            case 0x3c -> "OPHCT";
+            case 0x3d -> "OPVCT";
+            case 0x3e -> "STAT77";
+            case 0x3f -> "STAT78";
+            default -> "???";
+        };
+    }
+
+    @Override
     public Component getComponent() {
         return Component.PPU;
     }
