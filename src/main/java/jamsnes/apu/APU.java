@@ -20,6 +20,16 @@ public class APU extends AMemory {
 
     private final APURegisters internalRegisters = new APURegisters();
     private final int[] internalMemory = new int[0x10000];
+    private final int[] iplRom = {
+            0xcd, 0xef, 0xbd, 0xe8, 0x00, 0xc6, 0x1d, 0xd0,
+            0xfc, 0x8f, 0xaa, 0xf4, 0x8f, 0xbb, 0xf5, 0x78,
+            0xcc, 0xf4, 0xd0, 0xfb, 0x2f, 0x19, 0xeb, 0xf4,
+            0xd0, 0xfc, 0x7e, 0xf4, 0xd0, 0x0b, 0xe4, 0xf5,
+            0xcb, 0xf4, 0xd7, 0x00, 0xfc, 0xd0, 0xf3, 0xab,
+            0x01, 0x10, 0xef, 0x7e, 0xf4, 0x10, 0xeb, 0xba,
+            0xf6, 0xda, 0x00, 0xba, 0xf4, 0xc4, 0xf4, 0xdd,
+            0x5d, 0xd0, 0xdb, 0x1f, 0x00, 0x00, 0xc0, 0xff
+    };
     private final DSP dsp;
     private final int[] ports = new int[4];
     private final int[] timers = new int[3];
@@ -89,6 +99,9 @@ public class APU extends AMemory {
             case 0x00f9 -> registerMemory2;
             case 0x00fd, 0x00fe, 0x00ff -> counters[address - 0x00fd];
             default -> {
+                if (address >= 0xffc0) {
+                    yield iplRom[address - 0xffc0];
+                }
                 if (address <= 0x00ef || address >= 0x0100) {
                     yield internalMemory[address];
                 }
@@ -110,6 +123,10 @@ public class APU extends AMemory {
             case 0x00f9 -> registerMemory2 = value;
             case 0x00fa, 0x00fb, 0x00fc -> timers[address - 0x00fa] = value;
             default -> {
+                if (address >= 0xffc0) {
+                    iplRom[address - 0xffc0] = value;
+                    return;
+                }
                 if (address <= 0x00ef || address >= 0x0100) {
                     internalMemory[address] = value;
                     return;

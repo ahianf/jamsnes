@@ -40,6 +40,27 @@ class InternalMemoryMapTest {
     }
 
     @Test
+    void internalReadMapsIplRomAtBootVector() {
+        SNES snes = init();
+
+        assertEquals(0xcd, snes.apu._internalRead(0xffc0));
+        assertEquals(0xef, snes.apu._internalRead(0xffc1));
+        assertEquals(0xc0, snes.apu._internalRead(0xfffe));
+        assertEquals(0xff, snes.apu._internalRead(0xffff));
+    }
+
+    @Test
+    void internalWriteCanPatchIplRomRegion() {
+        SNES snes = init();
+
+        snes.apu._internalWrite(0xffc0, 0x42);
+        snes.apu._internalWrite(0xffff, 0x24);
+
+        assertEquals(0x42, snes.apu._internalRead(0xffc0));
+        assertEquals(0x24, snes.apu._internalRead(0xffff));
+    }
+
+    @Test
     void internalWriteUsesApuMemoryRegionsAndRegisters() {
         SNES snes = init();
 
