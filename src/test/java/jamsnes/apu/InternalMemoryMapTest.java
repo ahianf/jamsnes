@@ -61,6 +61,39 @@ class InternalMemoryMapTest {
     }
 
     @Test
+    void controlRegisterTogglesIplRomOverlay() {
+        SNES snes = init();
+
+        assertEquals(0xcd, snes.apu._internalRead(0xffc0));
+
+        snes.apu._internalWrite(0x00f1, 0x00);
+        snes.apu._internalWrite(0xffc0, 0x42);
+        assertEquals(0x42, snes.apu._internalRead(0xffc0));
+
+        snes.apu._internalWrite(0x00f1, 0x80);
+        assertEquals(0xcd, snes.apu._internalRead(0xffc0));
+    }
+
+    @Test
+    void controlRegisterClearsCommunicationPorts() {
+        SNES snes = init();
+        snes.apu._internalWrite(0x00f4, 0x11);
+        snes.apu._internalWrite(0x00f5, 0x22);
+        snes.apu._internalWrite(0x00f6, 0x33);
+        snes.apu._internalWrite(0x00f7, 0x44);
+
+        snes.apu._internalWrite(0x00f1, 0x10);
+        assertEquals(0x00, snes.apu._internalRead(0x00f4));
+        assertEquals(0x00, snes.apu._internalRead(0x00f5));
+        assertEquals(0x33, snes.apu._internalRead(0x00f6));
+        assertEquals(0x44, snes.apu._internalRead(0x00f7));
+
+        snes.apu._internalWrite(0x00f1, 0x20);
+        assertEquals(0x00, snes.apu._internalRead(0x00f6));
+        assertEquals(0x00, snes.apu._internalRead(0x00f7));
+    }
+
+    @Test
     void internalWriteUsesApuMemoryRegionsAndRegisters() {
         SNES snes = init();
 
@@ -138,6 +171,7 @@ class InternalMemoryMapTest {
         assertEquals(0x22, snes.apu._internalRead(0x0100));
         assertEquals(0x33, snes.apu._internalRead(0x0200));
         assertEquals(0x44, snes.apu._internalRead(0xffbf));
+        assertEquals(0x99, snes.apu._internalRead(0xffc0));
         assertEquals(0xaa, snes.apu._internalRead(0x00f4));
         assertEquals(0xbb, snes.apu._internalRead(0x00f8));
         assertEquals(0xcc, snes.apu._internalRead(0x00fd));
@@ -200,6 +234,7 @@ class InternalMemoryMapTest {
         spc[0x200] = 0x22;
         spc[0x300] = 0x33;
         spc[0x100bf] = 0x44;
+        spc[0x100c0] = (byte) 0x99;
         spc[0x1f2] = 0x00;
         spc[0x1f3] = 0x55;
         spc[0x1f4] = (byte) 0xaa;

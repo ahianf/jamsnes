@@ -41,6 +41,7 @@ public class APU extends AMemory {
     private int registerMemory1;
     private int registerMemory2;
     private int paddingCycles;
+    private boolean iplRomEnabled = true;
     public boolean isDisabled;
 
     public APU(IRenderer renderer) {
@@ -99,7 +100,7 @@ public class APU extends AMemory {
             case 0x00f9 -> registerMemory2;
             case 0x00fd, 0x00fe, 0x00ff -> counters[address - 0x00fd];
             default -> {
-                if (address >= 0xffc0) {
+                if (address >= 0xffc0 && iplRomEnabled) {
                     yield iplRom[address - 0xffc0];
                 }
                 if (address <= 0x00ef || address >= 0x0100) {
@@ -115,7 +116,7 @@ public class APU extends AMemory {
         int value = u8(data);
         switch (address) {
             case 0x00f0 -> unknownRegister = value;
-            case 0x00f1 -> controlRegister = value;
+            case 0x00f1 -> writeControlRegister(value);
             case 0x00f2 -> dspRegisterAddress = value;
             case 0x00f3 -> dsp.write(dspRegisterAddress, value);
             case 0x00f4, 0x00f5, 0x00f6, 0x00f7 -> ports[address - 0x00f4] = value;
@@ -123,7 +124,7 @@ public class APU extends AMemory {
             case 0x00f9 -> registerMemory2 = value;
             case 0x00fa, 0x00fb, 0x00fc -> timers[address - 0x00fa] = value;
             default -> {
-                if (address >= 0xffc0) {
+                if (address >= 0xffc0 && iplRomEnabled) {
                     iplRom[address - 0xffc0] = value;
                     return;
                 }
@@ -133,6 +134,19 @@ public class APU extends AMemory {
                 }
                 throw new InvalidAddress("APU Registers write", address);
             }
+        }
+    }
+
+    private void writeControlRegister(int value) {
+        controlRegister = value;
+        iplRomEnabled = (value & 0x80) != 0;
+        if ((value & 0x10) != 0) {
+            ports[0] = 0;
+            ports[1] = 0;
+        }
+        if ((value & 0x20) != 0) {
+            ports[2] = 0;
+            ports[3] = 0;
         }
     }
 
@@ -838,9 +852,12 @@ public class APU extends AMemory {
         for (int i = 0; i < 0xfdc0; i++) {
             internalMemory[0x0200 + i] = cartridge.read(0x300 + i);
         }
+        for (int i = 0; i < 0x0040; i++) {
+            internalMemory[0xffc0 + i] = cartridge.read(0x100 + 0xffc0 + i);
+        }
 
         unknownRegister = cartridge.read(0x100 + 0x00f0);
-        controlRegister = cartridge.read(0x100 + 0x00f1);
+        writeControlRegister(cartridge.read(0x100 + 0x00f1));
         dspRegisterAddress = cartridge.read(0x100 + 0x00f2);
         dsp.write(dspRegisterAddress, cartridge.read(0x100 + 0x00f3));
         ports[0] = cartridge.read(0x100 + 0x00f4);
@@ -1657,6 +1674,7 @@ public class APU extends AMemory {
         dsp.reset();
         unknownRegister = 0;
         controlRegister = 0;
+        iplRomEnabled = true;
         dspRegisterAddress = 0;
         registerMemory1 = 0;
         registerMemory2 = 0;
