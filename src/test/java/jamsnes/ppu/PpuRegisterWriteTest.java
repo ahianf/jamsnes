@@ -220,6 +220,15 @@ class PpuRegisterWriteTest {
         assertFalse(snes.ppu.ppuRegisters().window2InversionForBg2Bg4Color(2));
         assertTrue(snes.ppu.ppuRegisters().windowEnableWindow2ForBg2Bg4Color(2));
 
+        snes.bus.write(0x2126, 0x12);
+        snes.bus.write(0x2127, 0x34);
+        snes.bus.write(0x2128, 0x56);
+        snes.bus.write(0x2129, 0x78);
+        assertEquals(0x12, snes.ppu.ppuRegisters().windowPosition(0));
+        assertEquals(0x34, snes.ppu.ppuRegisters().windowPosition(1));
+        assertEquals(0x56, snes.ppu.ppuRegisters().windowPosition(2));
+        assertEquals(0x78, snes.ppu.ppuRegisters().windowPosition(3));
+
         snes.bus.write(0x212a, 0b1011_0001);
         assertEquals(0b10, snes.ppu.ppuRegisters().windowMaskLogicBg1());
         assertEquals(0b11, snes.ppu.ppuRegisters().windowMaskLogicBg2());

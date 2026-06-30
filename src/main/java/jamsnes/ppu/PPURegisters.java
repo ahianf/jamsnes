@@ -195,6 +195,10 @@ public class PPURegisters {
         return bit(raw[0x23 + index], 7);
     }
 
+    public int windowPosition(int index) {
+        return raw[0x26 + index];
+    }
+
     public int windowMaskLogicBg1() {
         return (raw[0x2a] >>> 6) & 0b11;
     }
