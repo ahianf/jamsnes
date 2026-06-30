@@ -184,6 +184,16 @@ class PpuRegisterWriteTest {
         snes.bus.write(0x211d, 0b1011_1001);
         snes.bus.write(0x211d, 0b1111_1111);
         assertEquals(0b1011_1001_1111_1111, snes.ppu.ppuRegisters().m7Matrix(2));
+
+        snes.bus.write(0x211f, 0b0001_1001);
+        snes.bus.write(0x211f, 0b1010_0101);
+        assertEquals(0b0001_1001_1010_0101, snes.ppu.ppuRegisters().m7CenterRaw(0));
+        assertEquals(0b0000_0011_0011_0100, snes.ppu.ppuRegisters().m7CenterValue(0));
+
+        snes.bus.write(0x2120, 0b0110_1001);
+        snes.bus.write(0x2120, 0b0101_1010);
+        assertEquals(0b0110_1001_0101_1010, snes.ppu.ppuRegisters().m7CenterRaw(1));
+        assertEquals(0b0000_1101_0010_1011, snes.ppu.ppuRegisters().m7CenterValue(1));
     }
 
     @Test

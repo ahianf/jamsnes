@@ -6,6 +6,7 @@ import static jamsnes.models.Unsigned.u8;
 public class PPURegisters {
     private final int[] raw;
     private final int[] m7 = new int[4];
+    private final int[] m7Center = new int[2];
     private final int[] bgOffsets = new int[8];
     private int cgAddress;
     private int cgData;
@@ -149,6 +150,14 @@ public class PPURegisters {
 
     public int m7MatrixLow(int index) {
         return m7[index] & 0xff;
+    }
+
+    public int m7CenterRaw(int index) {
+        return m7Center[index];
+    }
+
+    public int m7CenterValue(int index) {
+        return (m7Center[index] >>> 3) & 0x1fff;
     }
 
     public boolean windowEnableWindow2ForBg2Bg4Color(int index) {
@@ -326,6 +335,10 @@ public class PPURegisters {
 
     void writeM7Matrix(int index, int value) {
         m7[index] = u16((m7[index] << 8) | u8(value));
+    }
+
+    void writeM7Center(int index, int value) {
+        m7Center[index] = u16((m7Center[index] << 8) | u8(value));
     }
 
     void incrementOamAddress() {
