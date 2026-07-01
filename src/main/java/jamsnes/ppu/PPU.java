@@ -16,6 +16,8 @@ public class PPU extends AMemory {
     public static final int VRAM_SIZE = 65_536;
     public static final int CGRAM_SIZE = 512;
     public static final int OAMRAM_SIZE = 544;
+    private static final int SOURCE_NONE = -1;
+    private static final int SOURCE_BACKDROP = 0;
     private static final int MODE7_SIZE = 1024;
     private static final int MODE7_TILE_MAP_WIDTH = 128;
     private static final int MODE7_TILE_SIZE = 8;
@@ -33,6 +35,8 @@ public class PPU extends AMemory {
     private final int[][] screen = new int[Background.BUFFER_SIZE][Background.BUFFER_SIZE];
     private final int[][] mainScreenLevelMap = new int[Background.BUFFER_SIZE][Background.BUFFER_SIZE];
     private final int[][] subScreenLevelMap = new int[Background.BUFFER_SIZE][Background.BUFFER_SIZE];
+    private final int[][] mainScreenSourceMap = new int[Background.BUFFER_SIZE][Background.BUFFER_SIZE];
+    private final int[][] subScreenSourceMap = new int[Background.BUFFER_SIZE][Background.BUFFER_SIZE];
     private int vramAddress;
     private int vmain;
     private int vramIncrementAmount = 1;
@@ -146,18 +150,18 @@ public class PPU extends AMemory {
 
     public void update(int cycles) {
         renderMainAndSubScreen();
-        clearBuffer(screen);
-        addBuffer(screen, subScreen);
-        addBuffer(screen, mainScreen);
 
         for (int y = 0; y < screen.length; y++) {
             for (int x = 0; x < screen[y].length; x++) {
+                screen[y][x] = composePixel(x, y);
                 renderer.putPixel(y, x, applyDisplayControl(screen[y][x]));
             }
         }
         renderer.drawScreen();
         clearBuffer(mainScreen);
         clearBuffer(subScreen);
+        clearSourceMap(mainScreenSourceMap, SOURCE_NONE);
+        clearSourceMap(subScreenSourceMap, SOURCE_NONE);
     }
 
     public void renderMainAndSubScreen() {
@@ -171,6 +175,8 @@ public class PPU extends AMemory {
         clearBuffer(mainScreen);
         clearBuffer(mainScreenLevelMap);
         clearBuffer(subScreenLevelMap);
+        clearSourceMap(mainScreenSourceMap, SOURCE_NONE);
+        clearSourceMap(subScreenSourceMap, SOURCE_BACKDROP);
 
         switch (ppuRegisters.bgMode()) {
             case 0 -> {
@@ -365,32 +371,41 @@ public class PPU extends AMemory {
         Vector2<Integer> scroll = getBgScroll(background.getBackgroundNumber());
         if ((registers[0x2c] & backgroundBit) != 0) {
             Background.mergeBackgroundBuffer(
-                    mainScreen, mainScreenLevelMap, background, levelLow, levelHigh, scroll.x, scroll.y);
+                    mainScreen, mainScreenLevelMap, mainScreenSourceMap, background.getBackgroundNumber(),
+                    background, levelLow, levelHigh, scroll.x, scroll.y);
         }
         if ((registers[0x2d] & backgroundBit) != 0) {
             Background.mergeBackgroundBuffer(
-                    subScreen, subScreenLevelMap, background, levelLow, levelHigh, scroll.x, scroll.y);
+                    subScreen, subScreenLevelMap, subScreenSourceMap, background.getBackgroundNumber(),
+                    background, levelLow, levelHigh, scroll.x, scroll.y);
         }
     }
 
     private void addMode7ToMainSubScreen() {
         if ((registers[0x2c] & 0x01) != 0) {
-            renderMode7ToBuffer(mainScreen, mainScreenLevelMap, 20, 20, false);
+            renderMode7ToBuffer(mainScreen, mainScreenLevelMap, mainScreenSourceMap, 1, 20, 20, false);
         }
         if ((registers[0x2d] & 0x01) != 0) {
-            renderMode7ToBuffer(subScreen, subScreenLevelMap, 20, 20, false);
+            renderMode7ToBuffer(subScreen, subScreenLevelMap, subScreenSourceMap, 1, 20, 20, false);
         }
         if (ppuRegisters.setiniMode7ExtBg()) {
             if ((registers[0x2c] & 0x02) != 0) {
-                renderMode7ToBuffer(mainScreen, mainScreenLevelMap, 10, 30, true);
+                renderMode7ToBuffer(mainScreen, mainScreenLevelMap, mainScreenSourceMap, 2, 10, 30, true);
             }
             if ((registers[0x2d] & 0x02) != 0) {
-                renderMode7ToBuffer(subScreen, subScreenLevelMap, 10, 30, true);
+                renderMode7ToBuffer(subScreen, subScreenLevelMap, subScreenSourceMap, 2, 10, 30, true);
             }
         }
     }
 
-    private void renderMode7ToBuffer(int[][] destination, int[][] levelMap, int levelLow, int levelHigh, boolean extBg) {
+    private void renderMode7ToBuffer(
+            int[][] destination,
+            int[][] levelMap,
+            int[][] sourceMap,
+            int source,
+            int levelLow,
+            int levelHigh,
+            boolean extBg) {
         int a = signed16(ppuRegisters.m7Matrix(0));
         int b = signed16(ppuRegisters.m7Matrix(1));
         int c = signed16(ppuRegisters.m7Matrix(2));
@@ -416,6 +431,7 @@ public class PPU extends AMemory {
                 }
                 destination[y][x] = pixel.color;
                 levelMap[y][x] = level;
+                sourceMap[y][x] = source;
             }
         }
     }
@@ -486,11 +502,86 @@ public class PPU extends AMemory {
         }
     }
 
+    private int composePixel(int x, int y) {
+        int mainPixel = mainScreen[y][x];
+        int source = mainScreenSourceMap[y][x];
+        int pixel = mainPixel;
+        if (Integer.compareUnsigned(mainPixel, 0xff) <= 0) {
+            pixel = subScreen[y][x];
+            source = subScreenSourceMap[y][x];
+        }
+        return applyColorMath(pixel, source);
+    }
+
+    private int applyColorMath(int pixel, int source) {
+        if (!isColorMathEnabledForSource(source)) {
+            return pixel;
+        }
+        int other = ppuRegisters.cgwselAddSubscreen()
+                ? 0
+                : PPUUtils.cgramColorToRGBA(ppuRegisters.fixedColor());
+        return ppuRegisters.cgadsubAddSubtractSelect()
+                ? subtractColor(pixel, other, ppuRegisters.cgadsubHalfColorMath())
+                : addColor(pixel, other, ppuRegisters.cgadsubHalfColorMath());
+    }
+
+    private boolean isColorMathEnabledForSource(int source) {
+        if (source == SOURCE_BACKDROP) {
+            return ppuRegisters.cgadsubEnableColorMathBackdrop();
+        }
+        if (source >= 1 && source <= 4) {
+            return ppuRegisters.cgadsubEnableColorMathBg(source - 1);
+        }
+        return false;
+    }
+
+    private int addColor(int left, int right, boolean half) {
+        int red = channel(left, 24) + channel(right, 24);
+        int green = channel(left, 16) + channel(right, 16);
+        int blue = channel(left, 8) + channel(right, 8);
+        if (half) {
+            red >>>= 1;
+            green >>>= 1;
+            blue >>>= 1;
+        }
+        return packColor(clamp8(red), clamp8(green), clamp8(blue), left & 0xff);
+    }
+
+    private int subtractColor(int left, int right, boolean half) {
+        int red = channel(left, 24) - channel(right, 24);
+        int green = channel(left, 16) - channel(right, 16);
+        int blue = channel(left, 8) - channel(right, 8);
+        if (half) {
+            red >>= 1;
+            green >>= 1;
+            blue >>= 1;
+        }
+        return packColor(clamp8(red), clamp8(green), clamp8(blue), left & 0xff);
+    }
+
+    private int channel(int color, int shift) {
+        return (color >>> shift) & 0xff;
+    }
+
+    private int clamp8(int value) {
+        return Math.max(0, Math.min(0xff, value));
+    }
+
+    private int packColor(int red, int green, int blue, int alpha) {
+        return (red << 24) | (green << 16) | (blue << 8) | alpha;
+    }
+
     private void clearBuffer(int[][] buffer) {
         fillBuffer(buffer, 0);
     }
 
     private void fillBuffer(int[][] buffer, int value) {
+        for (int[] row : buffer) {
+            Arrays.fill(row, value);
+        }
+    }
+
+    private void clearSourceMap(int[][] buffer, int value) {
         for (int[] row : buffer) {
             Arrays.fill(row, value);
         }

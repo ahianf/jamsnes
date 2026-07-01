@@ -115,6 +115,20 @@ public class Background {
             int levelHigh,
             int scrollX,
             int scrollY) {
+        mergeBackgroundBuffer(
+                bufferDest, pixelDestinationLevelMap, null, 0, backgroundSrc, levelLow, levelHigh, scrollX, scrollY);
+    }
+
+    public static void mergeBackgroundBuffer(
+            int[][] bufferDest,
+            int[][] pixelDestinationLevelMap,
+            int[][] sourceDestinationMap,
+            int source,
+            Background backgroundSrc,
+            int levelLow,
+            int levelHigh,
+            int scrollX,
+            int scrollY) {
         int height = Math.min(bufferDest.length, backgroundSrc.buffer.length);
         int sourceHeight = backgroundSrc.backgroundSize.y > 0
                 ? Math.min(backgroundSrc.backgroundSize.y, backgroundSrc.buffer.length)
@@ -135,6 +149,9 @@ public class Background {
                 if (pixelLevel >= pixelDestinationLevelMap[y][x]) {
                     bufferDest[y][x] = pixel;
                     pixelDestinationLevelMap[y][x] = pixelLevel;
+                    if (sourceDestinationMap != null) {
+                        sourceDestinationMap[y][x] = source;
+                    }
                 }
             }
         }
