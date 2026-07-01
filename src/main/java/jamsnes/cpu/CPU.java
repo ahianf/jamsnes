@@ -1015,26 +1015,22 @@ public class CPU extends AMemory {
     }
 
     public int TXY(int valueAddr) {
-        int negativeFlag = registers.p.x_b ? 0x80 : 0x8000;
         if (registers.p.x_b) {
             registers.y = u16((registers.y & 0xff00) | registers.xl());
         } else {
             registers.y = u16(registers.x);
         }
-        registers.p.n = (registers.y & negativeFlag) != 0;
-        registers.p.z = registers.y == 0;
+        setZNIndex(registers.y);
         return 0;
     }
 
     public int TYX(int valueAddr) {
-        int negativeFlag = registers.p.x_b ? 0x80 : 0x8000;
         if (registers.p.x_b) {
             registers.x = u16((registers.x & 0xff00) | registers.yl());
         } else {
             registers.x = u16(registers.y);
         }
-        registers.p.n = (registers.y & negativeFlag) != 0;
-        registers.p.z = registers.y == 0;
+        setZNIndex(registers.x);
         return 0;
     }
 

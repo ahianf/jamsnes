@@ -94,12 +94,21 @@ class TransferInstructionTest {
     void indexTransfersPreserveHighByteInEightBitMode() {
         SNES snes = init();
         snes.cpu.registers().p.x_b = true;
-        snes.cpu.registers().x = 0x12ab;
+        snes.cpu.registers().x = 0x1200;
         snes.cpu.registers().y = 0x3400;
 
         snes.cpu.TXY(0);
 
-        assertEquals(0x34ab, snes.cpu.registers().y);
+        assertEquals(0x3400, snes.cpu.registers().y);
+        assertTrue(snes.cpu.registers().p.z);
+        assertFalse(snes.cpu.registers().p.n);
+
+        snes.cpu.registers().y = 0x3480;
+        snes.cpu.TYX(0);
+
+        assertEquals(0x1280, snes.cpu.registers().x);
+        assertFalse(snes.cpu.registers().p.z);
+        assertTrue(snes.cpu.registers().p.n);
     }
 
     @Test
