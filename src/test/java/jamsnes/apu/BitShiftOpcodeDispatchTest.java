@@ -86,6 +86,25 @@ class BitShiftOpcodeDispatchTest {
         assertEquals(0x5a, snes.apu.internalRegisters().a);
     }
 
+    @Test
+    void executesAccumulatorRightShiftOpcodes() {
+        SNES snes = init();
+        snes.apu.internalRegisters().pc = 0x200;
+        snes.apu.internalRegisters().a = 0x03;
+        snes.apu._internalWrite(0x200, 0x5c);
+        snes.apu._internalWrite(0x201, 0x7c);
+
+        assertEquals(2, snes.apu.executeInstruction());
+        assertEquals(0x01, snes.apu.internalRegisters().a);
+        assertTrue(snes.apu.internalRegisters().c);
+        assertFalse(snes.apu.internalRegisters().n);
+
+        assertEquals(2, snes.apu.executeInstruction());
+        assertEquals(0x80, snes.apu.internalRegisters().a);
+        assertTrue(snes.apu.internalRegisters().c);
+        assertTrue(snes.apu.internalRegisters().n);
+    }
+
     private static void writeAbsoluteBitInstruction(SNES snes, int pc, int opcode, int address, int bit) {
         int operand = (bit << 13) | address;
         snes.apu._internalWrite(pc, opcode);

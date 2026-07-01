@@ -36,7 +36,7 @@ class ShiftRotationInstructionTest {
         assertEquals(2, snes.apu.LSR(snes.apu.internalRegisters().a, 2, true));
         assertEquals(0x33, snes.apu.internalRegisters().a);
         assertFalse(snes.apu.internalRegisters().c);
-        assertTrue(snes.apu.internalRegisters().n);
+        assertFalse(snes.apu.internalRegisters().n);
         assertFalse(snes.apu.internalRegisters().z);
 
         snes.apu._internalWrite(0x55, 0xdd);
@@ -67,20 +67,20 @@ class ShiftRotationInstructionTest {
     }
 
     @Test
-    void rorRotatesAccumulatorAndMemoryThroughCarryLikeCppPort() {
+    void rorRotatesAccumulatorAndMemoryThroughCarry() {
         SNES snes = init();
         snes.apu.internalRegisters().a = 0x66;
 
         assertEquals(2, snes.apu.ROR(snes.apu.internalRegisters().a, 2, true));
         assertEquals(0x33, snes.apu.internalRegisters().a);
         assertFalse(snes.apu.internalRegisters().c);
-        assertTrue(snes.apu.internalRegisters().n);
+        assertFalse(snes.apu.internalRegisters().n);
         assertFalse(snes.apu.internalRegisters().z);
 
         snes.apu.internalRegisters().c = true;
         snes.apu._internalWrite(0x55, 0xdc);
         assertEquals(5, snes.apu.ROR(0x55, 5));
-        assertEquals(0x6f, snes.apu._internalRead(0x55));
+        assertEquals(0xee, snes.apu._internalRead(0x55));
         assertFalse(snes.apu.internalRegisters().c);
         assertTrue(snes.apu.internalRegisters().n);
     }
