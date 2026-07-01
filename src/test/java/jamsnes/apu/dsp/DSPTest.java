@@ -1,6 +1,7 @@
 package jamsnes.apu.dsp;
 
 import jamsnes.SNES;
+import jamsnes.renderer.IRenderer;
 import jamsnes.renderer.NoRenderer;
 import org.junit.jupiter.api.Test;
 
@@ -75,6 +76,25 @@ class DSPTest {
         snes.apu.update(0);
 
         assertEquals(1, snes.apu.dsp().voicePhase());
+    }
+
+    @Test
+    void apuBackedDspPlaysBufferedAudioThroughRenderer() {
+        TestRenderer renderer = new TestRenderer();
+        SNES snes = new SNES(renderer);
+        snes.apu.dsp().setMasterOutput(0, 0x1234);
+        snes.apu.dsp().setEchoOutput(1, 0x0055);
+        snes.apu.dsp().write(0x0c, 0x7f);
+        snes.apu.dsp().write(0x1c, 0x7f);
+
+        for (int i = 0; i < 28; i++) {
+            snes.apu.dsp().update();
+        }
+
+        assertEquals(1, renderer.playAudioCalls);
+        assertEquals(2, renderer.lastAudioSamples.length);
+        assertEquals(4623, renderer.lastAudioSamples[0]);
+        assertEquals(0, renderer.lastAudioSamples[1]);
     }
 
     @Test
@@ -366,5 +386,32 @@ class DSPTest {
         assertEquals(8669, dsp.soundBuffer()[0]);
         assertEquals(2, dsp.getSamplesCount());
         assertEquals(0, dsp.masterOutput(0));
+    }
+
+    private static final class TestRenderer implements IRenderer {
+        private int playAudioCalls;
+        private short[] lastAudioSamples = new short[0];
+
+        @Override
+        public void setWindowName(String newWindowName) {
+        }
+
+        @Override
+        public void drawScreen() {
+        }
+
+        @Override
+        public void putPixel(int y, int x, int rgba) {
+        }
+
+        @Override
+        public void createWindow(SNES snes, int maxFPS) {
+        }
+
+        @Override
+        public void playAudio(short[] samples) {
+            playAudioCalls++;
+            lastAudioSamples = samples;
+        }
     }
 }

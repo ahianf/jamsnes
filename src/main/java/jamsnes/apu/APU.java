@@ -48,7 +48,7 @@ public class APU extends AMemory {
     public boolean isDisabled;
 
     public APU(IRenderer renderer) {
-        dsp = new DSP(this::_internalRead, this::_internalWrite);
+        dsp = new DSP(this::_internalRead, this::_internalWrite, renderer);
         reset();
     }
 

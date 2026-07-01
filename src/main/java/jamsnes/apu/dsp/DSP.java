@@ -1,7 +1,9 @@
 package jamsnes.apu.dsp;
 
 import jamsnes.exceptions.InvalidAddress;
+import jamsnes.renderer.IRenderer;
 
+import java.util.Arrays;
 import java.util.function.IntUnaryOperator;
 
 import static jamsnes.models.Unsigned.u16;
@@ -81,6 +83,7 @@ public class DSP {
     private final short[] soundBuffer = new short[0x10000];
     private final IntUnaryOperator ramReader;
     private final RamWriter ramWriter;
+    private final IRenderer renderer;
     private int voicePhase;
     private int bufferOffset;
 
@@ -88,14 +91,20 @@ public class DSP {
         int[] ram = new int[0x10000];
         ramReader = address -> ram[u16(address)];
         ramWriter = (address, value) -> ram[u16(address)] = u8(value);
+        renderer = null;
         for (int i = 0; i < voices.length; i++) {
             voices[i] = new Voice();
         }
     }
 
     public DSP(IntUnaryOperator ramReader, RamWriter ramWriter) {
+        this(ramReader, ramWriter, null);
+    }
+
+    public DSP(IntUnaryOperator ramReader, RamWriter ramWriter, IRenderer renderer) {
         this.ramReader = address -> u8(ramReader.applyAsInt(u16(address)));
         this.ramWriter = (address, value) -> ramWriter.write(u16(address), u8(value));
+        this.renderer = renderer;
         for (int i = 0; i < voices.length; i++) {
             voices[i] = new Voice();
         }
@@ -407,6 +416,14 @@ public class DSP {
             }
         }
         voicePhase = (voicePhase + 1) % 32;
+        playBufferedAudio();
+    }
+
+    private void playBufferedAudio() {
+        int samples = getSamplesCount();
+        if (renderer != null && samples > 0) {
+            renderer.playAudio(Arrays.copyOf(soundBuffer, samples));
+        }
     }
 
     public void timerTick() {
