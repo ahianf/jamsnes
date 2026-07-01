@@ -1424,7 +1424,7 @@ public class CPU extends AMemory {
         if (condition) {
             registers.setPc(registers.pc + (byte) bus.read(valueAddr));
         }
-        return (condition ? 1 : 0) + (emulationMode ? 1 : 0);
+        return condition ? 1 + (emulationMode ? 1 : 0) : 0;
     }
 
     private void checkInterrupts() {

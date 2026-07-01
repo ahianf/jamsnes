@@ -31,7 +31,7 @@ class CpuOpcodeDispatchTest {
         assertEquals(0x0200, snes.cpu.registers().pc);
 
         snes.cpu.registers().p.z = true;
-        assertEquals(3, snes.cpu.executeInstruction());
+        assertEquals(2, snes.cpu.executeInstruction());
         assertEquals(0x0202, snes.cpu.registers().pc);
     }
 
