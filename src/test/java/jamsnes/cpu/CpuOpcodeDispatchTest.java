@@ -451,12 +451,12 @@ class CpuOpcodeDispatchTest {
         snes.cpu.registers().y = 0x03;
         snes.wram.data()[0x0112] = 0x00;
         snes.wram.data()[0x0113] = 0x04;
-        snes.wram.data()[0x0120] = 0x10;
+        snes.wram.data()[0x0120] = 0xfd;
         snes.wram.data()[0x0121] = 0x04;
         snes.wram.data()[0x0130] = 0x01;
         snes.wram.data()[0x0131] = 0x04;
         snes.wram.data()[0x0400] = 0x10;
-        snes.wram.data()[0x0413] = 0x01;
+        snes.wram.data()[0x0500] = 0x01;
         snes.wram.data()[0x0401] = 0x0f;
         snes.wram.data()[0x0313] = 0x02;
         writeProgram(snes, 0x0200, 0xa1, 0x10, 0x11, 0x20, 0x32, 0x30, 0x73, 0x10);
@@ -525,10 +525,10 @@ class CpuOpcodeDispatchTest {
         snes.cpu.registers().a = 0x05;
         snes.wram.data()[0x0112] = 0x00;
         snes.wram.data()[0x0113] = 0x04;
-        snes.wram.data()[0x0120] = 0x10;
+        snes.wram.data()[0x0120] = 0xfd;
         snes.wram.data()[0x0121] = 0x04;
         snes.wram.data()[0x0400] = 0x05;
-        snes.wram.data()[0x0413] = 0x06;
+        snes.wram.data()[0x0500] = 0x06;
         snes.wram.data()[0x0305] = 0x01;
         writeProgram(snes, 0x0200, 0xc1, 0x10, 0xd1, 0x20, 0xe3, 0x05);
 

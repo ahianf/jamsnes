@@ -1606,7 +1606,7 @@ public class CPU extends AMemory {
     }
 
     private void markIndexBoundary(int base, int index) {
-        if ((base & 0x80000000) == ((base + index) & 0x80000000)) {
+        if ((base & 0xff00) != ((base + index) & 0xff00)) {
             hasIndexCrossedPageBoundary = true;
         }
     }

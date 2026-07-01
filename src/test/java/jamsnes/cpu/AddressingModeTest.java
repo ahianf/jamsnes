@@ -6,6 +6,8 @@ import jamsnes.renderer.NoRenderer;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class AddressingModeTest {
     @Test
@@ -79,6 +81,21 @@ class AddressingModeTest {
     }
 
     @Test
+    void directIndirectIndexedYTracksPageBoundaryCrossing() {
+        SNES snes = init();
+        snes.cartridge.data()[0] = 0x10;
+        snes.wram.data()[0x1010] = 0xf0;
+        snes.wram.data()[0x1011] = 0x12;
+        snes.cpu.registers().setPac(0x808000);
+        snes.cpu.registers().dbr = 0x80;
+        snes.cpu.registers().y = 0x0010;
+        snes.cpu.registers().d = 0x1000;
+
+        assertEquals(0x801300, snes.cpu._getDirectIndirectIndexedYAddr());
+        assertTrue(snes.cpu.hasIndexCrossedPageBoundary());
+    }
+
+    @Test
     void directIndirectIndexedYLong() {
         SNES snes = init();
         snes.cpu.registers().setPac(0x808000);
@@ -142,6 +159,32 @@ class AddressingModeTest {
 
         assertEquals(0xefac15, snes.cpu._getAbsoluteIndexedByXAddr());
         assertEquals(0x808002, snes.cpu.registers().pac);
+    }
+
+    @Test
+    void absoluteIndexedByXDoesNotTrackPageBoundaryWhenIndexStaysOnPage() {
+        SNES snes = init();
+        snes.cpu.registers().setPac(0x808000);
+        snes.cartridge.data()[0] = 0xf0;
+        snes.cartridge.data()[1] = 0x12;
+        snes.cpu.registers().dbr = 0x80;
+        snes.cpu.registers().x = 0x000f;
+
+        assertEquals(0x8012ff, snes.cpu._getAbsoluteIndexedByXAddr());
+        assertFalse(snes.cpu.hasIndexCrossedPageBoundary());
+    }
+
+    @Test
+    void absoluteIndexedByXTracksPageBoundaryCrossing() {
+        SNES snes = init();
+        snes.cpu.registers().setPac(0x808000);
+        snes.cartridge.data()[0] = 0xf0;
+        snes.cartridge.data()[1] = 0x12;
+        snes.cpu.registers().dbr = 0x80;
+        snes.cpu.registers().x = 0x0010;
+
+        assertEquals(0x801300, snes.cpu._getAbsoluteIndexedByXAddr());
+        assertTrue(snes.cpu.hasIndexCrossedPageBoundary());
     }
 
     @Test
