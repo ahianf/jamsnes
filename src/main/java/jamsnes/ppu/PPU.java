@@ -372,14 +372,22 @@ public class PPU extends AMemory {
 
     private void addMode7ToMainSubScreen() {
         if ((registers[0x2c] & 0x01) != 0) {
-            renderMode7ToBuffer(mainScreen, mainScreenLevelMap, 20);
+            renderMode7ToBuffer(mainScreen, mainScreenLevelMap, 20, 20, false);
         }
         if ((registers[0x2d] & 0x01) != 0) {
-            renderMode7ToBuffer(subScreen, subScreenLevelMap, 20);
+            renderMode7ToBuffer(subScreen, subScreenLevelMap, 20, 20, false);
+        }
+        if (ppuRegisters.setiniMode7ExtBg()) {
+            if ((registers[0x2c] & 0x02) != 0) {
+                renderMode7ToBuffer(mainScreen, mainScreenLevelMap, 10, 30, true);
+            }
+            if ((registers[0x2d] & 0x02) != 0) {
+                renderMode7ToBuffer(subScreen, subScreenLevelMap, 10, 30, true);
+            }
         }
     }
 
-    private void renderMode7ToBuffer(int[][] destination, int[][] levelMap, int level) {
+    private void renderMode7ToBuffer(int[][] destination, int[][] levelMap, int levelLow, int levelHigh, boolean extBg) {
         int a = signed16(ppuRegisters.m7Matrix(0));
         int b = signed16(ppuRegisters.m7Matrix(1));
         int c = signed16(ppuRegisters.m7Matrix(2));
@@ -398,20 +406,21 @@ public class PPU extends AMemory {
                 if (ppuRegisters.m7VerticalMirroring()) {
                     sourceY = MODE7_SIZE - 1 - sourceY;
                 }
-                int color = readMode7Pixel(sourceX, sourceY);
-                if (Integer.compareUnsigned(color, 0xff) <= 0 || level < levelMap[y][x]) {
+                Mode7Pixel pixel = readMode7Pixel(sourceX, sourceY, extBg);
+                int level = pixel.priority ? levelHigh : levelLow;
+                if (Integer.compareUnsigned(pixel.color, 0xff) <= 0 || level < levelMap[y][x]) {
                     continue;
                 }
-                destination[y][x] = color;
+                destination[y][x] = pixel.color;
                 levelMap[y][x] = level;
             }
         }
     }
 
-    private int readMode7Pixel(int sourceX, int sourceY) {
+    private Mode7Pixel readMode7Pixel(int sourceX, int sourceY, boolean extBg) {
         boolean outsidePlayingField = sourceX < 0 || sourceX >= MODE7_SIZE || sourceY < 0 || sourceY >= MODE7_SIZE;
         if (outsidePlayingField && ppuRegisters.m7PlayingFieldSize() && !ppuRegisters.m7EmptySpaceFill()) {
-            return 0;
+            return Mode7Pixel.TRANSPARENT;
         }
 
         int wrappedX = sourceX & (MODE7_SIZE - 1);
@@ -427,12 +436,17 @@ public class PPU extends AMemory {
             tile = vram.read(u16(tileY * MODE7_TILE_MAP_WIDTH + tileX));
         }
         int colorIndex = vram.read(u16(MODE7_TILE_DATA_ADDRESS + tile * 64 + pixelY * MODE7_TILE_SIZE + pixelX));
+        boolean priority = false;
+        if (extBg) {
+            priority = (colorIndex & 0x80) != 0;
+            colorIndex &= 0x7f;
+        }
         if (colorIndex == 0) {
-            return 0;
+            return Mode7Pixel.TRANSPARENT;
         }
         int colorAddress = colorIndex * 2;
         int color = cgram.read(colorAddress) | (cgram.read(colorAddress + 1) << 8);
-        return PPUUtils.cgramColorToRGBA(color);
+        return new Mode7Pixel(PPUUtils.cgramColorToRGBA(color), priority);
     }
 
     private int signed16(int value) {
@@ -453,6 +467,10 @@ public class PPU extends AMemory {
     private int signed13(int value) {
         int normalized = value & 0x1fff;
         return (normalized & 0x1000) != 0 ? normalized - 0x2000 : normalized;
+    }
+
+    private record Mode7Pixel(int color, boolean priority) {
+        private static final Mode7Pixel TRANSPARENT = new Mode7Pixel(0, false);
     }
 
     private void addBuffer(int[][] destination, int[][] source) {

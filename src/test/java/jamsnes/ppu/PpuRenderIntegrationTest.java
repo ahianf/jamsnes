@@ -183,6 +183,37 @@ class PpuRenderIntegrationTest {
     }
 
     @Test
+    void modeSevenExtBgRendersBackgroundTwoWhenEnabled() {
+        SNES snes = init(new TestRenderer());
+        writeColor(snes, 5, 0x001f);
+        setupMode7Identity(snes);
+        snes.bus.write(0x2133, 0x40);
+        snes.bus.write(0x212c, 0x02);
+        snes.ppu.vram.write(0x0000, 0x01);
+        snes.ppu.vram.write(0x4040, 0x05);
+
+        snes.ppu.renderMainAndSubScreen();
+
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][0]);
+    }
+
+    @Test
+    void modeSevenExtBgUsesBitSevenAsPriority() {
+        SNES snes = init(new TestRenderer());
+        writeColor(snes, 5, 0x001f);
+        writeColor(snes, 6, 0x03e0);
+        setupMode7Identity(snes);
+        snes.bus.write(0x2133, 0x40);
+        snes.bus.write(0x212c, 0x03);
+        snes.ppu.vram.write(0x0000, 0x01);
+        snes.ppu.vram.write(0x4040, 0x86);
+
+        snes.ppu.renderMainAndSubScreen();
+
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), snes.ppu.mainScreen()[0][0]);
+    }
+
+    @Test
     void updateDrawsComposedScreenToRenderer() {
         TestRenderer renderer = new TestRenderer();
         SNES snes = init(renderer);
