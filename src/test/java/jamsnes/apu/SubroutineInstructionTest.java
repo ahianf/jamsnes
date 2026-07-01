@@ -36,14 +36,18 @@ class SubroutineInstructionTest {
     }
 
     @Test
-    void tcallJumpsToByteReadFromVectorTable() {
+    void tcallJumpsToWordReadFromVectorTable() {
         SNES snes = init();
+        snes.apu.internalRegisters().pc = 0x0200;
         snes.apu._internalWrite(0x00f1, 0x00);
-        snes.apu._internalWrite(0xffd0, 45);
+        snes.apu._internalWrite(0xffd0, 0x34);
+        snes.apu._internalWrite(0xffd1, 0x12);
 
         assertEquals(8, snes.apu.TCALL(7));
 
-        assertEquals(45, snes.apu.internalRegisters().pc);
+        assertEquals(0x1234, snes.apu.internalRegisters().pc);
+        assertEquals(0x02, snes.apu._internalRead(0x01ef));
+        assertEquals(0x00, snes.apu._internalRead(0x01ee));
     }
 
     @Test

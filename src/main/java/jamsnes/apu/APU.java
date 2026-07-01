@@ -1641,7 +1641,10 @@ public class APU extends AMemory {
     }
 
     public int TCALL(int bit) {
-        CALL(_internalRead(0xffde - bit * 2));
+        int vector = 0xffde - bit * 2;
+        int low = _internalRead(vector);
+        int high = _internalRead(vector + 1);
+        CALL((high << 8) | low);
         return 8;
     }
 
