@@ -840,7 +840,7 @@ public class APU extends AMemory {
             case 0xfc:
                 return INCreg("y");
             case 0xfd:
-                return MOVregToReg("y", "a");
+                return MOVregToReg("a", "y");
             case 0xfe:
                 return DBNZ(_getImmediateData());
             case 0xff:
