@@ -184,6 +184,23 @@ class InternalInstructionTest {
     }
 
     @Test
+    void rtlRestoresProgramBankAndLeavesDataBankUnchanged() {
+        SNES snes = init();
+        snes.cpu.registers().s = 0x0100;
+        snes.cpu.registers().dbr = 0xef;
+        snes.cpu._push8(0x12);
+        snes.cpu._push16(0x3455);
+
+        snes.cpu.RTL(0);
+
+        assertEquals(0x12, snes.cpu.registers().pbr);
+        assertEquals(0x3456, snes.cpu.registers().pc);
+        assertEquals(0x123456, snes.cpu.registers().pac);
+        assertEquals(0xef, snes.cpu.registers().dbr);
+        assertEquals(0x0100, snes.cpu.registers().s);
+    }
+
+    @Test
     void pushesEffectiveOperands() {
         SNES snes = init();
         snes.cpu.registers().setPac(0x008005);

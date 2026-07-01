@@ -858,7 +858,7 @@ public class CPU extends AMemory {
 
     public int RTL(int valueAddr) {
         registers.setPc(_pop16() + 1);
-        registers.dbr = _pop();
+        registers.setPbr(_pop());
         return 0;
     }
 
@@ -900,7 +900,7 @@ public class CPU extends AMemory {
         registers.p.setFlags(_pop());
         registers.setPc(_pop16());
         if (!emulationMode) {
-            registers.setPbr(_pop16());
+            registers.setPbr(_pop());
         }
         return emulationMode ? 0 : 1;
     }

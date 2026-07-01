@@ -69,6 +69,25 @@ class InterruptInstructionTest {
     }
 
     @Test
+    void rtiInNativeModeRestoresSingleByteProgramBank() {
+        SNES snes = init();
+        snes.cpu.setEmulationMode(false);
+        snes.cpu.registers().s = 0x0100;
+        snes.cpu._push8(0x12);
+        snes.cpu._push16(0x3456);
+        snes.cpu._push8(0xa5);
+
+        int cycles = snes.cpu.RTI(0);
+
+        assertEquals(1, cycles);
+        assertEquals(0xa5, snes.cpu.registers().p.flags());
+        assertEquals(0x12, snes.cpu.registers().pbr);
+        assertEquals(0x3456, snes.cpu.registers().pc);
+        assertEquals(0x123456, snes.cpu.registers().pac);
+        assertEquals(0x0100, snes.cpu.registers().s);
+    }
+
+    @Test
     void resetLoadsEmulationResetVector() {
         SNES snes = init();
         snes.cpu.setEmulationMode(false);
