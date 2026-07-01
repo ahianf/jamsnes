@@ -776,7 +776,8 @@ public class CPU extends AMemory {
     }
 
     public int PEI(int value) {
-        _push16(value);
+        int effective = bus.read(value) | (bus.read(value + 1) << 8);
+        _push16(effective);
         return 0;
     }
 

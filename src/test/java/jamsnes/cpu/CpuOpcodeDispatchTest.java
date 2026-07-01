@@ -238,13 +238,15 @@ class CpuOpcodeDispatchTest {
         snes.cpu.registers().setPc(0x0200);
         snes.cpu.registers().s = 0x01ff;
         snes.cpu.registers().d = 0x1000;
+        snes.wram.data()[0x1010] = 0x78;
+        snes.wram.data()[0x1011] = 0x56;
         writeProgram(snes, 0x0200, 0x62, 0xff, 0xff, 0xd4, 0x10, 0xf4, 0x34, 0x12);
 
         assertEquals(6, snes.cpu.executeInstruction());
         assertEquals(0x0202, snes.cpu._pop16());
 
         assertEquals(6, snes.cpu.executeInstruction());
-        assertEquals(0x1010, snes.cpu._pop16());
+        assertEquals(0x5678, snes.cpu._pop16());
 
         assertEquals(5, snes.cpu.executeInstruction());
         assertEquals(0x0206, snes.cpu._pop16());
@@ -695,6 +697,23 @@ class CpuOpcodeDispatchTest {
         assertEquals(0xffff, snes.cpu.registers().a);
         assertTrue(snes.cpu.registers().p.n);
         assertEquals(0x0202, snes.cpu.registers().pc);
+    }
+
+    @Test
+    void executesPeiOpcodeFromFetchedDirectAddress() {
+        SNES snes = init();
+        snes.cpu.registers().setPc(0x0200);
+        snes.cpu.registers().d = 0x0100;
+        snes.cpu.registers().s = 0x1fff;
+        snes.wram.data()[0x0120] = 0xcd;
+        snes.wram.data()[0x0121] = 0xab;
+        writeProgram(snes, 0x0200, 0xd4, 0x20);
+
+        assertEquals(6, snes.cpu.executeInstruction());
+
+        assertEquals(0x0202, snes.cpu.registers().pc);
+        assertEquals(0x1ffd, snes.cpu.registers().s);
+        assertEquals(0xabcd, snes.cpu._pop16());
     }
 
     private static void writeProgram(SNES snes, int start, int... opcodes) {

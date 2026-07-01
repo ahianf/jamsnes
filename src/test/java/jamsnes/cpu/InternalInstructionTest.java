@@ -241,8 +241,10 @@ class InternalInstructionTest {
         assertEquals(0x8004, snes.cpu._pop16());
 
         snes.cpu.registers().s = 0x1fff;
-        snes.cpu.PEI(0xffff);
-        assertEquals(0xffff, snes.cpu._pop16());
+        snes.wram.data()[0x20] = 0xef;
+        snes.wram.data()[0x21] = 0xbe;
+        snes.cpu.PEI(0x20);
+        assertEquals(0xbeef, snes.cpu._pop16());
 
         snes.cpu.registers().s = 0x1fff;
         snes.cpu.PEA(0x1234);
