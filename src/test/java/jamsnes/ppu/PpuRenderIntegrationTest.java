@@ -113,6 +113,24 @@ class PpuRenderIntegrationTest {
     }
 
     @Test
+    void modeSevenRendersIdentityMappedBackgroundOne() {
+        SNES snes = init(new TestRenderer());
+        writeColor(snes, 5, 0x001f);
+        snes.bus.write(0x2105, 0x07);
+        snes.bus.write(0x212c, 0x01);
+        writeMode7Register(snes, 0x211b, 0x0100);
+        writeMode7Register(snes, 0x211c, 0x0000);
+        writeMode7Register(snes, 0x211d, 0x0000);
+        writeMode7Register(snes, 0x211e, 0x0100);
+        snes.ppu.vram.write(0x0000, 0x01);
+        snes.ppu.vram.write(0x4040, 0x05);
+
+        snes.ppu.renderMainAndSubScreen();
+
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][0]);
+    }
+
+    @Test
     void updateDrawsComposedScreenToRenderer() {
         TestRenderer renderer = new TestRenderer();
         SNES snes = init(renderer);
@@ -129,6 +147,11 @@ class PpuRenderIntegrationTest {
         int address = colorIndex * 2;
         snes.ppu.cgram.write(address, color);
         snes.ppu.cgram.write(address + 1, color >>> 8);
+    }
+
+    private static void writeMode7Register(SNES snes, int address, int value) {
+        snes.bus.write(address, value >>> 8);
+        snes.bus.write(address, value);
     }
 
     private static SNES init(IRenderer renderer) {

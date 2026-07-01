@@ -16,6 +16,10 @@ public class PPU extends AMemory {
     public static final int VRAM_SIZE = 65_536;
     public static final int CGRAM_SIZE = 512;
     public static final int OAMRAM_SIZE = 544;
+    private static final int MODE7_SIZE = 1024;
+    private static final int MODE7_TILE_MAP_WIDTH = 128;
+    private static final int MODE7_TILE_SIZE = 8;
+    private static final int MODE7_TILE_DATA_ADDRESS = 0x4000;
 
     public final Ram vram = new Ram(VRAM_SIZE, Component.VRAM, "VRAM");
     public final Ram oamram = new Ram(OAMRAM_SIZE, Component.OAMRAM, "OAMRAM");
@@ -184,7 +188,7 @@ public class PPU extends AMemory {
                 addToMainSubScreen(backgrounds[0], 20, 26);
             }
             case 6 -> addToMainSubScreen(backgrounds[0], 20, 26);
-            case 7 -> throw new IllegalStateException("not implemented");
+            case 7 -> addMode7ToMainSubScreen();
             default -> throw new IllegalStateException("Bg mode not implemented or commented (bg nb "
                     + ppuRegisters.bgMode() + ")");
         }
@@ -363,6 +367,64 @@ public class PPU extends AMemory {
         if ((registers[0x2d] & backgroundBit) != 0) {
             Background.mergeBackgroundBuffer(subScreen, subScreenLevelMap, background, levelLow, levelHigh);
         }
+    }
+
+    private void addMode7ToMainSubScreen() {
+        if ((registers[0x2c] & 0x01) != 0) {
+            renderMode7ToBuffer(mainScreen, mainScreenLevelMap, 20);
+        }
+        if ((registers[0x2d] & 0x01) != 0) {
+            renderMode7ToBuffer(subScreen, subScreenLevelMap, 20);
+        }
+    }
+
+    private void renderMode7ToBuffer(int[][] destination, int[][] levelMap, int level) {
+        int a = signed16(ppuRegisters.m7Matrix(0));
+        int b = signed16(ppuRegisters.m7Matrix(1));
+        int c = signed16(ppuRegisters.m7Matrix(2));
+        int d = signed16(ppuRegisters.m7Matrix(3));
+        int centerX = signed13(ppuRegisters.m7CenterValue(0));
+        int centerY = signed13(ppuRegisters.m7CenterValue(1));
+        Vector2<Integer> scroll = getBgScroll(1);
+
+        for (int y = 0; y < destination.length; y++) {
+            for (int x = 0; x < destination[y].length; x++) {
+                int sourceX = (((a * (x - centerX)) + (b * (y - centerY))) >> 8) + centerX + scroll.x;
+                int sourceY = (((c * (x - centerX)) + (d * (y - centerY))) >> 8) + centerY + scroll.y;
+                int color = readMode7Pixel(sourceX, sourceY);
+                if (Integer.compareUnsigned(color, 0xff) <= 0 || level < levelMap[y][x]) {
+                    continue;
+                }
+                destination[y][x] = color;
+                levelMap[y][x] = level;
+            }
+        }
+    }
+
+    private int readMode7Pixel(int sourceX, int sourceY) {
+        int wrappedX = sourceX & (MODE7_SIZE - 1);
+        int wrappedY = sourceY & (MODE7_SIZE - 1);
+        int tileX = wrappedX / MODE7_TILE_SIZE;
+        int tileY = wrappedY / MODE7_TILE_SIZE;
+        int pixelX = wrappedX % MODE7_TILE_SIZE;
+        int pixelY = wrappedY % MODE7_TILE_SIZE;
+        int tile = vram.read(u16(tileY * MODE7_TILE_MAP_WIDTH + tileX));
+        int colorIndex = vram.read(u16(MODE7_TILE_DATA_ADDRESS + tile * 64 + pixelY * MODE7_TILE_SIZE + pixelX));
+        if (colorIndex == 0) {
+            return 0;
+        }
+        int colorAddress = colorIndex * 2;
+        int color = cgram.read(colorAddress) | (cgram.read(colorAddress + 1) << 8);
+        return PPUUtils.cgramColorToRGBA(color);
+    }
+
+    private int signed16(int value) {
+        return (short) u16(value);
+    }
+
+    private int signed13(int value) {
+        int normalized = value & 0x1fff;
+        return (normalized & 0x1000) != 0 ? normalized - 0x2000 : normalized;
     }
 
     private void addBuffer(int[][] destination, int[][] source) {
