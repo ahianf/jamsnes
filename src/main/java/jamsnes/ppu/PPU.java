@@ -403,13 +403,23 @@ public class PPU extends AMemory {
     }
 
     private int readMode7Pixel(int sourceX, int sourceY) {
+        boolean outsidePlayingField = sourceX < 0 || sourceX >= MODE7_SIZE || sourceY < 0 || sourceY >= MODE7_SIZE;
+        if (outsidePlayingField && ppuRegisters.m7PlayingFieldSize() && !ppuRegisters.m7EmptySpaceFill()) {
+            return 0;
+        }
+
         int wrappedX = sourceX & (MODE7_SIZE - 1);
         int wrappedY = sourceY & (MODE7_SIZE - 1);
-        int tileX = wrappedX / MODE7_TILE_SIZE;
-        int tileY = wrappedY / MODE7_TILE_SIZE;
         int pixelX = wrappedX % MODE7_TILE_SIZE;
         int pixelY = wrappedY % MODE7_TILE_SIZE;
-        int tile = vram.read(u16(tileY * MODE7_TILE_MAP_WIDTH + tileX));
+        int tile;
+        if (outsidePlayingField && ppuRegisters.m7PlayingFieldSize()) {
+            tile = 0;
+        } else {
+            int tileX = wrappedX / MODE7_TILE_SIZE;
+            int tileY = wrappedY / MODE7_TILE_SIZE;
+            tile = vram.read(u16(tileY * MODE7_TILE_MAP_WIDTH + tileX));
+        }
         int colorIndex = vram.read(u16(MODE7_TILE_DATA_ADDRESS + tile * 64 + pixelY * MODE7_TILE_SIZE + pixelX));
         if (colorIndex == 0) {
             return 0;
