@@ -53,15 +53,16 @@ class PpuBackgroundHelperTest {
     }
 
     @Test
-    void returnsTilesetAddressWithOriginalNibbleBehavior() {
+    void returnsTilesetAddressFromBackgroundBaseAddressNibbles() {
         SNES snes = init();
 
         snes.bus.write(0x210b, 0b1010_1010);
-        snes.bus.write(0x210c, 0b0000_0011);
+        snes.bus.write(0x210c, 0b1100_0011);
 
         assertEquals(0x4000, snes.ppu.getTilesetAddress(1));
-        assertEquals(0x0000, snes.ppu.getTilesetAddress(2));
+        assertEquals(0x4000, snes.ppu.getTilesetAddress(2));
         assertEquals(0x6000, snes.ppu.getTilesetAddress(3));
+        assertEquals(0x8000, snes.ppu.getTilesetAddress(4));
     }
 
     @Test

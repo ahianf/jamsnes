@@ -217,7 +217,7 @@ public class PPU extends AMemory {
 
     public int getTilesetAddress(int backgroundNumber) {
         int baseAddress = registers[0x0b + (backgroundNumber > 2 ? 1 : 0)];
-        baseAddress = backgroundNumber % 2 != 0 ? baseAddress & 0x0f : (baseAddress & 0x0f) >>> 4;
+        baseAddress = backgroundNumber % 2 != 0 ? baseAddress & 0x0f : (baseAddress >>> 4) & 0x0f;
         return u16(baseAddress << 13);
     }
 
