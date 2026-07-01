@@ -89,12 +89,22 @@ public class TileRenderer {
     }
 
     public void render(int tileAddress) {
+        render(tileAddress, false);
+    }
+
+    public void render(int tileAddress, boolean directColor) {
         int[] palette = getPalette(paletteIndex);
         int pixelIndex = 0;
         for (int y = 0; y < buffer.length; y++) {
             for (int x = 0; x < buffer[y].length; x++) {
                 int pixelReference = getPixelReferenceFromTile(tileAddress, pixelIndex++);
-                buffer[y][x] = pixelReference != 0 ? PPUUtils.cgramColorToRGBA(palette[pixelReference]) : 0;
+                if (pixelReference == 0) {
+                    buffer[y][x] = 0;
+                } else if (directColor) {
+                    buffer[y][x] = PPUUtils.directColorToRGBA(paletteIndex, pixelReference);
+                } else {
+                    buffer[y][x] = PPUUtils.cgramColorToRGBA(palette[pixelReference]);
+                }
             }
         }
     }

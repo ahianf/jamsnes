@@ -217,10 +217,31 @@ class TileRendererTest {
     }
 
     @Test
+    void render8bppCanUseDirectColorInsteadOfCgram() {
+        Ram vram = new Ram(100, Component.VRAM, "vramTest");
+        Ram cgram = new Ram(512, Component.CGRAM, "cgramTest");
+        TileRenderer renderer = new TileRenderer(vram, cgram);
+        renderer.setBpp(8);
+        vram.write(0x00, 0x80);
+        vram.write(0x01, 0x80);
+        vram.write(0x10, 0x80);
+        writeCgramColor(cgram, 7, 0x03e0);
+
+        renderer.render(0, true);
+
+        assertEquals(0xe70000ff, renderer.buffer[0][0]);
+    }
+
+    @Test
     void cgramColorToRGBA() {
         assertEquals(0x000000ff, PPUUtils.cgramColorToRGBA(0x0000));
         assertEquals(0xffffffff, PPUUtils.cgramColorToRGBA(0x7fff));
         assertEquals(0xff0000ff, PPUUtils.cgramColorToRGBA(0x001f));
+    }
+
+    @Test
+    void directColorToRGBA() {
+        assertEquals(0xe70000ff, PPUUtils.directColorToRGBA(0, 0x07));
     }
 
     private static TileRenderer renderer(Ram vram) {

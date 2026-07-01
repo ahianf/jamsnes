@@ -224,7 +224,7 @@ public class Background {
                 int graphicAddress = tilesetAddress
                         + ((tileData.posY + tileOffsetY) * NB_TILE_PER_ROW * bpp * Tile.BASE_BYTE_SIZE)
                         + ((tileData.posX + tileOffsetX) * bpp * Tile.BASE_BYTE_SIZE);
-                tileRenderer.render(graphicAddress);
+                tileRenderer.render(graphicAddress, bpp == 8 && ppu.ppuRegisters().cgwselDirectColorMode());
                 mergeTileRendererBuffer(x, y);
                 tileOffsetX++;
             }

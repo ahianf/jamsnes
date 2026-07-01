@@ -14,4 +14,14 @@ public final class PPUUtils {
         int r = to8Bit(cgramColor & 0x1f);
         return 0x000000ff | (r << 24) | (g << 16) | (b << 8);
     }
+
+    public static int directColorToRGBA(int palette, int colorIndex) {
+        int cgramColor = ((palette << 2) & 0x1c00)
+                | ((colorIndex & 0xc0) << 5)
+                | ((palette << 1) & 0x00e0)
+                | ((colorIndex & 0x38) << 2)
+                | (palette & 0x0003)
+                | ((colorIndex & 0x07) << 2);
+        return cgramColorToRGBA(cgramColor);
+    }
 }

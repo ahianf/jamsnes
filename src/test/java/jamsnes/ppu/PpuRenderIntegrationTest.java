@@ -138,6 +138,25 @@ class PpuRenderIntegrationTest {
     }
 
     @Test
+    void modeThreeDirectColorBypassesCgramForBackgroundOne() {
+        SNES snes = init(new TestRenderer());
+        writeColor(snes, 7, 0x03e0);
+        snes.bus.write(0x2105, 0x03);
+        snes.bus.write(0x210b, 0x01);
+        snes.bus.write(0x212c, 0x01);
+        snes.bus.write(0x2130, 0x01);
+        snes.ppu.vram.write(0x0000, 0x00);
+        snes.ppu.vram.write(0x0001, 0x00);
+        snes.ppu.vram.write(0x2000, 0x80);
+        snes.ppu.vram.write(0x2001, 0x80);
+        snes.ppu.vram.write(0x2010, 0x80);
+
+        snes.ppu.renderMainAndSubScreen();
+
+        assertEquals(0xe70000ff, snes.ppu.mainScreen()[0][0]);
+    }
+
+    @Test
     void modeSixComposesOnlyBackgroundOne() {
         SNES snes = init(new TestRenderer());
         writeColor(snes, 1, 0x001f);
