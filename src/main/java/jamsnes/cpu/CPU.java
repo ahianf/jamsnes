@@ -570,9 +570,9 @@ public class CPU extends AMemory {
     }
 
     public int _getStackRelativeIndirectIndexedYAddr() {
-        int base = readPC() + registers.s;
-        base += registers.dbr << 16;
-        return u24(base + registers.y);
+        int pointer = u16(readPC() + registers.s);
+        int base = bus.read(pointer) | (bus.read(u16(pointer + 1)) << 8);
+        return u24((registers.dbr << 16) + base + registers.y);
     }
 
     public void _push8(int data) {

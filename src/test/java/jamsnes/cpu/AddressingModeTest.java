@@ -287,8 +287,10 @@ class AddressingModeTest {
         snes.cpu.registers().s = 0x1010;
         snes.cpu.registers().y = 0x5;
         snes.cpu.registers().dbr = 0x88;
+        snes.wram.data()[0x1016] = 0xef;
+        snes.wram.data()[0x1017] = 0x01;
 
-        assertEquals(0x88101b, snes.cpu._getStackRelativeIndirectIndexedYAddr());
+        assertEquals(0x8801f4, snes.cpu._getStackRelativeIndirectIndexedYAddr());
         assertEquals(0x808001, snes.cpu.registers().pac);
     }
 
