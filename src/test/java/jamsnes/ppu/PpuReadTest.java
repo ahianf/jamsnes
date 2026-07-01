@@ -70,6 +70,28 @@ class PpuReadTest {
     }
 
     @Test
+    void mode7MultiplicationResultReadsLowMiddleAndHighBytes() {
+        SNES snes = init();
+        writeMode7Register(snes, 0x211b, 0x0100);
+        writeMode7Register(snes, 0x211c, 0x0200);
+
+        assertEquals(0x00, snes.bus.read(0x2134));
+        assertEquals(0x02, snes.bus.read(0x2135));
+        assertEquals(0x00, snes.bus.read(0x2136));
+    }
+
+    @Test
+    void mode7MultiplicationResultReadsSignedProduct() {
+        SNES snes = init();
+        writeMode7Register(snes, 0x211b, 0xff00);
+        writeMode7Register(snes, 0x211c, 0x0200);
+
+        assertEquals(0x00, snes.bus.read(0x2134));
+        assertEquals(0xfe, snes.bus.read(0x2135));
+        assertEquals(0xff, snes.bus.read(0x2136));
+    }
+
+    @Test
     void placeholderPpuReadRegistersReturnZero() {
         SNES snes = init();
         snes.ppu.registers()[0x3c] = 0xff;
@@ -110,6 +132,11 @@ class PpuReadTest {
         MemoryShadow shadow = assertInstanceOf(MemoryShadow.class, accessor);
 
         assertEquals("STAT78", shadow.getValueName(0x3f));
+    }
+
+    private static void writeMode7Register(SNES snes, int address, int value) {
+        snes.bus.write(address, value >>> 8);
+        snes.bus.write(address, value);
     }
 
     private static SNES init() {

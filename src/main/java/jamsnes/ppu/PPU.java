@@ -53,7 +53,8 @@ public class PPU extends AMemory {
     @Override
     public int read(int address) {
         return switch (address) {
-            case 0x34, 0x35, 0x36, 0x37 -> registers[address];
+            case 0x34, 0x35, 0x36 -> mode7MultiplicationResultByte(address - 0x34);
+            case 0x37 -> registers[address];
             case 0x38 -> readOamData();
             case 0x39 -> readVramLow();
             case 0x3a -> readVramHigh();
@@ -420,6 +421,17 @@ public class PPU extends AMemory {
 
     private int signed16(int value) {
         return (short) u16(value);
+    }
+
+    private int mode7MultiplicationResultByte(int index) {
+        int operandA = signed16(ppuRegisters.m7Matrix(0));
+        int operandB = signed8(ppuRegisters.m7Matrix(1) >>> 8);
+        int result = operandA * operandB;
+        return (result >>> (index * 8)) & 0xff;
+    }
+
+    private int signed8(int value) {
+        return (byte) u8(value);
     }
 
     private int signed13(int value) {

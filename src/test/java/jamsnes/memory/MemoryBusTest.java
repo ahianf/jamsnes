@@ -73,8 +73,8 @@ class MemoryBusTest {
         snes.cpu.internalRegisters()[0x01] = 123;
         assertEquals(123, snes.bus.read(0x004201));
 
-        snes.ppu.registers()[0x34] = 123;
-        assertEquals(123, snes.bus.read(0x002134));
+        snes.ppu.registers()[0x37] = 123;
+        assertEquals(123, snes.bus.read(0x002137));
 
         snes.sram.data()[7] = 123;
         assertEquals(123, snes.bus.read(0x700007));
