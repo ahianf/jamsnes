@@ -1396,21 +1396,20 @@ public class CPU extends AMemory {
     }
 
     public int ROR(int valueAddr, AddressingMode mode) {
-        registers.p.n = false;
         boolean oldCarry = registers.p.c;
         int highBitIndex = registers.p.m ? 7 : 15;
         if (mode == AddressingMode.IMPLIED) {
             int value = accumulatorValue();
             registers.p.c = (value & 1) != 0;
             setAccumulatorValue((value >>> 1) | ((oldCarry ? 1 : 0) << highBitIndex));
-            registers.p.z = accumulatorValue() == 0;
+            setZNAccumulator(registers.a);
             return 0;
         }
 
         int value = readAccumulatorWidth(valueAddr);
         registers.p.c = (value & 1) != 0;
         value = normalizeAccumulator((value >>> 1) | ((oldCarry ? 1 : 0) << highBitIndex));
-        registers.p.z = value == 0;
+        setZNAccumulator(value);
         writeAccumulatorWidth(valueAddr, value);
         return registers.p.m ? 0 : 2;
     }

@@ -119,7 +119,7 @@ class BitShiftInstructionTest {
 
         assertEquals(0b10110011, snes.wram.data()[0]);
         assertFalse(snes.cpu.registers().p.c);
-        assertFalse(snes.cpu.registers().p.n);
+        assertTrue(snes.cpu.registers().p.n);
 
         snes.cpu.registers().p.c = true;
         snes.cpu.registers().a = 0xab01;
@@ -127,6 +127,7 @@ class BitShiftInstructionTest {
 
         assertEquals(0xab80, snes.cpu.registers().a);
         assertTrue(snes.cpu.registers().p.c);
+        assertTrue(snes.cpu.registers().p.n);
     }
 
     private static SNES init() {
