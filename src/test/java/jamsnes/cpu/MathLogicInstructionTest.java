@@ -14,7 +14,7 @@ class MathLogicInstructionTest {
     void cmpSetsCarryZeroAndNegative() {
         SNES snes = init();
         snes.cpu.registers().p.m = true;
-        snes.cpu.registers().a = 0;
+        snes.cpu.registers().a = 0xab00;
         snes.wram.data()[0] = 1;
         snes.cpu.CMP(0);
         assertFalse(snes.cpu.registers().p.c);
@@ -48,10 +48,10 @@ class MathLogicInstructionTest {
     void adcHandlesCarryOverflowAndWidth() {
         SNES snes = init();
         snes.cpu.registers().p.m = true;
-        snes.cpu.registers().a = 0xff;
+        snes.cpu.registers().a = 0xabff;
         snes.wram.data()[0] = 0x01;
         snes.cpu.ADC(0);
-        assertEquals(0, snes.cpu.registers().a);
+        assertEquals(0xab00, snes.cpu.registers().a);
         assertTrue(snes.cpu.registers().p.c);
         assertTrue(snes.cpu.registers().p.z);
 
@@ -72,10 +72,10 @@ class MathLogicInstructionTest {
         SNES snes = init();
         snes.cpu.registers().p.m = true;
         snes.cpu.registers().p.c = true;
-        snes.cpu.registers().a = 0x01;
+        snes.cpu.registers().a = 0xab01;
         snes.wram.data()[0] = 0x01;
         snes.cpu.SBC(0);
-        assertEquals(0, snes.cpu.registers().a);
+        assertEquals(0xab00, snes.cpu.registers().a);
         assertTrue(snes.cpu.registers().p.c);
         assertTrue(snes.cpu.registers().p.z);
 
@@ -94,20 +94,20 @@ class MathLogicInstructionTest {
     void oraAndAndAndEorUseAccumulatorWidth() {
         SNES snes = init();
         snes.cpu.registers().p.m = true;
-        snes.cpu.registers().a = 0x80;
+        snes.cpu.registers().a = 0xab80;
         snes.wram.data()[0] = 0x0f;
         snes.cpu.ORA(0);
-        assertEquals(0x8f, snes.cpu.registers().a);
+        assertEquals(0xab8f, snes.cpu.registers().a);
         assertTrue(snes.cpu.registers().p.n);
 
         snes.wram.data()[0] = 0x0f;
         snes.cpu.AND(0);
-        assertEquals(0x0f, snes.cpu.registers().a);
+        assertEquals(0xab0f, snes.cpu.registers().a);
         assertFalse(snes.cpu.registers().p.n);
 
         snes.wram.data()[0] = 0x0f;
         snes.cpu.EOR(0);
-        assertEquals(0, snes.cpu.registers().a);
+        assertEquals(0xab00, snes.cpu.registers().a);
         assertTrue(snes.cpu.registers().p.z);
     }
 
@@ -136,9 +136,9 @@ class MathLogicInstructionTest {
         assertTrue(snes.cpu.registers().p.n);
 
         snes.cpu.registers().p.m = true;
-        snes.cpu.registers().a = 0x00;
+        snes.cpu.registers().a = 0xab00;
         snes.cpu.DEA(0);
-        assertEquals(0xff, snes.cpu.registers().a);
+        assertEquals(0xabff, snes.cpu.registers().a);
         assertTrue(snes.cpu.registers().p.n);
     }
 

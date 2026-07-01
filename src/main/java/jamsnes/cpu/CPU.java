@@ -1185,33 +1185,34 @@ public class CPU extends AMemory {
     }
 
     public int ORA(int valueAddr) {
-        registers.a = normalizeAccumulator(registers.a | readAccumulatorWidth(valueAddr));
+        setAccumulatorValue(accumulatorValue() | readAccumulatorWidth(valueAddr));
         setZNAccumulator(registers.a);
         return registers.p.m ? 0 : 1;
     }
 
     public int AND(int valueAddr) {
-        registers.a = normalizeAccumulator(registers.a & readAccumulatorWidth(valueAddr));
+        setAccumulatorValue(accumulatorValue() & readAccumulatorWidth(valueAddr));
         setZNAccumulator(registers.a);
         return registers.p.m ? 0 : 1;
     }
 
     public int EOR(int valueAddr) {
-        registers.a = normalizeAccumulator(registers.a ^ readAccumulatorWidth(valueAddr));
+        setAccumulatorValue(accumulatorValue() ^ readAccumulatorWidth(valueAddr));
         setZNAccumulator(registers.a);
         return registers.p.m ? 0 : 1;
     }
 
     public int CMP(int valueAddr) {
         int value = readAccumulatorWidth(valueAddr);
-        long result = (Integer.toUnsignedLong(registers.a) - Integer.toUnsignedLong(value)) & 0xffff_ffffL;
+        int left = accumulatorValue();
+        long result = (Integer.toUnsignedLong(left) - Integer.toUnsignedLong(value)) & 0xffff_ffffL;
         if (registers.p.m) {
             result &= 0xff;
         }
         int negativeMask = registers.p.m ? 0x80 : 0x8000;
         registers.p.n = (result & negativeMask) != 0;
         registers.p.z = result == 0;
-        registers.p.c = Integer.toUnsignedLong(registers.a) >= result;
+        registers.p.c = left >= value;
         return registers.p.m ? 0 : 1;
     }
 
@@ -1222,7 +1223,7 @@ public class CPU extends AMemory {
         }
         int negativeMask = registers.p.m ? 0x80 : 0x8000;
         int maxValue = registers.p.m ? 0xff : 0xffff;
-        int oldA = registers.a;
+        int oldA = accumulatorValue();
         int result = oldA + value;
 
         registers.p.c = result > maxValue;
@@ -1231,7 +1232,7 @@ public class CPU extends AMemory {
         } else {
             registers.p.v = false;
         }
-        registers.a = normalizeAccumulator(result);
+        setAccumulatorValue(result);
         setZNAccumulator(registers.a);
         return registers.p.m ? 0 : 1;
     }
@@ -1240,7 +1241,7 @@ public class CPU extends AMemory {
         int negativeMask = registers.p.m ? 0x80 : 0x8000;
         int value = readAccumulatorWidth(valueAddr);
         boolean oldCarry = registers.p.c;
-        int oldA = registers.a;
+        int oldA = accumulatorValue();
 
         registers.p.c = oldA >= value;
         if ((oldA & negativeMask) == (value & negativeMask)) {
@@ -1248,7 +1249,7 @@ public class CPU extends AMemory {
         } else {
             registers.p.v = false;
         }
-        registers.a = normalizeAccumulator(oldA + ~value + (oldCarry ? 1 : 0));
+        setAccumulatorValue(oldA + ~value + (oldCarry ? 1 : 0));
         setZNAccumulator(registers.a);
         return registers.p.m ? 0 : 1;
     }
@@ -1284,13 +1285,13 @@ public class CPU extends AMemory {
     }
 
     public int INA(int valueAddr) {
-        registers.a = normalizeAccumulator(registers.a + 1);
+        setAccumulatorValue(accumulatorValue() + 1);
         setZNAccumulator(registers.a);
         return 0;
     }
 
     public int DEA(int valueAddr) {
-        registers.a = normalizeAccumulator(registers.a - 1);
+        setAccumulatorValue(accumulatorValue() - 1);
         setZNAccumulator(registers.a);
         return 0;
     }
@@ -1341,10 +1342,10 @@ public class CPU extends AMemory {
     public int ASL(int valueAddr, AddressingMode mode) {
         int highBit = registers.p.m ? 0x80 : 0x8000;
         if (mode == AddressingMode.IMPLIED) {
-            registers.p.c = (registers.a & highBit) != 0;
-            registers.a = u16(registers.a << 1);
-            registers.p.n = (registers.a & highBit) != 0;
-            registers.p.z = registers.a == 0;
+            int value = accumulatorValue();
+            registers.p.c = (value & highBit) != 0;
+            setAccumulatorValue(value << 1);
+            setZNAccumulator(registers.a);
             return 0;
         }
 
@@ -1360,9 +1361,10 @@ public class CPU extends AMemory {
     public int LSR(int valueAddr, AddressingMode mode) {
         registers.p.n = false;
         if (mode == AddressingMode.IMPLIED) {
-            registers.p.c = (registers.a & 1) != 0;
-            registers.a = u16(registers.a >>> 1);
-            registers.p.z = registers.a == 0;
+            int value = accumulatorValue();
+            registers.p.c = (value & 1) != 0;
+            setAccumulatorValue(value >>> 1);
+            registers.p.z = accumulatorValue() == 0;
             return 0;
         }
 
@@ -1378,10 +1380,10 @@ public class CPU extends AMemory {
         int highBit = registers.p.m ? 0x80 : 0x8000;
         boolean oldCarry = registers.p.c;
         if (mode == AddressingMode.IMPLIED) {
-            registers.p.c = (registers.a & highBit) != 0;
-            registers.a = u16((registers.a << 1) | (oldCarry ? 1 : 0));
-            registers.p.n = (registers.a & highBit) != 0;
-            registers.p.z = registers.a == 0;
+            int value = accumulatorValue();
+            registers.p.c = (value & highBit) != 0;
+            setAccumulatorValue((value << 1) | (oldCarry ? 1 : 0));
+            setZNAccumulator(registers.a);
             return 0;
         }
 
@@ -1399,9 +1401,10 @@ public class CPU extends AMemory {
         boolean oldCarry = registers.p.c;
         int highBitIndex = registers.p.m ? 7 : 15;
         if (mode == AddressingMode.IMPLIED) {
-            registers.p.c = (registers.a & 1) != 0;
-            registers.a = u16((registers.a >>> 1) | ((oldCarry ? 1 : 0) << highBitIndex));
-            registers.p.z = registers.a == 0;
+            int value = accumulatorValue();
+            registers.p.c = (value & 1) != 0;
+            setAccumulatorValue((value >>> 1) | ((oldCarry ? 1 : 0) << highBitIndex));
+            registers.p.z = accumulatorValue() == 0;
             return 0;
         }
 
@@ -1489,6 +1492,18 @@ public class CPU extends AMemory {
         int negativeFlag = registers.p.m ? 0x80 : 0x8000;
         registers.p.z = normalized == 0;
         registers.p.n = (normalized & negativeFlag) != 0;
+    }
+
+    private int accumulatorValue() {
+        return registers.p.m ? registers.al() : registers.a;
+    }
+
+    private void setAccumulatorValue(int value) {
+        if (registers.p.m) {
+            registers.setAl(value);
+        } else {
+            registers.a = u16(value);
+        }
     }
 
     private int readAccumulatorWidth(int valueAddr) {
