@@ -140,6 +140,8 @@ class InternalInstructionTest {
         SNES snes = init();
         snes.cpu.setEmulationMode(true);
         snes.cpu.registers().p.c = false;
+        snes.cpu.registers().p.m = false;
+        snes.cpu.registers().p.x_b = false;
         snes.cpu.registers().x = 0xff11;
         snes.cpu.registers().y = 0xee22;
 
@@ -147,6 +149,16 @@ class InternalInstructionTest {
 
         assertFalse(snes.cpu.isEmulationMode());
         assertTrue(snes.cpu.registers().p.c);
+        assertFalse(snes.cpu.registers().p.m);
+        assertFalse(snes.cpu.registers().p.x_b);
+        assertEquals(0xff11, snes.cpu.registers().x);
+        assertEquals(0xee22, snes.cpu.registers().y);
+
+        snes.cpu.registers().p.c = true;
+        snes.cpu.XCE(0);
+
+        assertTrue(snes.cpu.isEmulationMode());
+        assertFalse(snes.cpu.registers().p.c);
         assertTrue(snes.cpu.registers().p.m);
         assertTrue(snes.cpu.registers().p.x_b);
         assertEquals(0x11, snes.cpu.registers().x);

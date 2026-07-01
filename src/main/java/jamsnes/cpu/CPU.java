@@ -785,7 +785,7 @@ public class CPU extends AMemory {
         registers.p.c = emulationMode;
         emulationMode = oldCarry;
 
-        if (!emulationMode) {
+        if (emulationMode) {
             registers.p.m = true;
             registers.p.x_b = true;
             registers.x &= 0xff;
