@@ -1155,38 +1155,32 @@ public class CPU extends AMemory {
 
     public int LDA(int address) {
         if (registers.p.m) {
-            registers.a = bus.read(address);
-            registers.p.n = (registers.al() & 0xf0) != 0;
+            registers.setAl(bus.read(address));
         } else {
             registers.setAl(bus.read(address));
             registers.setAh(bus.read(address + 1));
-            registers.p.n = (registers.a & 0xf000) != 0;
         }
-        registers.p.z = registers.a == 0;
+        setZNAccumulator(registers.a);
         return registers.p.m ? 0 : 1;
     }
 
     public int LDX(int address) {
         if (registers.p.x_b) {
             registers.x = bus.read(address);
-            registers.p.n = (registers.xl() & 0xf0) != 0;
         } else {
             registers.x = bus.read(address) | (bus.read(address + 1) << 8);
-            registers.p.n = (registers.x & 0xf000) != 0;
         }
-        registers.p.z = registers.x == 0;
+        setZNIndex(registers.x);
         return registers.p.x_b ? 0 : 1;
     }
 
     public int LDY(int address) {
         if (registers.p.x_b) {
             registers.y = bus.read(address);
-            registers.p.n = (registers.yl() & 0xf0) != 0;
         } else {
             registers.y = bus.read(address) | (bus.read(address + 1) << 8);
-            registers.p.n = (registers.y & 0xf000) != 0;
         }
-        registers.p.z = registers.y == 0;
+        setZNIndex(registers.y);
         return registers.p.x_b ? 0 : 1;
     }
 

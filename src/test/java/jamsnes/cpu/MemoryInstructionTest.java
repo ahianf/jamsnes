@@ -56,11 +56,25 @@ class MemoryInstructionTest {
     void loadsAccumulatorAndFlags() {
         SNES snes = init();
         snes.cpu.registers().p.m = true;
+        snes.cpu.registers().a = 0xab00;
         snes.wram.data()[0] = 0x11;
         snes.cpu.LDA(0);
-        assertEquals(0x11, snes.cpu.registers().a);
+        assertEquals(0xab11, snes.cpu.registers().a);
+        assertFalse(snes.cpu.registers().p.n);
+        assertFalse(snes.cpu.registers().p.z);
+
+        snes.wram.data()[0] = 0x80;
+        snes.cpu.LDA(0);
+        assertEquals(0xab80, snes.cpu.registers().a);
         assertTrue(snes.cpu.registers().p.n);
         assertFalse(snes.cpu.registers().p.z);
+
+        snes.cpu.registers().a = 0xab00;
+        snes.wram.data()[0] = 0x00;
+        snes.cpu.LDA(0);
+        assertEquals(0xab00, snes.cpu.registers().a);
+        assertTrue(snes.cpu.registers().p.z);
+        assertFalse(snes.cpu.registers().p.n);
 
         snes.cpu.registers().p.m = false;
         snes.wram.data()[0] = 0x00;
@@ -78,6 +92,11 @@ class MemoryInstructionTest {
         snes.wram.data()[0] = 0x11;
         snes.cpu.LDX(0);
         assertEquals(0x11, snes.cpu.registers().x);
+        assertFalse(snes.cpu.registers().p.n);
+
+        snes.wram.data()[0] = 0x80;
+        snes.cpu.LDX(0);
+        assertEquals(0x80, snes.cpu.registers().x);
         assertTrue(snes.cpu.registers().p.n);
 
         snes.cpu.registers().p.x_b = false;
@@ -96,6 +115,13 @@ class MemoryInstructionTest {
         snes.wram.data()[1] = 0x11;
         snes.cpu.LDY(0);
         assertEquals(0x11ab, snes.cpu.registers().y);
+        assertFalse(snes.cpu.registers().p.n);
+        assertFalse(snes.cpu.registers().p.z);
+
+        snes.wram.data()[0] = 0x00;
+        snes.wram.data()[1] = 0x80;
+        snes.cpu.LDY(0);
+        assertEquals(0x8000, snes.cpu.registers().y);
         assertTrue(snes.cpu.registers().p.n);
         assertFalse(snes.cpu.registers().p.z);
     }
