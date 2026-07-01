@@ -511,11 +511,14 @@ public class PPU extends AMemory {
             pixel = subScreen[y][x];
             source = subScreenSourceMap[y][x];
         }
+        if (isColorClippedToBlack()) {
+            pixel = 0x000000ff;
+        }
         return applyColorMath(pixel, source, x, y, mainPixelVisible);
     }
 
     private int applyColorMath(int pixel, int source, int x, int y, boolean mainPixelVisible) {
-        if (!isColorMathEnabledForSource(source)) {
+        if (isColorMathPrevented() || !isColorMathEnabledForSource(source)) {
             return pixel;
         }
         int other = ppuRegisters.cgwselAddSubscreen()
@@ -534,6 +537,14 @@ public class PPU extends AMemory {
             return ppuRegisters.cgadsubEnableColorMathBg(source - 1);
         }
         return false;
+    }
+
+    private boolean isColorClippedToBlack() {
+        return ppuRegisters.cgwselClipColorToBlackBeforeMath() == 0b11;
+    }
+
+    private boolean isColorMathPrevented() {
+        return ppuRegisters.cgwselPreventColorMath() == 0b11;
     }
 
     private int addColor(int left, int right, boolean half) {

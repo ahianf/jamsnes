@@ -317,6 +317,36 @@ class PpuRenderIntegrationTest {
         assertEquals(0x848400ff, renderer.firstPixel);
     }
 
+    @Test
+    void updateCanGloballyPreventColorMath() {
+        TestRenderer renderer = new TestRenderer();
+        SNES snes = init(renderer);
+        setupBg1FirstPixel(snes, 0x0010);
+        snes.bus.write(0x2100, 0x0f);
+        snes.bus.write(0x2130, 0x30);
+        snes.bus.write(0x2131, 0x01);
+        snes.bus.write(0x2132, 0x50);
+
+        snes.ppu.update(1);
+
+        assertEquals(0x840000ff, renderer.firstPixel);
+    }
+
+    @Test
+    void updateCanGloballyClipColorToBlackBeforeMath() {
+        TestRenderer renderer = new TestRenderer();
+        SNES snes = init(renderer);
+        setupBg1FirstPixel(snes, 0x0010);
+        snes.bus.write(0x2100, 0x0f);
+        snes.bus.write(0x2130, 0xc0);
+        snes.bus.write(0x2131, 0x01);
+        snes.bus.write(0x2132, 0x50);
+
+        snes.ppu.update(1);
+
+        assertEquals(0x008400ff, renderer.firstPixel);
+    }
+
     private static void writeColor(SNES snes, int colorIndex, int color) {
         int address = colorIndex * 2;
         snes.ppu.cgram.write(address, color);
