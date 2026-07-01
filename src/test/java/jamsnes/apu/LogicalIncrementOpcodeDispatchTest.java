@@ -14,23 +14,45 @@ class LogicalIncrementOpcodeDispatchTest {
         SNES snes = init();
         snes.apu.internalRegisters().pc = 0x200;
         snes.apu.internalRegisters().a = 0x10;
-        snes.apu._internalWrite(0x200, 0x08);
-        snes.apu._internalWrite(0x201, 0x42);
-        snes.apu._internalWrite(0x42, 0x03);
+        writeProgram(snes, 0x200,
+                0x08, 0x03,
+                0x28, 0x0f,
+                0x48, 0xff);
 
         assertEquals(2, snes.apu.executeInstruction());
         assertEquals(0x13, snes.apu.internalRegisters().a);
         assertFalse(snes.apu.internalRegisters().z);
         assertFalse(snes.apu.internalRegisters().n);
 
-        snes.apu.internalRegisters().a = 0xf0;
-        snes.apu.internalRegisters().x = 2;
-        snes.apu._internalWrite(0x202, 0x34);
-        snes.apu._internalWrite(0x203, 0x40);
+        assertEquals(2, snes.apu.executeInstruction());
+        assertEquals(0x03, snes.apu.internalRegisters().a);
+
+        assertEquals(2, snes.apu.executeInstruction());
+        assertEquals(0xfc, snes.apu.internalRegisters().a);
+        assertTrue(snes.apu.internalRegisters().n);
+    }
+
+    @Test
+    void executesLogicalDirectImmediateOpcodes() {
+        SNES snes = init();
+        snes.apu.internalRegisters().pc = 0x200;
+        snes.apu._internalWrite(0x40, 0x10);
+        snes.apu._internalWrite(0x41, 0xf0);
         snes.apu._internalWrite(0x42, 0x0f);
-        assertEquals(4, snes.apu.executeInstruction());
-        assertEquals(0x00, snes.apu.internalRegisters().a);
+        writeProgram(snes, 0x200,
+                0x18, 0x40, 0x03,
+                0x38, 0x41, 0x0f,
+                0x58, 0x42, 0x0f);
+
+        assertEquals(5, snes.apu.executeInstruction());
+        assertEquals(0x13, snes.apu._internalRead(0x40));
+
+        assertEquals(5, snes.apu.executeInstruction());
+        assertEquals(0x00, snes.apu._internalRead(0x41));
         assertTrue(snes.apu.internalRegisters().z);
+
+        assertEquals(5, snes.apu.executeInstruction());
+        assertEquals(0x00, snes.apu._internalRead(0x42));
     }
 
     @Test
@@ -103,5 +125,11 @@ class LogicalIncrementOpcodeDispatchTest {
 
     private static SNES init() {
         return new SNES(new NoRenderer(0, 0, 0));
+    }
+
+    private static void writeProgram(SNES snes, int start, int... bytes) {
+        for (int i = 0; i < bytes.length; i++) {
+            snes.apu._internalWrite(start + i, bytes[i]);
+        }
     }
 }

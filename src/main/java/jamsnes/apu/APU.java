@@ -307,7 +307,7 @@ public class APU extends AMemory {
             case 0x07:
                 return ORacc(_getAbsoluteDirectByXAddr(), 6);
             case 0x08:
-                return ORacc(_getImmediateData(), 2);
+                return ORaccValue(_getImmediateData(), 2);
             case 0x09: {
                 int operand1 = _getDirectAddr();
                 int operand2 = _getDirectAddr();
@@ -344,7 +344,7 @@ public class APU extends AMemory {
             case 0x18: {
                 int operand1 = _getDirectAddr();
                 int operand2 = _getImmediateData();
-                return OR(operand1, operand2, 5);
+                return ORmemValue(operand1, operand2, 5);
             }
             case 0x19:
                 return OR(_getIndexXAddr(), _getIndexYAddr(), 5);
@@ -377,7 +377,7 @@ public class APU extends AMemory {
             case 0x27:
                 return ANDacc(_getAbsoluteDirectByXAddr(), 6);
             case 0x28:
-                return ANDacc(_getImmediateData(), 2);
+                return ANDaccValue(_getImmediateData(), 2);
             case 0x29: {
                 int operand1 = _getDirectAddr();
                 int operand2 = _getDirectAddr();
@@ -414,7 +414,7 @@ public class APU extends AMemory {
             case 0x38: {
                 int operand1 = _getDirectAddr();
                 int operand2 = _getImmediateData();
-                return AND(operand1, operand2, 5);
+                return ANDmemValue(operand1, operand2, 5);
             }
             case 0x39:
                 return AND(_getIndexXAddr(), _getIndexYAddr(), 5);
@@ -447,7 +447,7 @@ public class APU extends AMemory {
             case 0x47:
                 return EORacc(_getAbsoluteDirectByXAddr(), 6);
             case 0x48:
-                return EORacc(_getImmediateData(), 2);
+                return EORaccValue(_getImmediateData(), 2);
             case 0x49: {
                 int operand1 = _getDirectAddr();
                 int operand2 = _getDirectAddr();
@@ -484,7 +484,7 @@ public class APU extends AMemory {
             case 0x58: {
                 int operand1 = _getDirectAddr();
                 int operand2 = _getImmediateData();
-                return EOR(operand1, operand2, 5);
+                return EORmemValue(operand1, operand2, 5);
             }
             case 0x59:
                 return EOR(_getIndexXAddr(), _getIndexYAddr(), 5);
@@ -1125,6 +1125,19 @@ public class APU extends AMemory {
         return cycles;
     }
 
+    public int ANDmemValue(int address, int value, int cycles) {
+        int data = _internalRead(address) & u8(value);
+        _internalWrite(address, data);
+        setNzFlags(data);
+        return cycles;
+    }
+
+    public int ANDaccValue(int value, int cycles) {
+        internalRegisters.a = u8(internalRegisters.a & value);
+        setNzFlags(internalRegisters.a);
+        return cycles;
+    }
+
     public int OR(int operand1, int operand2, int cycles) {
         int data = _internalRead(operand1) | _internalRead(operand2);
         _internalWrite(operand1, data);
@@ -1138,6 +1151,19 @@ public class APU extends AMemory {
         return cycles;
     }
 
+    public int ORmemValue(int address, int value, int cycles) {
+        int data = _internalRead(address) | u8(value);
+        _internalWrite(address, data);
+        setNzFlags(data);
+        return cycles;
+    }
+
+    public int ORaccValue(int value, int cycles) {
+        internalRegisters.a = u8(internalRegisters.a | value);
+        setNzFlags(internalRegisters.a);
+        return cycles;
+    }
+
     public int EOR(int operand1, int operand2, int cycles) {
         int data = _internalRead(operand1) ^ _internalRead(operand2);
         _internalWrite(operand1, data);
@@ -1147,6 +1173,19 @@ public class APU extends AMemory {
 
     public int EORacc(int address, int cycles) {
         internalRegisters.a = u8(internalRegisters.a ^ _internalRead(address));
+        setNzFlags(internalRegisters.a);
+        return cycles;
+    }
+
+    public int EORmemValue(int address, int value, int cycles) {
+        int data = _internalRead(address) ^ u8(value);
+        _internalWrite(address, data);
+        setNzFlags(data);
+        return cycles;
+    }
+
+    public int EORaccValue(int value, int cycles) {
+        internalRegisters.a = u8(internalRegisters.a ^ value);
         setNzFlags(internalRegisters.a);
         return cycles;
     }
