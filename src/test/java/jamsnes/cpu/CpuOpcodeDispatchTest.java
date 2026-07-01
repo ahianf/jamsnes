@@ -36,6 +36,21 @@ class CpuOpcodeDispatchTest {
     }
 
     @Test
+    void executesBplOpcodeWithNormalRelativeBranchCycles() {
+        SNES snes = init();
+        snes.cpu.registers().setPc(0x0200);
+        writeProgram(snes, 0x0200, 0x10, 0x02, 0x10, 0x02);
+
+        assertEquals(4, snes.cpu.executeInstruction());
+        assertEquals(0x0204, snes.cpu.registers().pc);
+
+        snes.cpu.registers().p.n = true;
+        snes.cpu.registers().setPc(0x0202);
+        assertEquals(2, snes.cpu.executeInstruction());
+        assertEquals(0x0204, snes.cpu.registers().pc);
+    }
+
+    @Test
     void executesAbsoluteJumpAndSubroutineOpcodes() {
         SNES snes = init();
         snes.cpu.registers().setPc(0x0200);

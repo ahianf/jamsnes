@@ -170,7 +170,7 @@ public class CPU extends AMemory {
             case 0x0d -> 3 + ORA(_getAbsoluteAddr());
             case 0x0e -> 6 + ASL(_getAbsoluteAddr(), AddressingMode.ABSOLUTE);
             case 0x0f -> 5 + ORA(_getAbsoluteLongAddr());
-            case 0x10 -> 7 + BPL(_getImmediateAddr8Bits());
+            case 0x10 -> 2 + BPL(_getImmediateAddr8Bits());
             case 0x11 -> 5 + ORA(_getDirectIndirectIndexedYAddr()) + directPageIndexedYExtraCycle();
             case 0x12 -> 5 + ORA(_getDirectIndirectAddr()) + directPageExtraCycle();
             case 0x13 -> 7 + ORA(_getStackRelativeIndirectIndexedYAddr());
