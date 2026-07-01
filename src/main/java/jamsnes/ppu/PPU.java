@@ -387,15 +387,18 @@ public class PPU extends AMemory {
     private void addToMainSubScreen(Background background, int levelLow, int levelHigh) {
         int backgroundBit = 1 << (background.getBackgroundNumber() - 1);
         Vector2<Integer> scroll = getBgScroll(background.getBackgroundNumber());
+        int mosaicSize = ppuRegisters.mosaicAffectsBackground(background.getBackgroundNumber() - 1)
+                ? ppuRegisters.mosaicPixelSize() + 1
+                : 1;
         if ((registers[0x2c] & backgroundBit) != 0) {
             Background.mergeBackgroundBuffer(
                     mainScreen, mainScreenLevelMap, mainScreenSourceMap, background.getBackgroundNumber(),
-                    background, levelLow, levelHigh, scroll.x, scroll.y);
+                    background, levelLow, levelHigh, scroll.x, scroll.y, mosaicSize);
         }
         if ((registers[0x2d] & backgroundBit) != 0) {
             Background.mergeBackgroundBuffer(
                     subScreen, subScreenLevelMap, subScreenSourceMap, background.getBackgroundNumber(),
-                    background, levelLow, levelHigh, scroll.x, scroll.y);
+                    background, levelLow, levelHigh, scroll.x, scroll.y, mosaicSize);
         }
     }
 

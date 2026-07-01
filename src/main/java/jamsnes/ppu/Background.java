@@ -129,6 +129,22 @@ public class Background {
             int levelHigh,
             int scrollX,
             int scrollY) {
+        mergeBackgroundBuffer(
+                bufferDest, pixelDestinationLevelMap, sourceDestinationMap, source,
+                backgroundSrc, levelLow, levelHigh, scrollX, scrollY, 1);
+    }
+
+    public static void mergeBackgroundBuffer(
+            int[][] bufferDest,
+            int[][] pixelDestinationLevelMap,
+            int[][] sourceDestinationMap,
+            int source,
+            Background backgroundSrc,
+            int levelLow,
+            int levelHigh,
+            int scrollX,
+            int scrollY,
+            int mosaicSize) {
         int height = Math.min(bufferDest.length, backgroundSrc.buffer.length);
         int sourceHeight = backgroundSrc.backgroundSize.y > 0
                 ? Math.min(backgroundSrc.backgroundSize.y, backgroundSrc.buffer.length)
@@ -136,11 +152,14 @@ public class Background {
         int sourceWidth = backgroundSrc.backgroundSize.x > 0
                 ? Math.min(backgroundSrc.backgroundSize.x, backgroundSrc.buffer[0].length)
                 : backgroundSrc.buffer[0].length;
+        int pixelSize = Math.max(1, mosaicSize);
         for (int y = 0; y < height; y++) {
             int width = Math.min(bufferDest[y].length, backgroundSrc.buffer[y].length);
-            int sourceY = Math.floorMod(y + scrollY, sourceHeight);
+            int mosaicY = (y / pixelSize) * pixelSize;
+            int sourceY = Math.floorMod(mosaicY + scrollY, sourceHeight);
             for (int x = 0; x < width; x++) {
-                int sourceX = Math.floorMod(x + scrollX, sourceWidth);
+                int mosaicX = (x / pixelSize) * pixelSize;
+                int sourceX = Math.floorMod(mosaicX + scrollX, sourceWidth);
                 int pixel = backgroundSrc.buffer[sourceY][sourceX];
                 if (Integer.compareUnsigned(pixel, 0xff) <= 0) {
                     continue;

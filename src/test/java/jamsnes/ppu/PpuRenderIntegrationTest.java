@@ -119,6 +119,25 @@ class PpuRenderIntegrationTest {
     }
 
     @Test
+    void backgroundMosaicRepeatsFirstPixelInMosaicBlock() {
+        SNES snes = init(new TestRenderer());
+        writeColor(snes, 1, 0x001f);
+        writeColor(snes, 2, 0x03e0);
+        snes.bus.write(0x2106, 0x11);
+        snes.bus.write(0x210b, 0x01);
+        snes.bus.write(0x212c, 0x01);
+        snes.ppu.vram.write(0x0000, 0x00);
+        snes.ppu.vram.write(0x0001, 0x00);
+        snes.ppu.vram.write(0x2000, 0x80);
+        snes.ppu.vram.write(0x2001, 0x40);
+
+        snes.ppu.renderMainAndSubScreen();
+
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][1]);
+    }
+
+    @Test
     void modeSixComposesOnlyBackgroundOne() {
         SNES snes = init(new TestRenderer());
         writeColor(snes, 1, 0x001f);
