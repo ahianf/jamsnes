@@ -713,12 +713,11 @@ public class CPU extends AMemory {
 
     public int PLA(int valueAddr) {
         if (registers.p.m) {
-            registers.a = _pop();
+            registers.setAl(_pop());
         } else {
             registers.a = _pop16();
         }
-        registers.p.z = registers.a == 0;
-        registers.p.n = (registers.a & 0x8000) != 0;
+        setZNAccumulator(registers.a);
         return registers.p.m ? 0 : 1;
     }
 
@@ -746,23 +745,21 @@ public class CPU extends AMemory {
 
     public int PLX(int valueAddr) {
         if (registers.p.x_b) {
-            registers.x = _pop();
+            registers.x = u16((registers.x & 0xff00) | _pop());
         } else {
             registers.x = _pop16();
         }
-        registers.p.z = registers.x == 0;
-        registers.p.n = (registers.x & 0x8000) != 0;
+        setZNIndex(registers.x);
         return registers.p.x_b ? 0 : 1;
     }
 
     public int PLY(int valueAddr) {
         if (registers.p.x_b) {
-            registers.y = _pop();
+            registers.y = u16((registers.y & 0xff00) | _pop());
         } else {
             registers.y = _pop16();
         }
-        registers.p.z = registers.y == 0;
-        registers.p.n = (registers.y & 0x8000) != 0;
+        setZNIndex(registers.y);
         return registers.p.x_b ? 0 : 1;
     }
 
@@ -1482,9 +1479,10 @@ public class CPU extends AMemory {
     }
 
     private void setZNIndex(int value) {
+        int normalized = registers.p.x_b ? u8(value) : u16(value);
         int negativeFlag = registers.p.x_b ? 0x80 : 0x8000;
-        registers.p.z = value == 0;
-        registers.p.n = (value & negativeFlag) != 0;
+        registers.p.z = normalized == 0;
+        registers.p.n = (normalized & negativeFlag) != 0;
     }
 
     private void setZNAccumulator(int value) {

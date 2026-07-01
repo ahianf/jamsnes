@@ -104,6 +104,38 @@ class InternalInstructionTest {
     }
 
     @Test
+    void pullsAccumulatorAndIndexRegistersUsingActiveWidth() {
+        SNES snes = init();
+        snes.cpu.registers().s = 0x0010;
+        snes.cpu.registers().p.m = true;
+        snes.cpu.registers().a = 0xab00;
+        snes.cpu._push8(0x80);
+
+        snes.cpu.PLA(0);
+
+        assertEquals(0xab80, snes.cpu.registers().a);
+        assertTrue(snes.cpu.registers().p.n);
+        assertFalse(snes.cpu.registers().p.z);
+
+        snes.cpu.registers().s = 0x0010;
+        snes.cpu.registers().p.x_b = true;
+        snes.cpu.registers().x = 0xcd00;
+        snes.cpu.registers().y = 0xef00;
+        snes.cpu._push8(0x00);
+        snes.cpu.PLX(0);
+        assertEquals(0xcd00, snes.cpu.registers().x);
+        assertTrue(snes.cpu.registers().p.z);
+        assertFalse(snes.cpu.registers().p.n);
+
+        snes.cpu.registers().s = 0x0010;
+        snes.cpu._push8(0x80);
+        snes.cpu.PLY(0);
+        assertEquals(0xef80, snes.cpu.registers().y);
+        assertTrue(snes.cpu.registers().p.n);
+        assertFalse(snes.cpu.registers().p.z);
+    }
+
+    @Test
     void xceExchangesCarryAndEmulation() {
         SNES snes = init();
         snes.cpu.setEmulationMode(true);
