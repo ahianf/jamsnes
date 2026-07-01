@@ -29,7 +29,7 @@ class DataTransmissionInstructionTest {
         int memFrom = snes.apu._getImmediateData();
         int memTo = snes.apu._getDirectAddr();
         assertEquals(5, snes.apu.MOVmemToMem(memTo, memFrom));
-        assertEquals(0x56, snes.apu._internalRead(0x33));
+        assertEquals(99, snes.apu._internalRead(0x33));
     }
 
     @Test
@@ -47,7 +47,7 @@ class DataTransmissionInstructionTest {
         snes.apu.internalRegisters().a = 0x44;
         assertEquals(4, snes.apu.MOVmemToReg(snes.apu._getIndexXAddr(), "a", 4, true));
         assertEquals(0x24, snes.apu.internalRegisters().x);
-        assertEquals(0x23, snes.apu.internalRegisters().a);
+        assertEquals(0x44, snes.apu.internalRegisters().a);
     }
 
     @Test

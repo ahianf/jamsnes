@@ -54,6 +54,8 @@ class DataTransmissionOpcodeDispatchTest {
         snes.apu.internalRegisters().a = 0x66;
         snes.apu.internalRegisters().x = 0x77;
         snes.apu.internalRegisters().y = 0x88;
+        snes.apu._internalWrite(0x42, 0x7a);
+        snes.apu._internalWrite(0x0310, 0xa5);
         snes.apu._internalWrite(0x200, 0xc4);
         snes.apu._internalWrite(0x201, 0x40);
         snes.apu._internalWrite(0x202, 0xc9);
@@ -77,12 +79,10 @@ class DataTransmissionOpcodeDispatchTest {
         assertEquals(0x88, snes.apu._internalRead(0x41));
 
         assertEquals(3, snes.apu.executeInstruction());
-        assertEquals(0x42, snes.apu.internalRegisters().y);
-        assertEquals(0, snes.apu._internalRead(0x42));
+        assertEquals(0x7a, snes.apu.internalRegisters().y);
 
         assertEquals(4, snes.apu.executeInstruction());
-        assertEquals(0x10, snes.apu.internalRegisters().y);
-        assertEquals(0, snes.apu._internalRead(0x0310));
+        assertEquals(0xa5, snes.apu.internalRegisters().y);
     }
 
     @Test
@@ -99,8 +99,9 @@ class DataTransmissionOpcodeDispatchTest {
         assertEquals(0x31, snes.apu.internalRegisters().x);
 
         snes.apu.internalRegisters().a = 0;
+        snes.apu._internalWrite(0x31, 0xa7);
         assertEquals(4, snes.apu.executeInstruction());
-        assertEquals(0x31, snes.apu.internalRegisters().a);
+        assertEquals(0xa7, snes.apu.internalRegisters().a);
         assertEquals(0x32, snes.apu.internalRegisters().x);
     }
 
@@ -126,7 +127,7 @@ class DataTransmissionOpcodeDispatchTest {
     }
 
     @Test
-    void executesLoadLikeCppReadBeforeMoveOpcodes() {
+    void executesDirectAndIndexedLoadOpcodes() {
         SNES snes = init();
         snes.apu.internalRegisters().pc = 0x200;
         snes.apu.internalRegisters().x = 0x02;
@@ -145,15 +146,17 @@ class DataTransmissionOpcodeDispatchTest {
     }
 
     @Test
-    void executesCppAddressOperandLoadOpcodes() {
+    void executesAbsoluteImmediateAndIndirectLoadOpcodes() {
         SNES snes = init();
         snes.apu.internalRegisters().pc = 0x200;
         snes.apu.internalRegisters().x = 0x03;
         snes.apu.internalRegisters().y = 0x04;
+        snes.apu._internalWrite(0x03, 0xc5);
         snes.apu._internalWrite(0x0343, 0xee);
         snes.apu._internalWrite(0x13, 0x9a);
         snes.apu._internalWrite(0x14, 0x02);
         snes.apu._internalWrite(0x029a, 0xdd);
+        snes.apu._internalWrite(0x0421, 0x6c);
         writeProgram(snes, 0x200,
                 0xe5, 0x40, 0x03,
                 0xe6,
@@ -162,26 +165,24 @@ class DataTransmissionOpcodeDispatchTest {
                 0xe9, 0x21, 0x04);
 
         assertEquals(5, snes.apu.executeInstruction());
-        assertEquals(0x43, snes.apu.internalRegisters().a);
-        assertEquals(0xee, snes.apu._internalRead(0x0343));
+        assertEquals(0xee, snes.apu.internalRegisters().a);
 
         assertEquals(3, snes.apu.executeInstruction());
-        assertEquals(0x03, snes.apu.internalRegisters().a);
+        assertEquals(0xc5, snes.apu.internalRegisters().a);
 
         assertEquals(6, snes.apu.executeInstruction());
-        assertEquals(0x9a, snes.apu.internalRegisters().a);
-        assertEquals(0xdd, snes.apu._internalRead(0x029a));
+        assertEquals(0xdd, snes.apu.internalRegisters().a);
 
         assertEquals(2, snes.apu.executeInstruction());
         assertEquals(0x80, snes.apu.internalRegisters().a);
         assertTrue(snes.apu.internalRegisters().n);
 
         assertEquals(4, snes.apu.executeInstruction());
-        assertEquals(0x21, snes.apu.internalRegisters().x);
+        assertEquals(0x6c, snes.apu.internalRegisters().x);
     }
 
     @Test
-    void executesIndexedCppAddressOperandLoadOpcodes() {
+    void executesIndexedLoadOpcodes() {
         SNES snes = init();
         snes.apu.internalRegisters().pc = 0x300;
         snes.apu.internalRegisters().x = 0x03;
@@ -190,7 +191,8 @@ class DataTransmissionOpcodeDispatchTest {
         snes.apu._internalWrite(0x20, 0x70);
         snes.apu._internalWrite(0x21, 0x04);
         snes.apu._internalWrite(0x0474, 0xdd);
-        snes.apu._internalWrite(0x14, 0xcc);
+        snes.apu._internalWrite(0x06, 0x26);
+        snes.apu._internalWrite(0x14, 0x14);
         snes.apu._internalWrite(0x34, 0xbb);
         writeProgram(snes, 0x300,
                 0xf6, 0x40, 0x03,
@@ -200,23 +202,19 @@ class DataTransmissionOpcodeDispatchTest {
                 0xfb, 0x20);
 
         assertEquals(5, snes.apu.executeInstruction());
-        assertEquals(0x44, snes.apu.internalRegisters().a);
-        assertEquals(0xee, snes.apu._internalRead(0x0344));
+        assertEquals(0xee, snes.apu.internalRegisters().a);
 
         assertEquals(6, snes.apu.executeInstruction());
-        assertEquals(0x74, snes.apu.internalRegisters().a);
-        assertEquals(0xdd, snes.apu._internalRead(0x0474));
+        assertEquals(0xdd, snes.apu.internalRegisters().a);
 
         assertEquals(3, snes.apu.executeInstruction());
-        assertEquals(0x06, snes.apu.internalRegisters().x);
+        assertEquals(0x26, snes.apu.internalRegisters().x);
 
         assertEquals(4, snes.apu.executeInstruction());
         assertEquals(0x14, snes.apu.internalRegisters().x);
-        assertEquals(0xcc, snes.apu._internalRead(0x14));
 
         assertEquals(4, snes.apu.executeInstruction());
-        assertEquals(0x34, snes.apu.internalRegisters().y);
-        assertEquals(0xbb, snes.apu._internalRead(0x34));
+        assertEquals(0xbb, snes.apu.internalRegisters().y);
     }
 
     private static void writeProgram(SNES snes, int start, int... bytes) {

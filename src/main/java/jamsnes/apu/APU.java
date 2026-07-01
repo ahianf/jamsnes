@@ -600,14 +600,14 @@ public class APU extends AMemory {
             case 0x8c:
                 return DEC(_getAbsoluteAddr(), 5);
             case 0x8d:
-                return MOVmemToReg(_getImmediateData(), "y", 2);
+                return MOVvalueToReg(_getImmediateData(), "y", 2);
             case 0x8e:
                 internalRegisters.setPsw(popStack());
                 return 4;
             case 0x8f: {
                 int to = _getDirectAddr();
                 int from = _getImmediateData();
-                return MOVmemToMem(to, from);
+                return MOVvalueToMem(to, from, 5);
             }
             case 0x90:
                 return BCC(_getImmediateData());
@@ -741,7 +741,7 @@ public class APU extends AMemory {
             case 0xcc:
                 return MOVregToMem("y", _getAbsoluteAddr(), 5);
             case 0xcd:
-                return MOVmemToReg(_getImmediateData(), "x", 2);
+                return MOVvalueToReg(_getImmediateData(), "x", 2);
             case 0xce:
                 return POP("x");
             case 0xcf:
@@ -789,7 +789,7 @@ public class APU extends AMemory {
             case 0xea:
                 return NOT1(_getAbsoluteBit());
             case 0xe4:
-                return MOVmemToReg(_internalRead(_getDirectAddr()), "a", 3);
+                return MOVmemToReg(_getDirectAddr(), "a", 3);
             case 0xe5:
                 return MOVmemToReg(_getAbsoluteAddrByX(), "a", 5);
             case 0xe6:
@@ -797,7 +797,7 @@ public class APU extends AMemory {
             case 0xe7:
                 return MOVmemToReg(_getAbsoluteDirectByXAddr(), "a", 6);
             case 0xe8:
-                return MOVmemToReg(_getImmediateData(), "a", 2);
+                return MOVvalueToReg(_getImmediateData(), "a", 2);
             case 0xe9:
                 return MOVmemToReg(_getAbsoluteAddr(), "x", 4);
             case 0xeb:
@@ -819,9 +819,9 @@ public class APU extends AMemory {
             case 0xf3:
                 return BBC(_getDirectAddr(), _getImmediateData(), 7);
             case 0xf4:
-                return MOVmemToReg(_internalRead(_getDirectAddrByX()), "a", 4);
+                return MOVmemToReg(_getDirectAddrByX(), "a", 4);
             case 0xf5:
-                return MOVmemToReg(_internalRead(_getAbsoluteAddrByX()), "a", 5);
+                return MOVmemToReg(_getAbsoluteAddrByX(), "a", 5);
             case 0xf6:
                 return MOVmemToReg(_getAbsoluteAddrByY(), "a", 5);
             case 0xf7:
@@ -1372,7 +1372,8 @@ public class APU extends AMemory {
     }
 
     public int MOVmemToReg(int address, String to, int cycles, boolean incrementX) {
-        setRegister(to, address);
+        int value = _internalRead(address);
+        setRegister(to, value);
         if (incrementX) {
             internalRegisters.x = u8(internalRegisters.x + 1);
         }
@@ -1380,8 +1381,19 @@ public class APU extends AMemory {
         return cycles;
     }
 
+    public int MOVvalueToReg(int value, String to, int cycles) {
+        setRegister(to, value);
+        setNzFlags(getRegister(to));
+        return cycles;
+    }
+
+    public int MOVvalueToMem(int address, int value, int cycles) {
+        _internalWrite(address, value);
+        return cycles;
+    }
+
     public int MOVmemToMem(int memTo, int memFrom) {
-        _internalWrite(memTo, memFrom);
+        _internalWrite(memTo, _internalRead(memFrom));
         return 5;
     }
 
