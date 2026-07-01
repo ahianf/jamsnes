@@ -1304,23 +1304,25 @@ public class CPU extends AMemory {
 
     public int TSB(int valueAddr) {
         int value = readAccumulatorWidth(valueAddr);
-        value = normalizeAccumulator(value | registers.a);
-        bus.write(valueAddr, value);
+        int accumulator = accumulatorValue();
+        int newValue = normalizeAccumulator(value | accumulator);
+        bus.write(valueAddr, newValue);
         if (!registers.p.m) {
-            bus.write(valueAddr + 1, value >>> 8);
+            bus.write(valueAddr + 1, newValue >>> 8);
         }
-        registers.p.z = value == 0;
+        registers.p.z = (value & accumulator) == 0;
         return registers.p.m ? 0 : 2;
     }
 
     public int TRB(int valueAddr) {
         int value = readAccumulatorWidth(valueAddr);
-        int newValue = normalizeAccumulator(value & ~registers.a);
+        int accumulator = accumulatorValue();
+        int newValue = normalizeAccumulator(value & ~accumulator);
         bus.write(valueAddr, newValue);
         if (!registers.p.m) {
             bus.write(valueAddr + 1, newValue >>> 8);
         }
-        registers.p.z = (value & registers.a) == 0;
+        registers.p.z = (value & accumulator) == 0;
         return registers.p.m ? 0 : 2;
     }
 

@@ -20,9 +20,15 @@ class BitShiftInstructionTest {
         assertEquals(0b00110111, snes.wram.data()[0]);
         assertFalse(snes.cpu.registers().p.z);
 
+        snes.wram.data()[0] = 0b0000_0010;
+        snes.cpu.registers().a = 0xab01;
+        snes.cpu.TSB(0);
+        assertEquals(0b0000_0011, snes.wram.data()[0]);
+        assertTrue(snes.cpu.registers().p.z);
+
         snes.wram.data()[0] = 0xff;
         snes.cpu.TRB(0);
-        assertEquals(0b11001000, snes.wram.data()[0]);
+        assertEquals(0b1111_1110, snes.wram.data()[0]);
         assertFalse(snes.cpu.registers().p.z);
     }
 
