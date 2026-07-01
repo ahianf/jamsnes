@@ -506,19 +506,20 @@ public class PPU extends AMemory {
         int mainPixel = mainScreen[y][x];
         int source = mainScreenSourceMap[y][x];
         int pixel = mainPixel;
-        if (Integer.compareUnsigned(mainPixel, 0xff) <= 0) {
+        boolean mainPixelVisible = Integer.compareUnsigned(mainPixel, 0xff) > 0;
+        if (!mainPixelVisible) {
             pixel = subScreen[y][x];
             source = subScreenSourceMap[y][x];
         }
-        return applyColorMath(pixel, source);
+        return applyColorMath(pixel, source, x, y, mainPixelVisible);
     }
 
-    private int applyColorMath(int pixel, int source) {
+    private int applyColorMath(int pixel, int source, int x, int y, boolean mainPixelVisible) {
         if (!isColorMathEnabledForSource(source)) {
             return pixel;
         }
         int other = ppuRegisters.cgwselAddSubscreen()
-                ? 0
+                ? (mainPixelVisible ? subScreen[y][x] : 0)
                 : PPUUtils.cgramColorToRGBA(ppuRegisters.fixedColor());
         return ppuRegisters.cgadsubAddSubtractSelect()
                 ? subtractColor(pixel, other, ppuRegisters.cgadsubHalfColorMath())
