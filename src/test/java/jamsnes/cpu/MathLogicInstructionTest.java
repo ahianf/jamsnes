@@ -68,6 +68,33 @@ class MathLogicInstructionTest {
     }
 
     @Test
+    void adcUsesBcdArithmeticWhenDecimalFlagIsSet() {
+        SNES snes = init();
+        snes.cpu.registers().p.d = true;
+        snes.cpu.registers().p.m = true;
+        snes.cpu.registers().a = 0xab45;
+        snes.wram.data()[0] = 0x55;
+
+        snes.cpu.ADC(0);
+
+        assertEquals(0xab00, snes.cpu.registers().a);
+        assertTrue(snes.cpu.registers().p.c);
+        assertTrue(snes.cpu.registers().p.z);
+
+        snes.cpu.registers().p.m = false;
+        snes.cpu.registers().p.c = false;
+        snes.cpu.registers().a = 0x1234;
+        snes.wram.data()[0] = 0x66;
+        snes.wram.data()[1] = 0x87;
+
+        snes.cpu.ADC(0);
+
+        assertEquals(0x0000, snes.cpu.registers().a);
+        assertTrue(snes.cpu.registers().p.c);
+        assertTrue(snes.cpu.registers().p.z);
+    }
+
+    @Test
     void sbcHandlesBorrowAndWidth() {
         SNES snes = init();
         snes.cpu.registers().p.m = true;
@@ -88,6 +115,34 @@ class MathLogicInstructionTest {
         assertEquals(0xdffe, snes.cpu.registers().a);
         assertFalse(snes.cpu.registers().p.c);
         assertTrue(snes.cpu.registers().p.n);
+    }
+
+    @Test
+    void sbcUsesBcdArithmeticWhenDecimalFlagIsSet() {
+        SNES snes = init();
+        snes.cpu.registers().p.d = true;
+        snes.cpu.registers().p.m = true;
+        snes.cpu.registers().p.c = true;
+        snes.cpu.registers().a = 0xab00;
+        snes.wram.data()[0] = 0x01;
+
+        snes.cpu.SBC(0);
+
+        assertEquals(0xab99, snes.cpu.registers().a);
+        assertFalse(snes.cpu.registers().p.c);
+        assertTrue(snes.cpu.registers().p.n);
+
+        snes.cpu.registers().p.m = false;
+        snes.cpu.registers().p.c = true;
+        snes.cpu.registers().a = 0x1000;
+        snes.wram.data()[0] = 0x01;
+        snes.wram.data()[1] = 0x00;
+
+        snes.cpu.SBC(0);
+
+        assertEquals(0x0999, snes.cpu.registers().a);
+        assertTrue(snes.cpu.registers().p.c);
+        assertFalse(snes.cpu.registers().p.z);
     }
 
     @Test

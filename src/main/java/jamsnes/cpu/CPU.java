@@ -1214,10 +1214,11 @@ public class CPU extends AMemory {
     }
 
     public int ADC(int valueAddr) {
-        int value = bus.read(valueAddr) + (registers.p.c ? 1 : 0);
-        if (!registers.p.m) {
-            value += bus.read(valueAddr + 1) << 8;
+        int value = readAccumulatorWidth(valueAddr);
+        if (registers.p.d) {
+            return decimalAdd(value);
         }
+        value += registers.p.c ? 1 : 0;
         int negativeMask = registers.p.m ? 0x80 : 0x8000;
         int maxValue = registers.p.m ? 0xff : 0xffff;
         int oldA = accumulatorValue();
@@ -1235,8 +1236,11 @@ public class CPU extends AMemory {
     }
 
     public int SBC(int valueAddr) {
-        int negativeMask = registers.p.m ? 0x80 : 0x8000;
         int value = readAccumulatorWidth(valueAddr);
+        if (registers.p.d) {
+            return decimalSubtract(value);
+        }
+        int negativeMask = registers.p.m ? 0x80 : 0x8000;
         boolean oldCarry = registers.p.c;
         int oldA = accumulatorValue();
 
@@ -1495,6 +1499,62 @@ public class CPU extends AMemory {
 
     private int accumulatorValue() {
         return registers.p.m ? registers.al() : registers.a;
+    }
+
+    private int decimalAdd(int value) {
+        int left = accumulatorValue();
+        int carryIn = registers.p.c ? 1 : 0;
+        int binaryResult = left + value + carryIn;
+        int result = 0;
+        int carry = carryIn;
+        int digits = registers.p.m ? 2 : 4;
+
+        for (int digit = 0; digit < digits; digit++) {
+            int shift = digit * 4;
+            int sum = ((left >>> shift) & 0x0f) + ((value >>> shift) & 0x0f) + carry;
+            if (sum > 9) {
+                sum += 6;
+                carry = 1;
+            } else {
+                carry = 0;
+            }
+            result |= (sum & 0x0f) << shift;
+        }
+
+        registers.p.c = carry != 0;
+        int negativeMask = registers.p.m ? 0x80 : 0x8000;
+        registers.p.v = (~(left ^ value) & (left ^ binaryResult) & negativeMask) != 0;
+        setAccumulatorValue(result);
+        setZNAccumulator(registers.a);
+        return registers.p.m ? 0 : 1;
+    }
+
+    private int decimalSubtract(int value) {
+        int left = accumulatorValue();
+        int borrowIn = registers.p.c ? 0 : 1;
+        int binaryResult = left - value - borrowIn;
+        int result = 0;
+        int borrow = borrowIn;
+        int digits = registers.p.m ? 2 : 4;
+
+        for (int digit = 0; digit < digits; digit++) {
+            int shift = digit * 4;
+            int difference = ((left >>> shift) & 0x0f) - ((value >>> shift) & 0x0f) - borrow;
+            if (difference < 0) {
+                difference -= 6;
+                borrow = 1;
+            } else {
+                borrow = 0;
+            }
+            result |= (difference & 0x0f) << shift;
+        }
+
+        registers.p.c = borrow == 0;
+        int negativeMask = registers.p.m ? 0x80 : 0x8000;
+        registers.p.v = ((left ^ value) & (left ^ binaryResult) & negativeMask) != 0;
+        setAccumulatorValue(result);
+        setZNAccumulator(registers.a);
+        return registers.p.m ? 0 : 1;
     }
 
     private void setAccumulatorValue(int value) {
