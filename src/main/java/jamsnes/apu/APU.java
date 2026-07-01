@@ -127,10 +127,6 @@ public class APU extends AMemory {
             case 0x00f9 -> registerMemory2 = value;
             case 0x00fa, 0x00fb, 0x00fc -> timers[address - 0x00fa] = value;
             default -> {
-                if (address >= 0xffc0 && iplRomEnabled) {
-                    iplRom[address - 0xffc0] = value;
-                    return;
-                }
                 if (address <= 0x00ef || address >= 0x0100) {
                     internalMemory[address] = value;
                     return;

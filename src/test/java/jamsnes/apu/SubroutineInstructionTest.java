@@ -25,18 +25,20 @@ class SubroutineInstructionTest {
     @Test
     void pcallJumpsWithinFfPageUsingImmediateByte() {
         SNES snes = init();
-        snes.apu._internalWrite(0xffc0, 0x7b);
+        snes.apu.internalRegisters().pc = 0x0200;
+        snes.apu._internalWrite(0x0200, 0x7b);
 
         assertEquals(6, snes.apu.PCALL());
 
         assertEquals(0xff7b, snes.apu.internalRegisters().pc);
-        assertEquals(0xff, snes.apu._internalRead(0x01ef));
-        assertEquals(0xc1, snes.apu._internalRead(0x01ee));
+        assertEquals(0x02, snes.apu._internalRead(0x01ef));
+        assertEquals(0x01, snes.apu._internalRead(0x01ee));
     }
 
     @Test
     void tcallJumpsToByteReadFromVectorTable() {
         SNES snes = init();
+        snes.apu._internalWrite(0x00f1, 0x00);
         snes.apu._internalWrite(0xffd0, 45);
 
         assertEquals(8, snes.apu.TCALL(7));
@@ -49,6 +51,7 @@ class SubroutineInstructionTest {
         SNES snes = init();
         snes.apu.internalRegisters().pc = 0xffee;
         snes.apu.internalRegisters().setPsw(0xdd);
+        snes.apu._internalWrite(0x00f1, 0x00);
         snes.apu._internalWrite(0xffdf, 0xaa);
         snes.apu._internalWrite(0xffde, 0xbb);
 

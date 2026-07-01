@@ -25,7 +25,7 @@ class InternalMemoryMapTest {
         snes.apu._internalWrite(0x0010, 123);
         snes.apu._internalWrite(0x0142, 45);
         snes.apu._internalWrite(0xfedc, 67);
-        snes.apu._internalWrite(0xffdf, 89);
+        snes.apu._internalWrite(0xffbf, 89);
         snes.apu._internalWrite(0x00f4, 0xaa);
         snes.apu._internalWrite(0x00f8, 0xbb);
         snes.apu.counters()[0] = 0xcc;
@@ -33,7 +33,7 @@ class InternalMemoryMapTest {
         assertEquals(123, snes.apu._internalRead(0x0010));
         assertEquals(45, snes.apu._internalRead(0x0142));
         assertEquals(67, snes.apu._internalRead(0xfedc));
-        assertEquals(89, snes.apu._internalRead(0xffdf));
+        assertEquals(89, snes.apu._internalRead(0xffbf));
         assertEquals(0xaa, snes.apu._internalRead(0x00f4));
         assertEquals(0xbb, snes.apu._internalRead(0x00f8));
         assertEquals(0xcc, snes.apu._internalRead(0x00fd));
@@ -50,14 +50,22 @@ class InternalMemoryMapTest {
     }
 
     @Test
-    void internalWriteCanPatchIplRomRegion() {
+    void internalWriteStoresRamBehindIplRomOverlay() {
         SNES snes = init();
 
         snes.apu._internalWrite(0xffc0, 0x42);
         snes.apu._internalWrite(0xffff, 0x24);
 
+        assertEquals(0xcd, snes.apu._internalRead(0xffc0));
+        assertEquals(0xff, snes.apu._internalRead(0xffff));
+
+        snes.apu._internalWrite(0x00f1, 0x00);
         assertEquals(0x42, snes.apu._internalRead(0xffc0));
         assertEquals(0x24, snes.apu._internalRead(0xffff));
+
+        snes.apu._internalWrite(0x00f1, 0x80);
+        assertEquals(0xcd, snes.apu._internalRead(0xffc0));
+        assertEquals(0xff, snes.apu._internalRead(0xffff));
     }
 
     @Test
@@ -115,14 +123,14 @@ class InternalMemoryMapTest {
         snes.apu._internalWrite(0x0001, 12);
         snes.apu._internalWrite(0x01ff, 23);
         snes.apu._internalWrite(0x0789, 34);
-        snes.apu._internalWrite(0xfff0, 45);
+        snes.apu._internalWrite(0xffbf, 45);
         snes.apu._internalWrite(0x00f5, 56);
         snes.apu._internalWrite(0x00f9, 67);
 
         assertEquals(12, snes.apu._internalRead(0x0001));
         assertEquals(23, snes.apu._internalRead(0x01ff));
         assertEquals(34, snes.apu._internalRead(0x0789));
-        assertEquals(45, snes.apu._internalRead(0xfff0));
+        assertEquals(45, snes.apu._internalRead(0xffbf));
         assertEquals(56, snes.apu.ports()[1]);
         assertEquals(67, snes.apu._internalRead(0x00f9));
     }
