@@ -217,6 +217,7 @@ class PpuRenderIntegrationTest {
     void updateDrawsComposedScreenToRenderer() {
         TestRenderer renderer = new TestRenderer();
         SNES snes = init(renderer);
+        snes.bus.write(0x2100, 0x0f);
         writeColor(snes, 0, 0x7c00);
 
         snes.ppu.update(1);
@@ -224,6 +225,30 @@ class PpuRenderIntegrationTest {
         assertEquals(PPUUtils.cgramColorToRGBA(0x7c00), renderer.firstPixel);
         assertEquals((long) Background.BUFFER_SIZE * Background.BUFFER_SIZE, renderer.putPixelCalls);
         assertEquals(1, renderer.drawScreenCalls);
+    }
+
+    @Test
+    void updateAppliesDisplayBrightness() {
+        TestRenderer renderer = new TestRenderer();
+        SNES snes = init(renderer);
+        snes.bus.write(0x2100, 0x07);
+        writeColor(snes, 0, 0x001f);
+
+        snes.ppu.update(1);
+
+        assertEquals(0x770000ff, renderer.firstPixel);
+    }
+
+    @Test
+    void updateDrawsBlackDuringForcedBlank() {
+        TestRenderer renderer = new TestRenderer();
+        SNES snes = init(renderer);
+        snes.bus.write(0x2100, 0x8f);
+        writeColor(snes, 0, 0x001f);
+
+        snes.ppu.update(1);
+
+        assertEquals(0x000000ff, renderer.firstPixel);
     }
 
     private static void writeColor(SNES snes, int colorIndex, int color) {

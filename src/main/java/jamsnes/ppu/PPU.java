@@ -152,7 +152,7 @@ public class PPU extends AMemory {
 
         for (int y = 0; y < screen.length; y++) {
             for (int x = 0; x < screen[y].length; x++) {
-                renderer.putPixel(y, x, screen[y][x]);
+                renderer.putPixel(y, x, applyDisplayControl(screen[y][x]));
             }
         }
         renderer.drawScreen();
@@ -491,6 +491,17 @@ public class PPU extends AMemory {
         for (int[] row : buffer) {
             Arrays.fill(row, value);
         }
+    }
+
+    private int applyDisplayControl(int rgba) {
+        if (ppuRegisters.inidispFblank()) {
+            return 0x000000ff;
+        }
+        int brightness = ppuRegisters.inidispBrightness();
+        int red = (((rgba >>> 24) & 0xff) * brightness) / 15;
+        int green = (((rgba >>> 16) & 0xff) * brightness) / 15;
+        int blue = (((rgba >>> 8) & 0xff) * brightness) / 15;
+        return (red << 24) | (green << 16) | (blue << 8) | (rgba & 0xff);
     }
 
     @Override
