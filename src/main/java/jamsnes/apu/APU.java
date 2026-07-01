@@ -1612,6 +1612,7 @@ public class APU extends AMemory {
             case "x" -> internalRegisters.x = normalized;
             case "y" -> internalRegisters.y = normalized;
             case "sp" -> internalRegisters.sp = normalized;
+            case "psw" -> internalRegisters.setPsw(normalized);
             default -> throw new IllegalArgumentException("Unknown APU register: " + register);
         }
     }

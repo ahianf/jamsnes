@@ -26,6 +26,8 @@ class OpcodeDispatchTest {
         snes.apu.internalRegisters().a = 0x5a;
         snes.apu._internalWrite(0x200, 0x2d);
         snes.apu._internalWrite(0x201, 0xae);
+        snes.apu._internalWrite(0x202, 0x0d);
+        snes.apu._internalWrite(0x203, 0x8e);
 
         assertEquals(4, snes.apu.executeInstruction());
         assertEquals(0xee, snes.apu.internalRegisters().sp);
@@ -35,6 +37,16 @@ class OpcodeDispatchTest {
         assertEquals(4, snes.apu.executeInstruction());
         assertEquals(0xef, snes.apu.internalRegisters().sp);
         assertEquals(0x5a, snes.apu.internalRegisters().a);
+
+        snes.apu.internalRegisters().setPsw(0xa9);
+        assertEquals(4, snes.apu.executeInstruction());
+        assertEquals(0xee, snes.apu.internalRegisters().sp);
+        assertEquals(0xa9, snes.apu._internalRead(0x01ef));
+
+        snes.apu.internalRegisters().setPsw(0x00);
+        assertEquals(4, snes.apu.executeInstruction());
+        assertEquals(0xef, snes.apu.internalRegisters().sp);
+        assertEquals(0xa9, snes.apu.internalRegisters().psw());
     }
 
     @Test
