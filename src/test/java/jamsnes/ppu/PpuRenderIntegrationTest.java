@@ -155,6 +155,34 @@ class PpuRenderIntegrationTest {
     }
 
     @Test
+    void modeSevenHorizontalMirroringSamplesFromOppositeSide() {
+        SNES snes = init(new TestRenderer());
+        writeColor(snes, 5, 0x001f);
+        setupMode7Identity(snes);
+        snes.bus.write(0x211a, 0x01);
+        snes.ppu.vram.write(0x007f, 0x01);
+        snes.ppu.vram.write(0x4047, 0x05);
+
+        snes.ppu.renderMainAndSubScreen();
+
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][0]);
+    }
+
+    @Test
+    void modeSevenVerticalMirroringSamplesFromOppositeSide() {
+        SNES snes = init(new TestRenderer());
+        writeColor(snes, 5, 0x001f);
+        setupMode7Identity(snes);
+        snes.bus.write(0x211a, 0x02);
+        snes.ppu.vram.write(0x3f80, 0x01);
+        snes.ppu.vram.write(0x4078, 0x05);
+
+        snes.ppu.renderMainAndSubScreen();
+
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][0]);
+    }
+
+    @Test
     void updateDrawsComposedScreenToRenderer() {
         TestRenderer renderer = new TestRenderer();
         SNES snes = init(renderer);

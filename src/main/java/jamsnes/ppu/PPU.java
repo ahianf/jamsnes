@@ -392,6 +392,12 @@ public class PPU extends AMemory {
             for (int x = 0; x < destination[y].length; x++) {
                 int sourceX = (((a * (x - centerX)) + (b * (y - centerY))) >> 8) + centerX + scroll.x;
                 int sourceY = (((c * (x - centerX)) + (d * (y - centerY))) >> 8) + centerY + scroll.y;
+                if (ppuRegisters.m7HorizontalMirroring()) {
+                    sourceX = MODE7_SIZE - 1 - sourceX;
+                }
+                if (ppuRegisters.m7VerticalMirroring()) {
+                    sourceY = MODE7_SIZE - 1 - sourceY;
+                }
                 int color = readMode7Pixel(sourceX, sourceY);
                 if (Integer.compareUnsigned(color, 0xff) <= 0 || level < levelMap[y][x]) {
                     continue;
