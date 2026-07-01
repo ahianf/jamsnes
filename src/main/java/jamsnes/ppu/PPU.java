@@ -18,6 +18,23 @@ public class PPU extends AMemory {
     public static final int OAMRAM_SIZE = 544;
     private static final int SOURCE_NONE = -1;
     private static final int SOURCE_BACKDROP = 0;
+    private static final int SOURCE_OBJ = 5;
+    private static final int OBJ_COUNT = 128;
+    private static final int OBJ_LOW_TABLE_SIZE = 0x200;
+    private static final int OBJ_TILE_BPP = 4;
+    private static final int OBJ_TILE_BYTE_SIZE = 32;
+    private static final int OBJ_TILE_ROW_SIZE = 16;
+    private static final int OBJ_PALETTE_BASE = 128;
+    private static final int[][] OBJ_SIZE_PRESETS = {
+            {8, 16},
+            {8, 32},
+            {8, 64},
+            {16, 32},
+            {16, 64},
+            {32, 64},
+            {16, 32},
+            {16, 32}
+    };
     private static final int MODE7_SIZE = 1024;
     private static final int MODE7_TILE_MAP_WIDTH = 128;
     private static final int MODE7_TILE_SIZE = 8;
@@ -199,6 +216,7 @@ public class PPU extends AMemory {
             default -> throw new IllegalStateException("Bg mode not implemented or commented (bg nb "
                     + ppuRegisters.bgMode() + ")");
         }
+        addObjectsToMainSubScreen();
     }
 
     public int getBpp(int backgroundNumber) {
@@ -398,6 +416,114 @@ public class PPU extends AMemory {
         }
     }
 
+    private void addObjectsToMainSubScreen() {
+        if (ppuRegisters.screenDesignationObj(0)) {
+            renderObjectsToBuffer(mainScreen, mainScreenLevelMap, mainScreenSourceMap);
+        }
+        if (ppuRegisters.screenDesignationObj(1)) {
+            renderObjectsToBuffer(subScreen, subScreenLevelMap, subScreenSourceMap);
+        }
+    }
+
+    private void renderObjectsToBuffer(int[][] destination, int[][] levelMap, int[][] sourceMap) {
+        for (int objectIndex = OBJ_COUNT - 1; objectIndex >= 0; objectIndex--) {
+            renderObjectToBuffer(objectIndex, destination, levelMap, sourceMap);
+        }
+    }
+
+    private void renderObjectToBuffer(int objectIndex, int[][] destination, int[][] levelMap, int[][] sourceMap) {
+        int objectAddress = objectIndex * 4;
+        int x = oamram.read(objectAddress);
+        int y = oamram.read(objectAddress + 1);
+        int tile = oamram.read(objectAddress + 2);
+        int attributes = oamram.read(objectAddress + 3);
+        int highTable = oamram.read(OBJ_LOW_TABLE_SIZE + objectIndex / 4);
+        int highShift = (objectIndex % 4) * 2;
+        if (((highTable >>> highShift) & 0x01) != 0) {
+            x |= 0x100;
+        }
+        if (x >= 256) {
+            x -= 512;
+        }
+
+        int objectSize = objectSize((highTable >>> (highShift + 1)) & 0x01);
+        int level = objectPriorityLevel((attributes >>> 4) & 0x03);
+        int palette = (attributes >>> 1) & 0x07;
+        boolean horizontalFlip = (attributes & 0x40) != 0;
+        boolean verticalFlip = (attributes & 0x80) != 0;
+        int baseAddress = objectTileBaseAddress(attributes);
+
+        for (int pixelY = 0; pixelY < objectSize; pixelY++) {
+            int screenY = y + pixelY;
+            if (screenY < 0 || screenY >= destination.length) {
+                continue;
+            }
+            int sourceY = verticalFlip ? objectSize - 1 - pixelY : pixelY;
+            for (int pixelX = 0; pixelX < objectSize; pixelX++) {
+                int screenX = x + pixelX;
+                if (screenX < 0 || screenX >= destination[screenY].length) {
+                    continue;
+                }
+                int sourceX = horizontalFlip ? objectSize - 1 - pixelX : pixelX;
+                int color = readObjectPixel(baseAddress, tile, palette, sourceX, sourceY);
+                if (Integer.compareUnsigned(color, 0xff) <= 0 || level < levelMap[screenY][screenX]) {
+                    continue;
+                }
+                destination[screenY][screenX] = color;
+                levelMap[screenY][screenX] = level;
+                sourceMap[screenY][screenX] = SOURCE_OBJ;
+            }
+        }
+    }
+
+    private int objectSize(int sizeBit) {
+        return OBJ_SIZE_PRESETS[ppuRegisters.obselObjectSize()][sizeBit];
+    }
+
+    private int objectPriorityLevel(int priority) {
+        return switch (priority) {
+            case 0 -> 18;
+            case 1 -> 28;
+            case 2 -> 34;
+            case 3 -> 38;
+            default -> 18;
+        };
+    }
+
+    private int objectTileBaseAddress(int attributes) {
+        int base = ppuRegisters.obselNameBaseSelect() << 13;
+        if ((attributes & 0x01) != 0) {
+            base += (ppuRegisters.obselNameSelect() + 1) << 12;
+        }
+        return u16(base);
+    }
+
+    private int readObjectPixel(int baseAddress, int tile, int palette, int sourceX, int sourceY) {
+        int tileX = sourceX / Tile.NB_PIXELS_WIDTH;
+        int tileY = sourceY / Tile.NB_PIXELS_HEIGHT;
+        int pixelX = sourceX % Tile.NB_PIXELS_WIDTH;
+        int pixelY = sourceY % Tile.NB_PIXELS_HEIGHT;
+        int tileNumber = tile + tileY * 16 + tileX;
+        int rowAddress = u16(baseAddress + tileNumber * OBJ_TILE_BYTE_SIZE + pixelY * 2);
+        int colorIndex = readObjectPixelReference(rowAddress, pixelX);
+        if (colorIndex == 0) {
+            return 0;
+        }
+        int cgramAddress = (OBJ_PALETTE_BASE + palette * 16 + colorIndex) * 2;
+        int color = cgram.read(cgramAddress) | (cgram.read(cgramAddress + 1) << 8);
+        return PPUUtils.cgramColorToRGBA(color);
+    }
+
+    private int readObjectPixelReference(int rowAddress, int pixelX) {
+        int shift = 7 - pixelX;
+        int result = 0;
+        for (int plane = 0; plane < OBJ_TILE_BPP; plane++) {
+            int planeAddress = rowAddress + (plane / 2) * OBJ_TILE_ROW_SIZE + (plane % 2);
+            result |= ((vram.read(u16(planeAddress)) >>> shift) & 1) << plane;
+        }
+        return result;
+    }
+
     private void renderMode7ToBuffer(
             int[][] destination,
             int[][] levelMap,
@@ -535,6 +661,9 @@ public class PPU extends AMemory {
         }
         if (source >= 1 && source <= 4) {
             return ppuRegisters.cgadsubEnableColorMathBg(source - 1);
+        }
+        if (source == SOURCE_OBJ) {
+            return ppuRegisters.cgadsubEnableColorMathObj();
         }
         return false;
     }

@@ -237,6 +237,17 @@ class PpuRenderIntegrationTest {
     }
 
     @Test
+    void rendersObjectPixelsWhenEnabledOnMainScreen() {
+        SNES snes = init(new TestRenderer());
+        setupObjFirstPixel(snes, 0x001f);
+        snes.bus.write(0x212c, 0x10);
+
+        snes.ppu.renderMainAndSubScreen();
+
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][0]);
+    }
+
+    @Test
     void updateDrawsComposedScreenToRenderer() {
         TestRenderer renderer = new TestRenderer();
         SNES snes = init(renderer);
@@ -383,6 +394,21 @@ class PpuRenderIntegrationTest {
         assertEquals(0x840000ff, renderer.firstPixel);
     }
 
+    @Test
+    void updateAddsFixedColorMathForEnabledObject() {
+        TestRenderer renderer = new TestRenderer();
+        SNES snes = init(renderer);
+        setupObjFirstPixel(snes, 0x0010);
+        snes.bus.write(0x2100, 0x0f);
+        snes.bus.write(0x212c, 0x10);
+        snes.bus.write(0x2131, 0x10);
+        snes.bus.write(0x2132, 0x50);
+
+        snes.ppu.update(1);
+
+        assertEquals(0x848400ff, renderer.firstPixel);
+    }
+
     private static void writeColor(SNES snes, int colorIndex, int color) {
         int address = colorIndex * 2;
         snes.ppu.cgram.write(address, color);
@@ -397,6 +423,15 @@ class PpuRenderIntegrationTest {
         snes.ppu.vram.write(0x0001, 0x00);
         snes.ppu.vram.write(0x2000, 0x80);
         snes.ppu.vram.write(0x2001, 0x00);
+    }
+
+    private static void setupObjFirstPixel(SNES snes, int color) {
+        writeColor(snes, 129, color);
+        snes.ppu.oamram.write(0x000, 0x00);
+        snes.ppu.oamram.write(0x001, 0x00);
+        snes.ppu.oamram.write(0x002, 0x00);
+        snes.ppu.oamram.write(0x003, 0x30);
+        snes.ppu.vram.write(0x0000, 0x80);
     }
 
     private static void writeMode7Register(SNES snes, int address, int value) {
