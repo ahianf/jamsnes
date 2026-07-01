@@ -51,6 +51,18 @@ class CpuOpcodeDispatchTest {
     }
 
     @Test
+    void executesClvOpcodeWithImpliedCycles() {
+        SNES snes = init();
+        snes.cpu.registers().setPc(0x0200);
+        snes.cpu.registers().p.v = true;
+        writeProgram(snes, 0x0200, 0xb8);
+
+        assertEquals(2, snes.cpu.executeInstruction());
+        assertFalse(snes.cpu.registers().p.v);
+        assertEquals(0x0201, snes.cpu.registers().pc);
+    }
+
+    @Test
     void executesAbsoluteJumpAndSubroutineOpcodes() {
         SNES snes = init();
         snes.cpu.registers().setPc(0x0200);

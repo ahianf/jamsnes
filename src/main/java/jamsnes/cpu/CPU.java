@@ -338,7 +338,7 @@ public class CPU extends AMemory {
             case 0xb5 -> 4 + LDA(_getDirectIndexedByXAddr()) + directPageExtraCycle();
             case 0xb6 -> 4 + LDX(_getDirectIndexedByYAddr()) + directPageExtraCycle();
             case 0xb7 -> 6 + LDA(_getDirectIndirectIndexedYLongAddr()) + directPageExtraCycle();
-            case 0xb8 -> 7 + CLV(0);
+            case 0xb8 -> 2 + CLV(0);
             case 0xb9 -> 4 + LDA(_getAbsoluteIndexedByYAddr()) + indexBoundaryExtraCycle();
             case 0xba -> 2 + TSX(0);
             case 0xbb -> 2 + TYX(0);
