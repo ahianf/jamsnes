@@ -511,14 +511,14 @@ public class PPU extends AMemory {
             pixel = subScreen[y][x];
             source = subScreenSourceMap[y][x];
         }
-        if (isColorClippedToBlack()) {
+        if (isColorClippedToBlack(x)) {
             pixel = 0x000000ff;
         }
         return applyColorMath(pixel, source, x, y, mainPixelVisible);
     }
 
     private int applyColorMath(int pixel, int source, int x, int y, boolean mainPixelVisible) {
-        if (isColorMathPrevented() || !isColorMathEnabledForSource(source)) {
+        if (isColorMathPrevented(x) || !isColorMathEnabledForSource(source)) {
             return pixel;
         }
         int other = ppuRegisters.cgwselAddSubscreen()
@@ -539,12 +539,55 @@ public class PPU extends AMemory {
         return false;
     }
 
-    private boolean isColorClippedToBlack() {
-        return ppuRegisters.cgwselClipColorToBlackBeforeMath() == 0b11;
+    private boolean isColorClippedToBlack(int x) {
+        return isColorWindowModeActive(ppuRegisters.cgwselClipColorToBlackBeforeMath(), x);
     }
 
-    private boolean isColorMathPrevented() {
-        return ppuRegisters.cgwselPreventColorMath() == 0b11;
+    private boolean isColorMathPrevented(int x) {
+        return isColorWindowModeActive(ppuRegisters.cgwselPreventColorMath(), x);
+    }
+
+    private boolean isColorWindowModeActive(int mode, int x) {
+        return switch (mode) {
+            case 0b00 -> false;
+            case 0b01 -> !isInsideColorWindow(x);
+            case 0b10 -> isInsideColorWindow(x);
+            case 0b11 -> true;
+            default -> false;
+        };
+    }
+
+    private boolean isInsideColorWindow(int x) {
+        boolean window1Enabled = ppuRegisters.windowEnableWindow1ForBg2Bg4Color(2);
+        boolean window2Enabled = ppuRegisters.windowEnableWindow2ForBg2Bg4Color(2);
+        boolean window1 = window1Enabled && isInsideWindow(x, 0);
+        boolean window2 = window2Enabled && isInsideWindow(x, 2);
+
+        if (window1Enabled && ppuRegisters.window1InversionForBg2Bg4Color(2)) {
+            window1 = !window1;
+        }
+        if (window2Enabled && ppuRegisters.window2InversionForBg2Bg4Color(2)) {
+            window2 = !window2;
+        }
+        if (!window1Enabled) {
+            return window2Enabled && window2;
+        }
+        if (!window2Enabled) {
+            return window1;
+        }
+        return switch (ppuRegisters.windowMaskLogicColor()) {
+            case 0b00 -> window1 || window2;
+            case 0b01 -> window1 && window2;
+            case 0b10 -> window1 ^ window2;
+            case 0b11 -> window1 == window2;
+            default -> false;
+        };
+    }
+
+    private boolean isInsideWindow(int x, int positionIndex) {
+        int left = ppuRegisters.windowPosition(positionIndex);
+        int right = ppuRegisters.windowPosition(positionIndex + 1);
+        return left <= right && x >= left && x <= right;
     }
 
     private int addColor(int left, int right, boolean half) {

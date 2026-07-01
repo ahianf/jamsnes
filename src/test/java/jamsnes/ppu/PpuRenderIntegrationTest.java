@@ -347,6 +347,42 @@ class PpuRenderIntegrationTest {
         assertEquals(0x008400ff, renderer.firstPixel);
     }
 
+    @Test
+    void updateCanClipColorInsideColorWindowBeforeMath() {
+        TestRenderer renderer = new TestRenderer();
+        SNES snes = init(renderer);
+        setupBg1FirstPixel(snes, 0x0010);
+        snes.bus.write(0x2100, 0x0f);
+        snes.bus.write(0x2125, 0x04);
+        snes.bus.write(0x2126, 0x00);
+        snes.bus.write(0x2127, 0x00);
+        snes.bus.write(0x2130, 0x80);
+        snes.bus.write(0x2131, 0x01);
+        snes.bus.write(0x2132, 0x50);
+
+        snes.ppu.update(1);
+
+        assertEquals(0x008400ff, renderer.firstPixel);
+    }
+
+    @Test
+    void updateCanPreventColorMathOutsideColorWindow() {
+        TestRenderer renderer = new TestRenderer();
+        SNES snes = init(renderer);
+        setupBg1FirstPixel(snes, 0x0010);
+        snes.bus.write(0x2100, 0x0f);
+        snes.bus.write(0x2125, 0x04);
+        snes.bus.write(0x2126, 0x10);
+        snes.bus.write(0x2127, 0x20);
+        snes.bus.write(0x2130, 0x10);
+        snes.bus.write(0x2131, 0x01);
+        snes.bus.write(0x2132, 0x50);
+
+        snes.ppu.update(1);
+
+        assertEquals(0x840000ff, renderer.firstPixel);
+    }
+
     private static void writeColor(SNES snes, int colorIndex, int color) {
         int address = colorIndex * 2;
         snes.ppu.cgram.write(address, color);
