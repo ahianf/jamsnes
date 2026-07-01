@@ -362,11 +362,14 @@ public class PPU extends AMemory {
 
     private void addToMainSubScreen(Background background, int levelLow, int levelHigh) {
         int backgroundBit = 1 << (background.getBackgroundNumber() - 1);
+        Vector2<Integer> scroll = getBgScroll(background.getBackgroundNumber());
         if ((registers[0x2c] & backgroundBit) != 0) {
-            Background.mergeBackgroundBuffer(mainScreen, mainScreenLevelMap, background, levelLow, levelHigh);
+            Background.mergeBackgroundBuffer(
+                    mainScreen, mainScreenLevelMap, background, levelLow, levelHigh, scroll.x, scroll.y);
         }
         if ((registers[0x2d] & backgroundBit) != 0) {
-            Background.mergeBackgroundBuffer(subScreen, subScreenLevelMap, background, levelLow, levelHigh);
+            Background.mergeBackgroundBuffer(
+                    subScreen, subScreenLevelMap, background, levelLow, levelHigh, scroll.x, scroll.y);
         }
     }
 

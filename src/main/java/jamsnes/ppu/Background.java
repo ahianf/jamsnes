@@ -104,15 +104,34 @@ public class Background {
             Background backgroundSrc,
             int levelLow,
             int levelHigh) {
+        mergeBackgroundBuffer(bufferDest, pixelDestinationLevelMap, backgroundSrc, levelLow, levelHigh, 0, 0);
+    }
+
+    public static void mergeBackgroundBuffer(
+            int[][] bufferDest,
+            int[][] pixelDestinationLevelMap,
+            Background backgroundSrc,
+            int levelLow,
+            int levelHigh,
+            int scrollX,
+            int scrollY) {
         int height = Math.min(bufferDest.length, backgroundSrc.buffer.length);
+        int sourceHeight = backgroundSrc.backgroundSize.y > 0
+                ? Math.min(backgroundSrc.backgroundSize.y, backgroundSrc.buffer.length)
+                : backgroundSrc.buffer.length;
+        int sourceWidth = backgroundSrc.backgroundSize.x > 0
+                ? Math.min(backgroundSrc.backgroundSize.x, backgroundSrc.buffer[0].length)
+                : backgroundSrc.buffer[0].length;
         for (int y = 0; y < height; y++) {
             int width = Math.min(bufferDest[y].length, backgroundSrc.buffer[y].length);
+            int sourceY = Math.floorMod(y + scrollY, sourceHeight);
             for (int x = 0; x < width; x++) {
-                int pixel = backgroundSrc.buffer[y][x];
+                int sourceX = Math.floorMod(x + scrollX, sourceWidth);
+                int pixel = backgroundSrc.buffer[sourceY][sourceX];
                 if (Integer.compareUnsigned(pixel, 0xff) <= 0) {
                     continue;
                 }
-                int pixelLevel = backgroundSrc.isPriorityPixel(x, y) ? levelHigh : levelLow;
+                int pixelLevel = backgroundSrc.isPriorityPixel(sourceX, sourceY) ? levelHigh : levelLow;
                 if (pixelLevel >= pixelDestinationLevelMap[y][x]) {
                     bufferDest[y][x] = pixel;
                     pixelDestinationLevelMap[y][x] = pixelLevel;

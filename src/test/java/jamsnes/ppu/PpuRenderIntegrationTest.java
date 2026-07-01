@@ -96,6 +96,29 @@ class PpuRenderIntegrationTest {
     }
 
     @Test
+    void backgroundScrollOffsetsSelectScrolledPixels() {
+        SNES snes = init(new TestRenderer());
+        writeColor(snes, 1, 0x001f);
+        writeColor(snes, 2, 0x03e0);
+        snes.bus.write(0x210b, 0x01);
+        snes.bus.write(0x212c, 0x01);
+        snes.bus.write(0x210d, 0x08);
+        snes.bus.write(0x210d, 0x00);
+        snes.ppu.vram.write(0x0000, 0x00);
+        snes.ppu.vram.write(0x0001, 0x00);
+        snes.ppu.vram.write(0x0002, 0x01);
+        snes.ppu.vram.write(0x0003, 0x00);
+        snes.ppu.vram.write(0x2000, 0x80);
+        snes.ppu.vram.write(0x2001, 0x00);
+        snes.ppu.vram.write(0x2010, 0x00);
+        snes.ppu.vram.write(0x2011, 0x80);
+
+        snes.ppu.renderMainAndSubScreen();
+
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), snes.ppu.mainScreen()[0][0]);
+    }
+
+    @Test
     void modeSixComposesOnlyBackgroundOne() {
         SNES snes = init(new TestRenderer());
         writeColor(snes, 1, 0x001f);
