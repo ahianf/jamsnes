@@ -517,11 +517,11 @@ public class APU extends AMemory {
             case 0x67:
                 return CMPreg("a", _getAbsoluteDirectByXAddr(), 6);
             case 0x68:
-                return CMPreg("a", _getImmediateData(), 2);
+                return CMPregValue("a", _getImmediateData(), 2);
             case 0x69: {
                 int operand1 = _getDirectAddr();
                 int operand2 = _getDirectAddr();
-                return CMP(operand1, operand2, 6);
+                return CMPmemToMem(operand1, operand2, 6);
             }
             case 0x6a:
                 return AND1(_getAbsoluteBit(), true);
@@ -557,7 +557,7 @@ public class APU extends AMemory {
                 return CMP(operand1, operand2, 5);
             }
             case 0x79:
-                return CMP(_getIndexXAddr(), _getIndexYAddr(), 5);
+                return CMPmemToMem(_getIndexXAddr(), _getIndexYAddr(), 5);
             case 0x7a:
                 return ADDW(_getDirectAddr());
             case 0x7b:
@@ -587,7 +587,7 @@ public class APU extends AMemory {
             case 0x87:
                 return ADCacc(_getAbsoluteDirectByXAddr(), 6);
             case 0x88:
-                return ADCacc(_getImmediateData(), 2);
+                return ADCaccValue(_getImmediateData(), 2);
             case 0x89: {
                 int operand1 = _getDirectAddr();
                 int operand2 = _getDirectAddr();
@@ -628,7 +628,7 @@ public class APU extends AMemory {
             case 0x98: {
                 int operand1 = _getDirectAddr();
                 int operand2 = _getImmediateData();
-                return ADC(operand1, operand2, 5);
+                return ADCmemValue(operand1, operand2, 5);
             }
             case 0x99:
                 return ADC(_getIndexXAddr(), _getIndexYAddr(), 3);
@@ -661,7 +661,7 @@ public class APU extends AMemory {
             case 0xa7:
                 return SBCacc(_getAbsoluteDirectByXAddr(), 6);
             case 0xa8:
-                return SBCacc(_getImmediateData(), 2);
+                return SBCaccValue(_getImmediateData(), 2);
             case 0xa9: {
                 int operand1 = _getDirectAddr();
                 int operand2 = _getDirectAddr();
@@ -674,7 +674,7 @@ public class APU extends AMemory {
             case 0xac:
                 return INC(_getAbsoluteAddr(), 5);
             case 0xad:
-                return CMPreg("y", _getImmediateData(), 2);
+                return CMPregValue("y", _getImmediateData(), 2);
             case 0xae:
                 return POP("a");
             case 0xaf:
@@ -698,7 +698,7 @@ public class APU extends AMemory {
             case 0xb8: {
                 int operand1 = _getDirectAddr();
                 int operand2 = _getImmediateData();
-                return SBC(operand1, operand2, 5);
+                return SBCmemValue(operand1, operand2, 5);
             }
             case 0xb9:
                 return SBC(_getIndexXAddr(), _getIndexYAddr(), 5);
@@ -731,7 +731,7 @@ public class APU extends AMemory {
             case 0xc7:
                 return MOVregToMem("a", _getAbsoluteDirectByXAddr(), 7);
             case 0xc8:
-                return CMPreg("x", _getImmediateData(), 2);
+                return CMPregValue("x", _getImmediateData(), 2);
             case 0xc9:
                 return MOVregToMem("x", _getAbsoluteAddr(), 5);
             case 0xca:
@@ -1300,6 +1300,33 @@ public class APU extends AMemory {
         return cycles;
     }
 
+    public int ADCmemValue(int address, int value, int cycles) {
+        int data1 = _internalRead(address);
+        int data2 = u8(value);
+        int carry = internalRegisters.c ? 1 : 0;
+        int result = data1 + data2 + carry;
+
+        internalRegisters.v = ((~(data1 ^ data2) & (data1 ^ result)) & 0x80) != 0;
+        internalRegisters.h = ((data1 & 0x0f) + (data2 & 0x0f) + carry) > 0x0f;
+        internalRegisters.c = result > 0xff;
+        setNzFlags(result);
+        _internalWrite(address, result);
+        return cycles;
+    }
+
+    public int ADCaccValue(int value, int cycles) {
+        int data = u8(value);
+        int carry = internalRegisters.c ? 1 : 0;
+        int result = internalRegisters.a + data + carry;
+
+        internalRegisters.v = ((~(internalRegisters.a ^ data) & (internalRegisters.a ^ result)) & 0x80) != 0;
+        internalRegisters.h = ((internalRegisters.a & 0x0f) + (data & 0x0f) + carry) > 0x0f;
+        internalRegisters.c = result > 0xff;
+        setNzFlags(result);
+        internalRegisters.a = u8(result);
+        return cycles;
+    }
+
     public int SBC(int operand1, int operand2, int cycles) {
         int data1 = _internalRead(operand1);
         int data2 = _internalRead(operand2);
@@ -1327,10 +1354,45 @@ public class APU extends AMemory {
         return cycles;
     }
 
+    public int SBCmemValue(int address, int value, int cycles) {
+        int data1 = _internalRead(address);
+        int data2 = u8(value);
+        int carry = internalRegisters.c ? 1 : 0;
+        int result = data1 - data2 - (carry ^ 1);
+
+        internalRegisters.v = (((data1 ^ data2) & (data1 ^ result)) & 0x80) != 0;
+        internalRegisters.h = ((result & 0x0f) - (data1 & 0x0f) + carry) > 0x0f;
+        internalRegisters.c = result >= 0 && result <= 0xff;
+        setNzFlags(result);
+        _internalWrite(address, result);
+        return cycles;
+    }
+
+    public int SBCaccValue(int value, int cycles) {
+        int data = u8(value);
+        int carry = internalRegisters.c ? 1 : 0;
+        int result = internalRegisters.a - data - (carry ^ 1);
+
+        internalRegisters.v = (((internalRegisters.a ^ data) & (internalRegisters.a ^ result)) & 0x80) != 0;
+        internalRegisters.h = ((result & 0x0f) - (internalRegisters.a & 0x0f) + carry) > 0x0f;
+        internalRegisters.c = result >= 0 && result <= 0xff;
+        setNzFlags(result);
+        internalRegisters.a = u8(result);
+        return cycles;
+    }
+
     public int CMP(int operand1, int operand2, int cycles) {
         int data1 = _internalRead(operand1);
         internalRegisters.c = data1 >= operand2;
         setNzFlags(data1 - operand2);
+        return cycles;
+    }
+
+    public int CMPmemToMem(int operand1, int operand2, int cycles) {
+        int data1 = _internalRead(operand1);
+        int data2 = _internalRead(operand2);
+        internalRegisters.c = data1 >= data2;
+        setNzFlags(data1 - data2);
         return cycles;
     }
 
@@ -1339,6 +1401,14 @@ public class APU extends AMemory {
         int value = getRegister(register);
         internalRegisters.c = value >= data;
         setNzFlags(value - data);
+        return cycles;
+    }
+
+    public int CMPregValue(String register, int value, int cycles) {
+        int data = u8(value);
+        int registerValue = getRegister(register);
+        internalRegisters.c = registerValue >= data;
+        setNzFlags(registerValue - data);
         return cycles;
     }
 

@@ -52,23 +52,64 @@ class ArithmeticOpcodeDispatchTest {
     }
 
     @Test
+    void executesImmediateArithmeticOpcodesAsValues() {
+        SNES snes = init();
+        snes.apu.internalRegisters().pc = 0x200;
+        snes.apu.internalRegisters().a = 10;
+        snes.apu._internalWrite(0x30, 10);
+        writeProgram(snes, 0x200,
+                0x88, 5,
+                0x98, 0x30, 7,
+                0xa8, 3,
+                0xb8, 0x30, 2);
+
+        assertEquals(2, snes.apu.executeInstruction());
+        assertEquals(15, snes.apu.internalRegisters().a);
+
+        assertEquals(5, snes.apu.executeInstruction());
+        assertEquals(17, snes.apu._internalRead(0x30));
+
+        snes.apu.internalRegisters().c = true;
+        assertEquals(2, snes.apu.executeInstruction());
+        assertEquals(12, snes.apu.internalRegisters().a);
+
+        snes.apu.internalRegisters().c = true;
+        assertEquals(5, snes.apu.executeInstruction());
+        assertEquals(15, snes.apu._internalRead(0x30));
+    }
+
+    @Test
     void executesCompareOpcodes() {
         SNES snes = init();
         snes.apu.internalRegisters().pc = 0x200;
         snes.apu.internalRegisters().a = 0x44;
         snes.apu.internalRegisters().x = 0x20;
         snes.apu._internalWrite(0x20, 0x22);
-        snes.apu._internalWrite(0x200, 0x64);
-        snes.apu._internalWrite(0x201, 0x20);
-        snes.apu._internalWrite(0x202, 0xc8);
-        snes.apu._internalWrite(0x203, 0x20);
+        snes.apu._internalWrite(0x21, 0x33);
+        snes.apu._internalWrite(0x22, 0x44);
+        snes.apu._internalWrite(0x30, 0x70);
+        snes.apu._internalWrite(0x31, 0x60);
+        writeProgram(snes, 0x200,
+                0x64, 0x20,
+                0xc8, 0x20,
+                0x69, 0x21, 0x22,
+                0x79);
 
         assertEquals(3, snes.apu.executeInstruction());
         assertTrue(snes.apu.internalRegisters().c);
         assertFalse(snes.apu.internalRegisters().z);
 
         assertEquals(2, snes.apu.executeInstruction());
+        assertTrue(snes.apu.internalRegisters().c);
+        assertTrue(snes.apu.internalRegisters().z);
+
+        assertEquals(6, snes.apu.executeInstruction());
         assertFalse(snes.apu.internalRegisters().c);
+
+        snes.apu.internalRegisters().x = 0x30;
+        snes.apu.internalRegisters().y = 0x31;
+        assertEquals(5, snes.apu.executeInstruction());
+        assertTrue(snes.apu.internalRegisters().c);
     }
 
     @Test
@@ -125,5 +166,11 @@ class ArithmeticOpcodeDispatchTest {
 
     private static SNES init() {
         return new SNES(new NoRenderer(0, 0, 0));
+    }
+
+    private static void writeProgram(SNES snes, int start, int... bytes) {
+        for (int i = 0; i < bytes.length; i++) {
+            snes.apu._internalWrite(start + i, bytes[i]);
+        }
     }
 }
