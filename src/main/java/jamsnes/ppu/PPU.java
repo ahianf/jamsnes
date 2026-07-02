@@ -39,6 +39,10 @@ public class PPU extends AMemory {
     private static final int MODE7_TILE_MAP_WIDTH = 128;
     private static final int MODE7_TILE_SIZE = 8;
     private static final int MODE7_TILE_DATA_ADDRESS = 0x4000;
+    private static final int H_COUNTER_DOTS = 341;
+    private static final int V_COUNTER_SCANLINES = 262;
+    private static final int PPU1_VERSION = 1;
+    private static final int PPU2_VERSION = 3;
 
     public final Ram vram = new Ram(VRAM_SIZE, Component.VRAM, "VRAM");
     public final Ram oamram = new Ram(OAMRAM_SIZE, Component.OAMRAM, "OAMRAM");
@@ -60,6 +64,13 @@ public class PPU extends AMemory {
     private int vramReadBuffer;
     private int hvSharedScrollPreviousValue;
     private int hScrollPreviousValue;
+    private int hCounter;
+    private int vCounter;
+    private int latchedHCounter;
+    private int latchedVCounter;
+    private boolean hCounterHighByte;
+    private boolean vCounterHighByte;
+    private boolean counterLatchFlag;
 
     public PPU(IRenderer renderer) {
         this.renderer = renderer;
@@ -75,12 +86,15 @@ public class PPU extends AMemory {
     public int read(int address) {
         return switch (address) {
             case 0x34, 0x35, 0x36 -> mode7MultiplicationResultByte(address - 0x34);
-            case 0x37 -> registers[address];
+            case 0x37 -> readSoftwareLatch();
             case 0x38 -> readOamData();
             case 0x39 -> readVramLow();
             case 0x3a -> readVramHigh();
             case 0x3b -> readCgData();
-            case 0x3c, 0x3d, 0x3e, 0x3f -> 0;
+            case 0x3c -> readLatchedHCounter();
+            case 0x3d -> readLatchedVCounter();
+            case 0x3e -> readStat77();
+            case 0x3f -> readStat78();
             default -> throw new InvalidAddress("PPU Internal Registers read ", address + start);
         };
     }
@@ -166,6 +180,7 @@ public class PPU extends AMemory {
     }
 
     public void update(int cycles) {
+        advanceCounters(cycles);
         renderMainAndSubScreen();
 
         for (int y = 0; y < screen.length; y++) {
@@ -328,6 +343,63 @@ public class PPU extends AMemory {
         int value = cgram.read(ppuRegisters.cgAddress());
         ppuRegisters.incrementCgAddress();
         return value;
+    }
+
+    private int readSoftwareLatch() {
+        latchCounters();
+        return registers[0x37];
+    }
+
+    private int readLatchedHCounter() {
+        if (hCounterHighByte) {
+            hCounterHighByte = false;
+            return (latchedHCounter >>> 8) & 1;
+        }
+        hCounterHighByte = true;
+        return latchedHCounter & 0xff;
+    }
+
+    private int readLatchedVCounter() {
+        if (vCounterHighByte) {
+            vCounterHighByte = false;
+            return (latchedVCounter >>> 8) & 1;
+        }
+        vCounterHighByte = true;
+        return latchedVCounter & 0xff;
+    }
+
+    private int readStat77() {
+        return PPU1_VERSION;
+    }
+
+    private int readStat78() {
+        int value = PPU2_VERSION | (counterLatchFlag ? 0x40 : 0);
+        counterLatchFlag = false;
+        hCounterHighByte = false;
+        vCounterHighByte = false;
+        return value;
+    }
+
+    private void advanceCounters(int cycles) {
+        if (cycles <= 0) {
+            return;
+        }
+        hCounter += cycles;
+        while (hCounter >= H_COUNTER_DOTS) {
+            hCounter -= H_COUNTER_DOTS;
+            vCounter++;
+            if (vCounter >= V_COUNTER_SCANLINES) {
+                vCounter = 0;
+            }
+        }
+    }
+
+    private void latchCounters() {
+        latchedHCounter = hCounter;
+        latchedVCounter = vCounter;
+        hCounterHighByte = false;
+        vCounterHighByte = false;
+        counterLatchFlag = true;
     }
 
     private int readOamData() {

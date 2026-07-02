@@ -92,17 +92,20 @@ class PpuReadTest {
     }
 
     @Test
-    void placeholderPpuReadRegistersReturnZero() {
+    void counterAndStatusRegistersLatchAndReturnPpuVersionBits() {
         SNES snes = init();
-        snes.ppu.registers()[0x3c] = 0xff;
-        snes.ppu.registers()[0x3d] = 0xff;
-        snes.ppu.registers()[0x3e] = 0xff;
-        snes.ppu.registers()[0x3f] = 0xff;
 
-        assertEquals(0, snes.bus.read(0x213c));
-        assertEquals(0, snes.bus.read(0x213d));
-        assertEquals(0, snes.bus.read(0x213e));
-        assertEquals(0, snes.bus.read(0x213f));
+        snes.ppu.update(600);
+        snes.ppu.registers()[0x37] = 0xab;
+
+        assertEquals(0xab, snes.bus.read(0x2137));
+        assertEquals(0x03, snes.bus.read(0x213c));
+        assertEquals(0x01, snes.bus.read(0x213c));
+        assertEquals(0x01, snes.bus.read(0x213d));
+        assertEquals(0x00, snes.bus.read(0x213d));
+        assertEquals(0x01, snes.bus.read(0x213e));
+        assertEquals(0x43, snes.bus.read(0x213f));
+        assertEquals(0x03, snes.bus.read(0x213f));
     }
 
     @Test
