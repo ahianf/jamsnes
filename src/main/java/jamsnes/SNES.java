@@ -56,9 +56,26 @@ public class SNES {
             return;
         }
 
+        updateAutoJoypadRegisters();
         int cycleCount = cpu.update(0x0c);
         ppu.update(cycleCount);
         apu.update(cycleCount);
+    }
+
+    private void updateAutoJoypadRegisters() {
+        if ((cpu.internalRegisters()[0x00] & 1) == 0) {
+            return;
+        }
+
+        for (int controller = 0; controller < 2; controller++) {
+            int state = joypad.controllerState(controller);
+            cpu.internalRegisters()[0x18 + controller * 2] = state & 0xff;
+            cpu.internalRegisters()[0x19 + controller * 2] = (state >>> 8) & 0xff;
+        }
+        for (int controller = 2; controller < 4; controller++) {
+            cpu.internalRegisters()[0x18 + controller * 2] = 0;
+            cpu.internalRegisters()[0x19 + controller * 2] = 0;
+        }
     }
 
     public IRenderer getRenderer() {

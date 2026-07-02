@@ -1,6 +1,7 @@
 package jamsnes;
 
 import jamsnes.cartridge.CartridgeType;
+import jamsnes.input.Joypad;
 import jamsnes.ppu.Background;
 import jamsnes.renderer.IRenderer;
 import org.junit.jupiter.api.Test;
@@ -55,6 +56,40 @@ class SNESTest {
 
         assertEquals(0, renderer.drawScreenCalls);
         assertEquals(0, renderer.putPixelCalls);
+    }
+
+    @Test
+    void updateCopiesJoypadStateToAutoReadRegistersWhenEnabled() {
+        SNES snes = new SNES(new TestRenderer());
+        snes.cpu.isDisabled = true;
+        snes.apu.isDisabled = true;
+        snes.cpu.internalRegisters()[0x00] = 0x01;
+        snes.joypad.setControllerState(0, Joypad.BUTTON_B | Joypad.BUTTON_START | Joypad.BUTTON_A);
+        snes.joypad.setControllerState(1, Joypad.BUTTON_Y | Joypad.BUTTON_L | Joypad.BUTTON_R);
+
+        snes.update();
+
+        assertEquals(0x09, snes.cpu.internalRegisters()[0x18]);
+        assertEquals(0x01, snes.cpu.internalRegisters()[0x19]);
+        assertEquals(0x02, snes.cpu.internalRegisters()[0x1a]);
+        assertEquals(0x0c, snes.cpu.internalRegisters()[0x1b]);
+        assertEquals(0x00, snes.cpu.internalRegisters()[0x1c]);
+        assertEquals(0x00, snes.cpu.internalRegisters()[0x1d]);
+        assertEquals(0x00, snes.cpu.internalRegisters()[0x1e]);
+        assertEquals(0x00, snes.cpu.internalRegisters()[0x1f]);
+    }
+
+    @Test
+    void updateDoesNotCopyJoypadStateWhenAutoReadIsDisabled() {
+        SNES snes = new SNES(new TestRenderer());
+        snes.cpu.isDisabled = true;
+        snes.apu.isDisabled = true;
+        snes.cpu.internalRegisters()[0x18] = 0x55;
+        snes.joypad.setControllerState(0, Joypad.BUTTON_B);
+
+        snes.update();
+
+        assertEquals(0x55, snes.cpu.internalRegisters()[0x18]);
     }
 
     @Test
