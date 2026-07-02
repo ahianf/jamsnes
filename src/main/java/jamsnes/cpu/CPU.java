@@ -1,6 +1,7 @@
 package jamsnes.cpu;
 
 import jamsnes.cartridge.Header;
+import jamsnes.exceptions.InvalidAddress;
 import jamsnes.exceptions.InvalidOpcode;
 import jamsnes.memory.AMemory;
 import jamsnes.memory.IMemoryBus;
@@ -88,6 +89,9 @@ public class CPU extends AMemory {
         if (address >= 0x100 && address < 0x180) {
             return dmaChannels[(address - 0x100) >>> 4].read(address & 0x0f);
         }
+        if (!isInternalRegister(address)) {
+            throw new InvalidAddress("CPU Internal Registers read", address + start);
+        }
         return internalRegisters[address];
     }
 
@@ -105,12 +109,19 @@ public class CPU extends AMemory {
             dmaChannels[(address - 0x100) >>> 4].write(address & 0x0f, data);
             return;
         }
+        if (!isInternalRegister(address)) {
+            throw new InvalidAddress("CPU Internal Registers write", address + start);
+        }
         internalRegisters[address] = value;
         if (address == 0x03) {
             runMultiplication();
         } else if (address == 0x06) {
             runDivision();
         }
+    }
+
+    private boolean isInternalRegister(int address) {
+        return (address >= 0x00 && address <= 0x0d) || (address >= 0x10 && address <= 0x1f);
     }
 
     private void runMultiplication() {

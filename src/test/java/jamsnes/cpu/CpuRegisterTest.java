@@ -1,6 +1,7 @@
 package jamsnes.cpu;
 
 import jamsnes.SNES;
+import jamsnes.exceptions.InvalidAddress;
 import jamsnes.memory.IMemory;
 import jamsnes.memory.MemoryShadow;
 import jamsnes.renderer.NoRenderer;
@@ -8,6 +9,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class CpuRegisterTest {
     @Test
@@ -71,6 +73,24 @@ class CpuRegisterTest {
         assertEquals("DAS7L", snes.cpu.getValueName(0x175));
         assertEquals("NTRL7", snes.cpu.getValueName(0x17a));
         assertEquals("???", snes.cpu.getValueName(0x17f));
+    }
+
+    @Test
+    void unmappedCpuInternalRegisterReadsAndWritesThrow() {
+        SNES snes = init();
+
+        assertThrows(InvalidAddress.class, () -> snes.bus.read(0x420e));
+        assertThrows(InvalidAddress.class, () -> snes.bus.write(0x420f, 0x12));
+        assertThrows(InvalidAddress.class, () -> snes.bus.read(0x4220));
+        assertThrows(InvalidAddress.class, () -> snes.bus.write(0x4400, 0x34));
+    }
+
+    @Test
+    void mirroredUnmappedCpuInternalRegistersAlsoThrow() {
+        SNES snes = init();
+
+        assertThrows(InvalidAddress.class, () -> snes.bus.read(0x80420e));
+        assertThrows(InvalidAddress.class, () -> snes.bus.write(0x80420f, 0x56));
     }
 
     @Test
