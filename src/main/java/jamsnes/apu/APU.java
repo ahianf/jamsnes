@@ -1817,6 +1817,17 @@ public class APU extends AMemory {
     }
 
     @Override
+    public String getValueName(int address) {
+        return switch (address) {
+            case 0x00 -> "APUIO0";
+            case 0x01 -> "APUIO1";
+            case 0x02 -> "APUIO2";
+            case 0x03 -> "APUIO3";
+            default -> "???";
+        };
+    }
+
+    @Override
     public Component getComponent() {
         return Component.APU;
     }

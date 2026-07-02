@@ -3,6 +3,8 @@ package jamsnes.apu;
 import jamsnes.SNES;
 import jamsnes.cartridge.Cartridge;
 import jamsnes.exceptions.InvalidAddress;
+import jamsnes.memory.IMemory;
+import jamsnes.memory.MemoryShadow;
 import jamsnes.renderer.NoRenderer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -13,6 +15,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class InternalMemoryMapTest {
@@ -261,6 +264,28 @@ class InternalMemoryMapTest {
         assertEquals(45, snes.apu.read(0x03));
         assertThrows(InvalidAddress.class, () -> snes.apu.read(0x04));
         assertThrows(InvalidAddress.class, () -> snes.apu.write(0x04, 123));
+    }
+
+    @Test
+    void returnsApuRegisterValueNames() {
+        SNES snes = init();
+
+        assertEquals("APUIO0", snes.apu.getValueName(0x00));
+        assertEquals("APUIO1", snes.apu.getValueName(0x01));
+        assertEquals("APUIO2", snes.apu.getValueName(0x02));
+        assertEquals("APUIO3", snes.apu.getValueName(0x03));
+        assertEquals("???", snes.apu.getValueName(0x04));
+    }
+
+    @Test
+    void apuMirrorForwardsRegisterValueNames() {
+        SNES snes = init();
+        snes.bus.mapComponents(snes);
+
+        IMemory accessor = snes.bus.getAccessor(0x802143);
+        MemoryShadow shadow = assertInstanceOf(MemoryShadow.class, accessor);
+
+        assertEquals("APUIO3", shadow.getValueName(0x03));
     }
 
     private static SNES init() {
