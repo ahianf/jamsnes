@@ -707,15 +707,13 @@ public class CPU extends AMemory {
 
     public int SEP(int valueAddr) {
         registers.p.setFlags(registers.p.flags() | bus.read(valueAddr));
+        enforceStatusWidth();
         return 0;
     }
 
     public int REP(int valueAddr) {
         registers.p.setFlags(registers.p.flags() & ~bus.read(valueAddr));
-        if (emulationMode) {
-            registers.p.x_b = true;
-            registers.p.m = true;
-        }
+        enforceStatusWidth();
         return 0;
     }
 
@@ -806,10 +804,7 @@ public class CPU extends AMemory {
 
     public int PLP(int valueAddr) {
         registers.p.setFlags(_pop());
-        if (emulationMode) {
-            registers.p.m = true;
-            registers.p.x_b = true;
-        }
+        enforceStatusWidth();
         return 0;
     }
 
@@ -860,9 +855,8 @@ public class CPU extends AMemory {
             registers.p.m = true;
             registers.p.x_b = true;
             registers.s = 0x0100 | registers.sl();
-            registers.x &= 0xff;
-            registers.y &= 0xff;
         }
+        enforceStatusWidth();
         return 0;
     }
 
@@ -970,10 +964,7 @@ public class CPU extends AMemory {
 
     public int RTI(int valueAddr) {
         registers.p.setFlags(_pop());
-        if (emulationMode) {
-            registers.p.m = true;
-            registers.p.x_b = true;
-        }
+        enforceStatusWidth();
         registers.setPc(_pop16());
         if (!emulationMode) {
             registers.setPbr(_pop());
@@ -1536,6 +1527,17 @@ public class CPU extends AMemory {
             registers.p.d = false;
             registers.setPbr(0);
             registers.setPc(nativeHandler);
+        }
+    }
+
+    private void enforceStatusWidth() {
+        if (emulationMode) {
+            registers.p.m = true;
+            registers.p.x_b = true;
+        }
+        if (registers.p.x_b) {
+            registers.x &= 0xff;
+            registers.y &= 0xff;
         }
     }
 

@@ -35,6 +35,22 @@ class InternalInstructionTest {
     }
 
     @Test
+    void sepClearsIndexHighBytesWhenSettingEightBitIndexMode() {
+        SNES snes = init();
+        snes.cpu.setEmulationMode(false);
+        snes.cpu.registers().p.x_b = false;
+        snes.cpu.registers().x = 0xabcd;
+        snes.cpu.registers().y = 0xef12;
+        snes.wram.data()[0] = 0x10;
+
+        snes.cpu.SEP(0);
+
+        assertTrue(snes.cpu.registers().p.x_b);
+        assertEquals(0x00cd, snes.cpu.registers().x);
+        assertEquals(0x0012, snes.cpu.registers().y);
+    }
+
+    @Test
     void flagSetAndClearInstructions() {
         SNES snes = init();
         snes.cpu.registers().p.setFlags(0xff);
