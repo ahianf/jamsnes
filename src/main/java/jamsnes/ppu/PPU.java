@@ -386,19 +386,22 @@ public class PPU extends AMemory {
 
     private void addToMainSubScreen(Background background, int levelLow, int levelHigh) {
         int backgroundBit = 1 << (background.getBackgroundNumber() - 1);
+        int backgroundIndex = background.getBackgroundNumber() - 1;
         Vector2<Integer> scroll = getBgScroll(background.getBackgroundNumber());
-        int mosaicSize = ppuRegisters.mosaicAffectsBackground(background.getBackgroundNumber() - 1)
+        int mosaicSize = ppuRegisters.mosaicAffectsBackground(backgroundIndex)
                 ? ppuRegisters.mosaicPixelSize() + 1
                 : 1;
         if ((registers[0x2c] & backgroundBit) != 0) {
             Background.mergeBackgroundBuffer(
                     mainScreen, mainScreenLevelMap, mainScreenSourceMap, background.getBackgroundNumber(),
-                    background, levelLow, levelHigh, scroll.x, scroll.y, mosaicSize);
+                    background, levelLow, levelHigh, scroll.x, scroll.y, mosaicSize,
+                    layerWindowMask(backgroundIndex, 0));
         }
         if ((registers[0x2d] & backgroundBit) != 0) {
             Background.mergeBackgroundBuffer(
                     subScreen, subScreenLevelMap, subScreenSourceMap, background.getBackgroundNumber(),
-                    background, levelLow, levelHigh, scroll.x, scroll.y, mosaicSize);
+                    background, levelLow, levelHigh, scroll.x, scroll.y, mosaicSize,
+                    layerWindowMask(backgroundIndex, 1));
         }
     }
 
@@ -421,20 +424,25 @@ public class PPU extends AMemory {
 
     private void addObjectsToMainSubScreen() {
         if (ppuRegisters.screenDesignationObj(0)) {
-            renderObjectsToBuffer(mainScreen, mainScreenLevelMap, mainScreenSourceMap);
+            renderObjectsToBuffer(mainScreen, mainScreenLevelMap, mainScreenSourceMap, objectWindowMask(0));
         }
         if (ppuRegisters.screenDesignationObj(1)) {
-            renderObjectsToBuffer(subScreen, subScreenLevelMap, subScreenSourceMap);
+            renderObjectsToBuffer(subScreen, subScreenLevelMap, subScreenSourceMap, objectWindowMask(1));
         }
     }
 
-    private void renderObjectsToBuffer(int[][] destination, int[][] levelMap, int[][] sourceMap) {
+    private void renderObjectsToBuffer(int[][] destination, int[][] levelMap, int[][] sourceMap, boolean[] windowMask) {
         for (int objectIndex = OBJ_COUNT - 1; objectIndex >= 0; objectIndex--) {
-            renderObjectToBuffer(objectIndex, destination, levelMap, sourceMap);
+            renderObjectToBuffer(objectIndex, destination, levelMap, sourceMap, windowMask);
         }
     }
 
-    private void renderObjectToBuffer(int objectIndex, int[][] destination, int[][] levelMap, int[][] sourceMap) {
+    private void renderObjectToBuffer(
+            int objectIndex,
+            int[][] destination,
+            int[][] levelMap,
+            int[][] sourceMap,
+            boolean[] windowMask) {
         int objectAddress = objectIndex * 4;
         int x = oamram.read(objectAddress);
         int y = oamram.read(objectAddress + 1);
@@ -465,6 +473,9 @@ public class PPU extends AMemory {
             for (int pixelX = 0; pixelX < objectSize; pixelX++) {
                 int screenX = x + pixelX;
                 if (screenX < 0 || screenX >= destination[screenY].length) {
+                    continue;
+                }
+                if (windowMask != null && screenX < windowMask.length && windowMask[screenX]) {
                     continue;
                 }
                 int sourceX = horizontalFlip ? objectSize - 1 - pixelX : pixelX;
@@ -525,6 +536,67 @@ public class PPU extends AMemory {
             result |= ((vram.read(u16(planeAddress)) >>> shift) & 1) << plane;
         }
         return result;
+    }
+
+    private boolean[] layerWindowMask(int backgroundIndex, int screenIndex) {
+        if (!ppuRegisters.windowMaskDesignationBackground(screenIndex, backgroundIndex)) {
+            return null;
+        }
+        boolean[] mask = new boolean[Background.BUFFER_SIZE];
+        for (int x = 0; x < mask.length; x++) {
+            mask[x] = isInsideLayerWindow(backgroundIndex, x);
+        }
+        return mask;
+    }
+
+    private boolean[] objectWindowMask(int screenIndex) {
+        if (!ppuRegisters.windowMaskDesignationObj(screenIndex)) {
+            return null;
+        }
+        boolean[] mask = new boolean[Background.BUFFER_SIZE];
+        for (int x = 0; x < mask.length; x++) {
+            mask[x] = isInsideObjectWindow(x);
+        }
+        return mask;
+    }
+
+    private boolean isInsideLayerWindow(int backgroundIndex, int x) {
+        int groupIndex = backgroundIndex / 2;
+        boolean bg1Bg3Window = (backgroundIndex & 1) == 0;
+        boolean window1Enabled = bg1Bg3Window
+                ? ppuRegisters.windowEnableWindow1ForBg1Bg3Obj(groupIndex)
+                : ppuRegisters.windowEnableWindow1ForBg2Bg4Color(groupIndex);
+        boolean window2Enabled = bg1Bg3Window
+                ? ppuRegisters.windowEnableWindow2ForBg1Bg3Obj(groupIndex)
+                : ppuRegisters.windowEnableWindow2ForBg2Bg4Color(groupIndex);
+        boolean window1Inverted = bg1Bg3Window
+                ? ppuRegisters.window1InversionForBg1Bg3Obj(groupIndex)
+                : ppuRegisters.window1InversionForBg2Bg4Color(groupIndex);
+        boolean window2Inverted = bg1Bg3Window
+                ? ppuRegisters.window2InversionForBg1Bg3Obj(groupIndex)
+                : ppuRegisters.window2InversionForBg2Bg4Color(groupIndex);
+        return isInsideWindowMask(window1Enabled, window1Inverted, window2Enabled, window2Inverted,
+                windowMaskLogic(backgroundIndex), x);
+    }
+
+    private boolean isInsideObjectWindow(int x) {
+        return isInsideWindowMask(
+                ppuRegisters.windowEnableWindow1ForBg1Bg3Obj(2),
+                ppuRegisters.window1InversionForBg1Bg3Obj(2),
+                ppuRegisters.windowEnableWindow2ForBg1Bg3Obj(2),
+                ppuRegisters.window2InversionForBg1Bg3Obj(2),
+                ppuRegisters.windowMaskLogicObj(),
+                x);
+    }
+
+    private int windowMaskLogic(int backgroundIndex) {
+        return switch (backgroundIndex) {
+            case 0 -> ppuRegisters.windowMaskLogicBg1();
+            case 1 -> ppuRegisters.windowMaskLogicBg2();
+            case 2 -> ppuRegisters.windowMaskLogicBg3();
+            case 3 -> ppuRegisters.windowMaskLogicBg4();
+            default -> 0;
+        };
     }
 
     private void renderMode7ToBuffer(
@@ -690,15 +762,29 @@ public class PPU extends AMemory {
     }
 
     private boolean isInsideColorWindow(int x) {
-        boolean window1Enabled = ppuRegisters.windowEnableWindow1ForBg2Bg4Color(2);
-        boolean window2Enabled = ppuRegisters.windowEnableWindow2ForBg2Bg4Color(2);
+        return isInsideWindowMask(
+                ppuRegisters.windowEnableWindow1ForBg2Bg4Color(2),
+                ppuRegisters.window1InversionForBg2Bg4Color(2),
+                ppuRegisters.windowEnableWindow2ForBg2Bg4Color(2),
+                ppuRegisters.window2InversionForBg2Bg4Color(2),
+                ppuRegisters.windowMaskLogicColor(),
+                x);
+    }
+
+    private boolean isInsideWindowMask(
+            boolean window1Enabled,
+            boolean window1Inverted,
+            boolean window2Enabled,
+            boolean window2Inverted,
+            int maskLogic,
+            int x) {
         boolean window1 = window1Enabled && isInsideWindow(x, 0);
         boolean window2 = window2Enabled && isInsideWindow(x, 2);
 
-        if (window1Enabled && ppuRegisters.window1InversionForBg2Bg4Color(2)) {
+        if (window1Enabled && window1Inverted) {
             window1 = !window1;
         }
-        if (window2Enabled && ppuRegisters.window2InversionForBg2Bg4Color(2)) {
+        if (window2Enabled && window2Inverted) {
             window2 = !window2;
         }
         if (!window1Enabled) {
@@ -707,7 +793,7 @@ public class PPU extends AMemory {
         if (!window2Enabled) {
             return window1;
         }
-        return switch (ppuRegisters.windowMaskLogicColor()) {
+        return switch (maskLogic) {
             case 0b00 -> window1 || window2;
             case 0b01 -> window1 && window2;
             case 0b10 -> window1 ^ window2;
