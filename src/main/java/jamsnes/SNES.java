@@ -4,6 +4,7 @@ import jamsnes.apu.APU;
 import jamsnes.cartridge.Cartridge;
 import jamsnes.cartridge.CartridgeType;
 import jamsnes.cpu.CPU;
+import jamsnes.input.Joypad;
 import jamsnes.memory.MemoryBus;
 import jamsnes.models.Component;
 import jamsnes.ppu.PPU;
@@ -17,6 +18,7 @@ public class SNES {
     public final Ram wram;
     public final Ram sram;
     public final CPU cpu;
+    public final Joypad joypad;
     public final PPU ppu;
     public final APU apu;
 
@@ -27,6 +29,7 @@ public class SNES {
         this.wram = new Ram(131_072, Component.WRAM, "WRam");
         this.sram = new Ram(0, Component.SRAM, "SRam");
         this.cpu = new CPU(bus, cartridge.header);
+        this.joypad = new Joypad();
         this.ppu = new PPU(renderer);
         this.apu = new APU(renderer);
     }

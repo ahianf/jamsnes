@@ -79,6 +79,9 @@ public class MemoryBus implements IMemoryBus {
         console.apu.setMemoryRegion(0x2140, 0x2143);
         memoryAccessors.add(console.apu);
 
+        console.joypad.setMemoryRegion(0x4016, 0x4017);
+        memoryAccessors.add(console.joypad);
+
         console.cpu.setMemoryRegion(0x4200, 0x44ff);
         memoryAccessors.add(console.cpu);
 
@@ -119,6 +122,7 @@ public class MemoryBus implements IMemoryBus {
         rectangleShadows.add(new RectangleShadow(console.wram, normalizedBank, normalizedBank, 0x0000, 0x1fff));
         shadows.add(new MemoryShadow(console.ppu, (normalizedBank << 16) + 0x2100, (normalizedBank << 16) + 0x213f));
         shadows.add(new MemoryShadow(console.apu, (normalizedBank << 16) + 0x2140, (normalizedBank << 16) + 0x2143));
+        shadows.add(new MemoryShadow(console.joypad, (normalizedBank << 16) + 0x4016, (normalizedBank << 16) + 0x4017));
         shadows.add(new MemoryShadow(console.cpu, (normalizedBank << 16) + 0x4200, (normalizedBank << 16) + 0x421f));
     }
 

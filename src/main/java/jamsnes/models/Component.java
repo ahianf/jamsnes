@@ -9,7 +9,8 @@ public enum Component {
     VRAM(1 << 5),
     OAMRAM(1 << 6),
     CGRAM(1 << 7),
-    SRAM(1 << 8);
+    SRAM(1 << 8),
+    JOYPAD(1 << 9);
 
     private final int mask;
 

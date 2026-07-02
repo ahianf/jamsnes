@@ -40,6 +40,11 @@ class MemoryBusTest {
         assertSame(snes.cpu, snes.bus.getAccessor(0x004212));
         assertMirrors(snes.cpu, snes.bus.getAccessor(0x804212));
 
+        assertSame(snes.joypad, snes.bus.getAccessor(0x004016));
+        assertSame(snes.joypad, snes.bus.getAccessor(0x004017));
+        assertMirrors(snes.joypad, snes.bus.getAccessor(0x804017));
+        assertMirrors(snes.joypad, snes.bus.getAccessor(0x054016));
+
         assertSame(snes.ppu, snes.bus.getAccessor(0x00213e));
         assertSame(snes.ppu, snes.bus.getAccessor(0x00213f));
         assertMirrors(snes.ppu, snes.bus.getAccessor(0x80213f));
@@ -72,6 +77,10 @@ class MemoryBusTest {
 
         snes.cpu.internalRegisters()[0x01] = 123;
         assertEquals(123, snes.bus.read(0x004201));
+
+        snes.joypad.setControllerState(0, 1);
+        snes.bus.write(0x004016, 1);
+        assertEquals(1, snes.bus.read(0x004016));
 
         snes.ppu.registers()[0x37] = 123;
         assertEquals(123, snes.bus.read(0x002137));
