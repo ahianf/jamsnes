@@ -1,10 +1,13 @@
 package jamsnes.cpu;
 
 import jamsnes.SNES;
+import jamsnes.memory.IMemory;
+import jamsnes.memory.MemoryShadow;
 import jamsnes.renderer.NoRenderer;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 class CpuRegisterTest {
     @Test
@@ -44,6 +47,40 @@ class CpuRegisterTest {
         assertEquals(0xff, snes.bus.read(0x4215));
         assertEquals(0xcd, snes.bus.read(0x4216));
         assertEquals(0xab, snes.bus.read(0x4217));
+    }
+
+    @Test
+    void returnsCpuRegisterValueNames() {
+        SNES snes = init();
+
+        assertEquals("NMITIMEN", snes.cpu.getValueName(0x00));
+        assertEquals("WRMPYA", snes.cpu.getValueName(0x02));
+        assertEquals("MDMAEN", snes.cpu.getValueName(0x0b));
+        assertEquals("RDDIVL", snes.cpu.getValueName(0x14));
+        assertEquals("JOY4H", snes.cpu.getValueName(0x1f));
+        assertEquals("???", snes.cpu.getValueName(0x20));
+    }
+
+    @Test
+    void returnsDmaRegisterValueNames() {
+        SNES snes = init();
+
+        assertEquals("DMAP0", snes.cpu.getValueName(0x100));
+        assertEquals("BBAD0", snes.cpu.getValueName(0x101));
+        assertEquals("A1T3H", snes.cpu.getValueName(0x133));
+        assertEquals("DAS7L", snes.cpu.getValueName(0x175));
+        assertEquals("NTRL7", snes.cpu.getValueName(0x17a));
+        assertEquals("???", snes.cpu.getValueName(0x17f));
+    }
+
+    @Test
+    void cpuMirrorForwardsRegisterValueNames() {
+        SNES snes = init();
+
+        IMemory accessor = snes.bus.getAccessor(0x804214);
+        MemoryShadow shadow = assertInstanceOf(MemoryShadow.class, accessor);
+
+        assertEquals("RDDIVL", shadow.getValueName(0x14));
     }
 
     private static SNES init() {

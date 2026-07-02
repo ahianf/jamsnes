@@ -1643,6 +1643,60 @@ public class CPU extends AMemory {
     }
 
     @Override
+    public String getValueName(int address) {
+        if (address >= 0x100 && address < 0x180) {
+            int channel = (address - 0x100) >>> 4;
+            return switch (address & 0x0f) {
+                case 0x0 -> "DMAP" + channel;
+                case 0x1 -> "BBAD" + channel;
+                case 0x2 -> "A1T" + channel + "L";
+                case 0x3 -> "A1T" + channel + "H";
+                case 0x4 -> "A1B" + channel;
+                case 0x5 -> "DAS" + channel + "L";
+                case 0x6 -> "DAS" + channel + "H";
+                case 0x7 -> "DASB" + channel;
+                case 0x8 -> "A2A" + channel + "L";
+                case 0x9 -> "A2A" + channel + "H";
+                case 0xa -> "NTRL" + channel;
+                default -> "???";
+            };
+        }
+        return switch (address) {
+            case 0x00 -> "NMITIMEN";
+            case 0x01 -> "WRIO";
+            case 0x02 -> "WRMPYA";
+            case 0x03 -> "WRMPYB";
+            case 0x04 -> "WRDIVL";
+            case 0x05 -> "WRDIVH";
+            case 0x06 -> "WRDIVB";
+            case 0x07 -> "HTIMEL";
+            case 0x08 -> "HTIMEH";
+            case 0x09 -> "VTIMEL";
+            case 0x0a -> "VTIMEH";
+            case 0x0b -> "MDMAEN";
+            case 0x0c -> "HDMAEN";
+            case 0x0d -> "MEMSEL";
+            case 0x10 -> "RDNMI";
+            case 0x11 -> "TIMEUP";
+            case 0x12 -> "HVBJOY";
+            case 0x13 -> "RDIO";
+            case 0x14 -> "RDDIVL";
+            case 0x15 -> "RDDIVH";
+            case 0x16 -> "RDMPYL";
+            case 0x17 -> "RDMPYH";
+            case 0x18 -> "JOY1L";
+            case 0x19 -> "JOY1H";
+            case 0x1a -> "JOY2L";
+            case 0x1b -> "JOY2H";
+            case 0x1c -> "JOY3L";
+            case 0x1d -> "JOY3H";
+            case 0x1e -> "JOY4L";
+            case 0x1f -> "JOY4H";
+            default -> "???";
+        };
+    }
+
+    @Override
     public Component getComponent() {
         return Component.CPU;
     }
