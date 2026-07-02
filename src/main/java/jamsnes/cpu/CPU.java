@@ -970,6 +970,10 @@ public class CPU extends AMemory {
 
     public int RTI(int valueAddr) {
         registers.p.setFlags(_pop());
+        if (emulationMode) {
+            registers.p.m = true;
+            registers.p.x_b = true;
+        }
         registers.setPc(_pop16());
         if (!emulationMode) {
             registers.setPbr(_pop());

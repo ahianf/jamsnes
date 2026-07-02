@@ -88,6 +88,23 @@ class InterruptInstructionTest {
     }
 
     @Test
+    void rtiInEmulationModeForcesAccumulatorAndIndexWidthFlags() {
+        SNES snes = init();
+        snes.cpu.setEmulationMode(true);
+        snes.cpu.registers().s = 0x0100;
+        snes.cpu._push16(0x3456);
+        snes.cpu._push8(0x00);
+
+        int cycles = snes.cpu.RTI(0);
+
+        assertEquals(0, cycles);
+        assertEquals(0x30, snes.cpu.registers().p.flags() & 0x30);
+        assertEquals(0x3456, snes.cpu.registers().pc);
+        assertEquals(0, snes.cpu.registers().pbr);
+        assertEquals(0x0100, snes.cpu.registers().s);
+    }
+
+    @Test
     void resetLoadsEmulationResetVector() {
         SNES snes = init();
         snes.cpu.setEmulationMode(false);
