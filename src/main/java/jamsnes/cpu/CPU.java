@@ -93,8 +93,8 @@ public class CPU extends AMemory {
 
     @Override
     public void write(int address, int data) {
+        int value = u8(data);
         if (address == 0x0b) {
-            int value = u8(data);
             internalRegisters[address] = value;
             for (int i = 0; i < dmaChannels.length; i++) {
                 dmaChannels[i].setEnabled((value & (1 << i)) != 0);
@@ -105,7 +105,36 @@ public class CPU extends AMemory {
             dmaChannels[(address - 0x100) >>> 4].write(address & 0x0f, data);
             return;
         }
-        internalRegisters[address] = u8(data);
+        internalRegisters[address] = value;
+        if (address == 0x03) {
+            runMultiplication();
+        } else if (address == 0x06) {
+            runDivision();
+        }
+    }
+
+    private void runMultiplication() {
+        int result = internalRegisters[0x02] * internalRegisters[0x03];
+        internalRegisters[0x16] = u8(result);
+        internalRegisters[0x17] = u8(result >>> 8);
+    }
+
+    private void runDivision() {
+        int dividend = internalRegisters[0x04] | (internalRegisters[0x05] << 8);
+        int divisor = internalRegisters[0x06];
+        int quotient;
+        int remainder;
+        if (divisor == 0) {
+            quotient = 0xffff;
+            remainder = dividend;
+        } else {
+            quotient = dividend / divisor;
+            remainder = dividend % divisor;
+        }
+        internalRegisters[0x14] = u8(quotient);
+        internalRegisters[0x15] = u8(quotient >>> 8);
+        internalRegisters[0x16] = u8(remainder);
+        internalRegisters[0x17] = u8(remainder >>> 8);
     }
 
     public int[] internalRegisters() {
