@@ -465,7 +465,7 @@ public class CPU extends AMemory {
     public int _getDirectIndirectIndexedYAddr() {
         int dp = u16(readPC() + registers.d);
         int base = bus.read(dp);
-        base += bus.read(dp + 1) << 8;
+        base += bus.read(u16(dp + 1)) << 8;
         base += registers.dbr << 16;
         markIndexBoundary(base, registers.y);
         return u24(base + registers.y);
@@ -474,8 +474,8 @@ public class CPU extends AMemory {
     public int _getDirectIndirectIndexedYLongAddr() {
         int dp = u16(readPC() + registers.d);
         int base = bus.read(dp);
-        base += bus.read(dp + 1) << 8;
-        base += bus.read(dp + 2) << 16;
+        base += bus.read(u16(dp + 1)) << 8;
+        base += bus.read(u16(dp + 2)) << 16;
         return u24(base);
     }
 
@@ -483,7 +483,7 @@ public class CPU extends AMemory {
         int dp = u16(readPC() + registers.d);
         dp = u16(dp + registers.x);
         int base = bus.read(dp);
-        base += bus.read(dp + 1) << 8;
+        base += bus.read(u16(dp + 1)) << 8;
         base += registers.dbr << 16;
         return u24(base);
     }
@@ -550,7 +550,7 @@ public class CPU extends AMemory {
     public int _getDirectIndirectAddr() {
         int dp = u16(readPC() + registers.d);
         int effective = bus.read(dp);
-        effective += bus.read(dp + 1) << 8;
+        effective += bus.read(u16(dp + 1)) << 8;
         effective += registers.dbr << 16;
         return u24(effective);
     }

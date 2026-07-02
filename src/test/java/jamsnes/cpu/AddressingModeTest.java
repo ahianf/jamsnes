@@ -81,6 +81,22 @@ class AddressingModeTest {
     }
 
     @Test
+    void directIndirectIndexedYWrapsDirectPagePointerBytes() {
+        SNES snes = init();
+        snes.cartridge.setSize(0x8000);
+        snes.cartridge.data()[0] = 0x00;
+        snes.cartridge.data()[0x7fff] = 0xef;
+        snes.wram.data()[0x0000] = 0x01;
+        snes.cpu.registers().setPac(0x808000);
+        snes.cpu.registers().dbr = 0x88;
+        snes.cpu.registers().y = 0x0002;
+        snes.cpu.registers().d = 0xffff;
+
+        assertEquals(0x8801f1, snes.cpu._getDirectIndirectIndexedYAddr());
+        assertEquals(0x808001, snes.cpu.registers().pac);
+    }
+
+    @Test
     void directIndirectIndexedYTracksPageBoundaryCrossing() {
         SNES snes = init();
         snes.cartridge.data()[0] = 0x10;
@@ -110,6 +126,21 @@ class AddressingModeTest {
     }
 
     @Test
+    void directIndirectIndexedYLongWrapsDirectPagePointerBytes() {
+        SNES snes = init();
+        snes.cartridge.setSize(0x8000);
+        snes.cpu.registers().setPac(0x808000);
+        snes.cpu.registers().d = 0xffff;
+        snes.cartridge.data()[0] = 0x00;
+        snes.cartridge.data()[0x7fff] = 0xef;
+        snes.wram.data()[0x0000] = 0x01;
+        snes.wram.data()[0x0001] = 0x88;
+
+        assertEquals(0x8801ef, snes.cpu._getDirectIndirectIndexedYLongAddr());
+        assertEquals(0x808001, snes.cpu.registers().pac);
+    }
+
+    @Test
     void directIndexedIndirectX() {
         SNES snes = init();
         snes.cartridge.data()[0] = 0x10;
@@ -121,6 +152,22 @@ class AddressingModeTest {
         snes.cpu.registers().setPac(0x808000);
 
         assertEquals(0x804030, snes.cpu._getDirectIndirectIndexedXAddr());
+        assertEquals(0x808001, snes.cpu.registers().pac);
+    }
+
+    @Test
+    void directIndexedIndirectXWrapsDirectPagePointerBytes() {
+        SNES snes = init();
+        snes.cartridge.setSize(0x8000);
+        snes.cartridge.data()[0] = 0xfe;
+        snes.cpu.registers().d = 0xff00;
+        snes.cpu.registers().x = 0x0001;
+        snes.cartridge.data()[0x7fff] = 0xef;
+        snes.wram.data()[0x0000] = 0x01;
+        snes.cpu.registers().dbr = 0x88;
+        snes.cpu.registers().setPac(0x808000);
+
+        assertEquals(0x8801ef, snes.cpu._getDirectIndirectIndexedXAddr());
         assertEquals(0x808001, snes.cpu.registers().pac);
     }
 
@@ -248,6 +295,21 @@ class AddressingModeTest {
         snes.cpu.registers().d = 0x1010;
         snes.wram.data()[0x1011] = 0xef;
         snes.wram.data()[0x1012] = 0x01;
+        snes.cpu.registers().dbr = 0x88;
+
+        assertEquals(0x8801ef, snes.cpu._getDirectIndirectAddr());
+        assertEquals(0x808001, snes.cpu.registers().pac);
+    }
+
+    @Test
+    void directIndirectWrapsDirectPagePointerBytes() {
+        SNES snes = init();
+        snes.cartridge.setSize(0x8000);
+        snes.cpu.registers().setPac(0x808000);
+        snes.cartridge.data()[0] = 0x00;
+        snes.cpu.registers().d = 0xffff;
+        snes.cartridge.data()[0x7fff] = 0xef;
+        snes.wram.data()[0x0000] = 0x01;
         snes.cpu.registers().dbr = 0x88;
 
         assertEquals(0x8801ef, snes.cpu._getDirectIndirectAddr());
