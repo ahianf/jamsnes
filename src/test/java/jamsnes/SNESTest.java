@@ -1,5 +1,6 @@
 package jamsnes;
 
+import jamsnes.cartridge.CartridgeType;
 import jamsnes.ppu.Background;
 import jamsnes.renderer.IRenderer;
 import org.junit.jupiter.api.Test;
@@ -56,6 +57,17 @@ class SNESTest {
         assertEquals(0, renderer.putPixelCalls);
     }
 
+    @Test
+    void loadRomClearsSmcOffsetBeforeLoadingAudioCartridge() throws IOException {
+        SNES snes = new SNES(new TestRenderer());
+
+        snes.loadRom(writeHeaderedGameRom().toString());
+        snes.loadRom(writeSpcFile().toString());
+
+        assertEquals(CartridgeType.AUDIO, snes.cartridge.getType());
+        assertEquals(0x1234, snes.apu.internalRegisters().pc);
+    }
+
     private Path writeGameRom() throws IOException {
         byte[] rom = new byte[0x8000];
         int base = 0x7f00;
@@ -73,6 +85,24 @@ class SNESTest {
         return romPath;
     }
 
+    private Path writeHeaderedGameRom() throws IOException {
+        byte[] rom = new byte[0x8200];
+        int base = 0x8100;
+        rom[0] = 0x78;
+        rom[0x200] = 0x78;
+        byte[] name = "JAMSNES SMC ROM".getBytes(StandardCharsets.ISO_8859_1);
+        System.arraycopy(name, 0, rom, 0x81c0, name.length);
+        rom[base + 0xd5] = 0x20;
+        rom[base + 0xd6] = 0x00;
+        rom[base + 0xd7] = 0x05;
+        rom[base + 0xd8] = 0x00;
+        rom[base + 0xfc] = 0x00;
+        rom[base + 0xfd] = (byte) 0x80;
+        Path romPath = tempDir.resolve("game-smc.sfc");
+        Files.write(romPath, rom);
+        return romPath;
+    }
+
     private Path writeSpcFile() throws IOException {
         byte[] spc = new byte[0x101c0];
         byte[] magic = "SNES-SPC700 Sound File Data v0.30".getBytes(StandardCharsets.ISO_8859_1);
@@ -81,6 +111,8 @@ class SNESTest {
         spc[0x22] = 0x1a;
         spc[0x23] = 0x1a;
         spc[0x24] = 0x1e;
+        spc[0x25] = 0x34;
+        spc[0x26] = 0x12;
         Path spcPath = tempDir.resolve("audio.spc");
         Files.write(spcPath, spc);
         return spcPath;

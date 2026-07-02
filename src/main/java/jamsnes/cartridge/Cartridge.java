@@ -55,6 +55,7 @@ public class Cartridge extends Ram {
 
     public void loadRom(String path) {
         try {
+            romStart = 0;
             romPath = Path.of(path);
             byte[] bytes = Files.readAllBytes(romPath);
             setSize(bytes.length);
