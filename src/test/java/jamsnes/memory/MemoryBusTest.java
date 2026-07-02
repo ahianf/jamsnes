@@ -92,7 +92,8 @@ class MemoryBusTest {
         assertEquals(123, snes.wram.data()[0]);
 
         snes.bus.write(0x002143, 123);
-        assertEquals(123, snes.apu.ports()[3]);
+        assertEquals(123, snes.apu.inputPorts()[3]);
+        assertEquals(123, snes.apu._internalRead(0x00f7));
 
         snes.bus.write(0x002106, 123);
         assertEquals(123, snes.ppu.registers()[0x06]);

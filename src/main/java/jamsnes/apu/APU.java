@@ -31,7 +31,8 @@ public class APU extends AMemory {
             0x5d, 0xd0, 0xdb, 0x1f, 0x00, 0x00, 0xc0, 0xff
     };
     private final DSP dsp;
-    private final int[] ports = new int[4];
+    private final int[] cpuReadPorts = new int[4];
+    private final int[] apuReadPorts = new int[4];
     private final int[] timers = new int[3];
     private final int[] counters = new int[3];
     private final boolean[] timerEnabled = new boolean[3];
@@ -55,7 +56,7 @@ public class APU extends AMemory {
     @Override
     public int read(int address) {
         return switch (address) {
-            case 0x00, 0x01, 0x02, 0x03 -> ports[address];
+            case 0x00, 0x01, 0x02, 0x03 -> cpuReadPorts[address];
             default -> throw new InvalidAddress("APU Registers read", address);
         };
     }
@@ -63,13 +64,17 @@ public class APU extends AMemory {
     @Override
     public void write(int address, int data) {
         switch (address) {
-            case 0x00, 0x01, 0x02, 0x03 -> ports[address] = u8(data);
+            case 0x00, 0x01, 0x02, 0x03 -> apuReadPorts[address] = u8(data);
             default -> throw new InvalidAddress("APU Registers write", address);
         }
     }
 
     public int[] ports() {
-        return ports;
+        return cpuReadPorts;
+    }
+
+    public int[] inputPorts() {
+        return apuReadPorts;
     }
 
     public int[] counters() {
@@ -98,7 +103,7 @@ public class APU extends AMemory {
             case 0x00f0 -> unknownRegister;
             case 0x00f2 -> dspRegisterAddress;
             case 0x00f3 -> dsp.read(dspRegisterAddress);
-            case 0x00f4, 0x00f5, 0x00f6, 0x00f7 -> ports[address - 0x00f4];
+            case 0x00f4, 0x00f5, 0x00f6, 0x00f7 -> apuReadPorts[address - 0x00f4];
             case 0x00f8 -> registerMemory1;
             case 0x00f9 -> registerMemory2;
             case 0x00fd, 0x00fe, 0x00ff -> readCounter(address - 0x00fd);
@@ -122,7 +127,7 @@ public class APU extends AMemory {
             case 0x00f1 -> writeControlRegister(value);
             case 0x00f2 -> dspRegisterAddress = value;
             case 0x00f3 -> dsp.write(dspRegisterAddress, value);
-            case 0x00f4, 0x00f5, 0x00f6, 0x00f7 -> ports[address - 0x00f4] = value;
+            case 0x00f4, 0x00f5, 0x00f6, 0x00f7 -> cpuReadPorts[address - 0x00f4] = value;
             case 0x00f8 -> registerMemory1 = value;
             case 0x00f9 -> registerMemory2 = value;
             case 0x00fa, 0x00fb, 0x00fc -> timers[address - 0x00fa] = value;
@@ -155,12 +160,12 @@ public class APU extends AMemory {
         }
         iplRomEnabled = (value & 0x80) != 0;
         if ((value & 0x10) != 0) {
-            ports[0] = 0;
-            ports[1] = 0;
+            apuReadPorts[0] = 0;
+            apuReadPorts[1] = 0;
         }
         if ((value & 0x20) != 0) {
-            ports[2] = 0;
-            ports[3] = 0;
+            apuReadPorts[2] = 0;
+            apuReadPorts[3] = 0;
         }
     }
 
@@ -902,10 +907,10 @@ public class APU extends AMemory {
         writeControlRegister(cartridge.read(0x100 + 0x00f1));
         dspRegisterAddress = cartridge.read(0x100 + 0x00f2);
         dsp.write(dspRegisterAddress, cartridge.read(0x100 + 0x00f3));
-        ports[0] = cartridge.read(0x100 + 0x00f4);
-        ports[1] = cartridge.read(0x100 + 0x00f5);
-        ports[2] = cartridge.read(0x100 + 0x00f6);
-        ports[3] = cartridge.read(0x100 + 0x00f7);
+        apuReadPorts[0] = cartridge.read(0x100 + 0x00f4);
+        apuReadPorts[1] = cartridge.read(0x100 + 0x00f5);
+        apuReadPorts[2] = cartridge.read(0x100 + 0x00f6);
+        apuReadPorts[3] = cartridge.read(0x100 + 0x00f7);
         registerMemory1 = cartridge.read(0x100 + 0x00f8);
         registerMemory2 = cartridge.read(0x100 + 0x00f9);
         timers[0] = cartridge.read(0x100 + 0x00fa);
@@ -1828,10 +1833,14 @@ public class APU extends AMemory {
     }
 
     public void reset() {
-        ports[0] = 0;
-        ports[1] = 0;
-        ports[2] = 0;
-        ports[3] = 0;
+        cpuReadPorts[0] = 0;
+        cpuReadPorts[1] = 0;
+        cpuReadPorts[2] = 0;
+        cpuReadPorts[3] = 0;
+        apuReadPorts[0] = 0;
+        apuReadPorts[1] = 0;
+        apuReadPorts[2] = 0;
+        apuReadPorts[3] = 0;
         timers[0] = 0;
         timers[1] = 0;
         timers[2] = 0;
