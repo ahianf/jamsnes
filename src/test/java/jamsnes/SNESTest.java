@@ -93,6 +93,32 @@ class SNESTest {
     }
 
     @Test
+    void updateRequestsNmiForNextFrameWhenEnabled() {
+        SNES snes = new SNES(new TestRenderer());
+        snes.bus.mapComponents(snes);
+        snes.cpu.isDisabled = true;
+        snes.apu.isDisabled = true;
+        snes.cpu.internalRegisters()[0x00] = 0x80;
+
+        snes.update();
+
+        assertEquals(0x80, snes.cpu.internalRegisters()[0x10]);
+        assertEquals(0x80, snes.bus.read(0x4210));
+        assertEquals(0x00, snes.bus.read(0x4210));
+    }
+
+    @Test
+    void updateDoesNotRequestNmiWhenDisabled() {
+        SNES snes = new SNES(new TestRenderer());
+        snes.cpu.isDisabled = true;
+        snes.apu.isDisabled = true;
+
+        snes.update();
+
+        assertEquals(0x00, snes.cpu.internalRegisters()[0x10]);
+    }
+
+    @Test
     void loadRomClearsSmcOffsetBeforeLoadingAudioCartridge() throws IOException {
         SNES snes = new SNES(new TestRenderer());
 

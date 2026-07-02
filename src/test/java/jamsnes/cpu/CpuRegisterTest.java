@@ -8,6 +8,7 @@ import jamsnes.renderer.NoRenderer;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -49,6 +50,17 @@ class CpuRegisterTest {
         assertEquals(0xff, snes.bus.read(0x4215));
         assertEquals(0xcd, snes.bus.read(0x4216));
         assertEquals(0xab, snes.bus.read(0x4217));
+    }
+
+    @Test
+    void rdnmiReadClearsNmiStatusAndPendingRequest() {
+        SNES snes = init();
+
+        snes.cpu.requestNMI();
+
+        assertEquals(0x80, snes.bus.read(0x4210));
+        assertEquals(0x00, snes.bus.read(0x4210));
+        assertFalse(snes.cpu.isNMIRequested);
     }
 
     @Test

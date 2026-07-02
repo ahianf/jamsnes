@@ -59,7 +59,14 @@ public class SNES {
         updateAutoJoypadRegisters();
         int cycleCount = cpu.update(0x0c);
         ppu.update(cycleCount);
+        requestFrameNmi();
         apu.update(cycleCount);
+    }
+
+    private void requestFrameNmi() {
+        if ((cpu.internalRegisters()[0x00] & 0x80) != 0) {
+            cpu.requestNMI();
+        }
     }
 
     private void updateAutoJoypadRegisters() {

@@ -86,6 +86,9 @@ public class CPU extends AMemory {
             }
             return value;
         }
+        if (address == 0x10) {
+            return readNmiStatus();
+        }
         if (address >= 0x100 && address < 0x180) {
             return dmaChannels[(address - 0x100) >>> 4].read(address & 0x0f);
         }
@@ -148,12 +151,28 @@ public class CPU extends AMemory {
         internalRegisters[0x17] = u8(remainder >>> 8);
     }
 
+    private int readNmiStatus() {
+        int value = internalRegisters[0x10];
+        internalRegisters[0x10] = value & 0x7f;
+        isNMIRequested = false;
+        return value;
+    }
+
     public int[] internalRegisters() {
         return internalRegisters;
     }
 
     public DMA[] dmaChannels() {
         return dmaChannels;
+    }
+
+    public void requestNMI() {
+        isNMIRequested = true;
+        internalRegisters[0x10] |= 0x80;
+    }
+
+    public void requestIRQ() {
+        isIRQRequested = true;
     }
 
     public int update(int maxCycles) {
@@ -1475,10 +1494,12 @@ public class CPU extends AMemory {
         waitingForInterrupt = false;
 
         if (isNMIRequested) {
+            isNMIRequested = false;
             runInterrupt(cartridgeHeader.nativeInterrupts.nmi, cartridgeHeader.emulationInterrupts.nmi);
             return;
         }
         if (isIRQRequested && !registers.p.i) {
+            isIRQRequested = false;
             runInterrupt(cartridgeHeader.nativeInterrupts.irq, cartridgeHeader.emulationInterrupts.irq);
         }
     }

@@ -56,6 +56,13 @@ class CpuUpdateLoopTest {
         assertEquals(0, snes.cpu.registers().pbr);
         assertEquals(snes.cpu.registers().p.flags(), snes.cpu._pop());
         assertEquals(0x0200, snes.cpu._pop16());
+        assertFalse(snes.cpu.isNMIRequested);
+
+        snes.cpu.registers().setPc(0x0400);
+        snes.wram.data()[0x0400] = 0xea;
+
+        assertEquals(2, snes.cpu.update(2));
+        assertEquals(0x0401, snes.cpu.registers().pc);
     }
 
     @Test
