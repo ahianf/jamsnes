@@ -59,6 +59,7 @@ public class SNES {
         updateAutoJoypadRegisters();
         int cycleCount = cpu.update(0x0c);
         ppu.update(cycleCount);
+        updateVideoStatusRegisters();
         requestFrameNmi();
         apu.update(cycleCount);
     }
@@ -83,6 +84,17 @@ public class SNES {
             cpu.internalRegisters()[0x18 + controller * 2] = 0;
             cpu.internalRegisters()[0x19 + controller * 2] = 0;
         }
+    }
+
+    void updateVideoStatusRegisters() {
+        int value = 0;
+        if (ppu.isInVBlank()) {
+            value |= 0x80;
+        }
+        if (ppu.isInHBlank()) {
+            value |= 0x40;
+        }
+        cpu.internalRegisters()[0x12] = value;
     }
 
     public IRenderer getRenderer() {

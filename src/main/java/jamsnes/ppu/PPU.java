@@ -40,7 +40,9 @@ public class PPU extends AMemory {
     private static final int MODE7_TILE_SIZE = 8;
     private static final int MODE7_TILE_DATA_ADDRESS = 0x4000;
     private static final int H_COUNTER_DOTS = 341;
+    private static final int H_BLANK_START_DOT = 256;
     private static final int V_COUNTER_SCANLINES = 262;
+    private static final int V_BLANK_START_SCANLINE = 225;
     private static final int PPU1_VERSION = 1;
     private static final int PPU2_VERSION = 3;
 
@@ -278,6 +280,22 @@ public class PPU extends AMemory {
 
     public int getBgMode() {
         return ppuRegisters.bgMode();
+    }
+
+    public int hCounter() {
+        return hCounter;
+    }
+
+    public int vCounter() {
+        return vCounter;
+    }
+
+    public boolean isInHBlank() {
+        return hCounter >= H_BLANK_START_DOT;
+    }
+
+    public boolean isInVBlank() {
+        return vCounter >= V_BLANK_START_SCANLINE;
     }
 
     public int cgramRead(int address) {

@@ -119,6 +119,24 @@ class SNESTest {
     }
 
     @Test
+    void updateVideoStatusRegistersReflectsPpuBlanking() {
+        SNES snes = new SNES(new TestRenderer());
+        snes.bus.mapComponents(snes);
+
+        snes.ppu.update(256);
+        snes.updateVideoStatusRegisters();
+        assertEquals(0x40, snes.bus.read(0x4212));
+
+        snes.ppu.update(341 * 225 - 256);
+        snes.updateVideoStatusRegisters();
+        assertEquals(0x80, snes.bus.read(0x4212));
+
+        snes.ppu.update(341 * (262 - 225));
+        snes.updateVideoStatusRegisters();
+        assertEquals(0x00, snes.bus.read(0x4212));
+    }
+
+    @Test
     void loadRomClearsSmcOffsetBeforeLoadingAudioCartridge() throws IOException {
         SNES snes = new SNES(new TestRenderer());
 
