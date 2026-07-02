@@ -137,6 +137,38 @@ class SNESTest {
     }
 
     @Test
+    void updateTimerIrqRequestsIrqWhenEnabledTimerMatchesCounters() {
+        SNES snes = new SNES(new TestRenderer());
+        snes.bus.mapComponents(snes);
+        snes.bus.write(0x4200, 0x30);
+        snes.bus.write(0x4207, 0x0c);
+        snes.bus.write(0x4208, 0x00);
+        snes.bus.write(0x4209, 0x02);
+        snes.bus.write(0x420a, 0x00);
+
+        snes.ppu.update(341 * 2 + 12);
+        snes.updateTimerIrq();
+
+        assertEquals(0x80, snes.bus.read(0x4211));
+    }
+
+    @Test
+    void updateTimerIrqDoesNotReassertAtSameCounterPosition() {
+        SNES snes = new SNES(new TestRenderer());
+        snes.bus.mapComponents(snes);
+        snes.bus.write(0x4200, 0x10);
+        snes.bus.write(0x4207, 0x08);
+        snes.bus.write(0x4208, 0x00);
+
+        snes.ppu.update(8);
+        snes.updateTimerIrq();
+        assertEquals(0x80, snes.bus.read(0x4211));
+
+        snes.updateTimerIrq();
+        assertEquals(0x00, snes.bus.read(0x4211));
+    }
+
+    @Test
     void loadRomClearsSmcOffsetBeforeLoadingAudioCartridge() throws IOException {
         SNES snes = new SNES(new TestRenderer());
 

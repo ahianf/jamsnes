@@ -12,6 +12,9 @@ import jamsnes.ram.Ram;
 import jamsnes.renderer.IRenderer;
 
 public class SNES {
+    private static final int NMITIMEN_H_IRQ_ENABLE = 0x10;
+    private static final int NMITIMEN_V_IRQ_ENABLE = 0x20;
+
     private final IRenderer renderer;
     public final MemoryBus bus;
     public final Cartridge cartridge;
@@ -21,6 +24,8 @@ public class SNES {
     public final Joypad joypad;
     public final PPU ppu;
     public final APU apu;
+    private int lastTimerIrqHCounter = -1;
+    private int lastTimerIrqVCounter = -1;
 
     public SNES(IRenderer renderer) {
         this.renderer = renderer;
@@ -60,6 +65,7 @@ public class SNES {
         int cycleCount = cpu.update(0x0c);
         ppu.update(cycleCount);
         updateVideoStatusRegisters();
+        updateTimerIrq();
         requestFrameNmi();
         apu.update(cycleCount);
     }
@@ -95,6 +101,39 @@ public class SNES {
             value |= 0x40;
         }
         cpu.internalRegisters()[0x12] = value;
+    }
+
+    void updateTimerIrq() {
+        int nmitimen = cpu.internalRegisters()[0x00];
+        boolean hTimerEnabled = (nmitimen & NMITIMEN_H_IRQ_ENABLE) != 0;
+        boolean vTimerEnabled = (nmitimen & NMITIMEN_V_IRQ_ENABLE) != 0;
+        if (!hTimerEnabled && !vTimerEnabled) {
+            return;
+        }
+
+        int hCounter = ppu.hCounter();
+        int vCounter = ppu.vCounter();
+        boolean matched = timerMatches(hTimerEnabled, vTimerEnabled, hCounter, vCounter);
+        if (!matched || (hCounter == lastTimerIrqHCounter && vCounter == lastTimerIrqVCounter)) {
+            return;
+        }
+
+        lastTimerIrqHCounter = hCounter;
+        lastTimerIrqVCounter = vCounter;
+        cpu.requestIRQ();
+    }
+
+    private boolean timerMatches(boolean hTimerEnabled, boolean vTimerEnabled, int hCounter, int vCounter) {
+        int hTarget = cpu.internalRegisters()[0x07] | ((cpu.internalRegisters()[0x08] & 1) << 8);
+        int vTarget = cpu.internalRegisters()[0x09] | ((cpu.internalRegisters()[0x0a] & 1) << 8);
+
+        if (hTimerEnabled && vTimerEnabled) {
+            return hCounter == hTarget && vCounter == vTarget;
+        }
+        if (hTimerEnabled) {
+            return hCounter == hTarget;
+        }
+        return hCounter == 0 && vCounter == vTarget;
     }
 
     public IRenderer getRenderer() {
