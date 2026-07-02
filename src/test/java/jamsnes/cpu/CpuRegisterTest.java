@@ -64,6 +64,17 @@ class CpuRegisterTest {
     }
 
     @Test
+    void timeupReadClearsIrqStatusAndPendingRequest() {
+        SNES snes = init();
+
+        snes.cpu.requestIRQ();
+
+        assertEquals(0x80, snes.bus.read(0x4211));
+        assertEquals(0x00, snes.bus.read(0x4211));
+        assertFalse(snes.cpu.isIRQRequested);
+    }
+
+    @Test
     void returnsCpuRegisterValueNames() {
         SNES snes = init();
 

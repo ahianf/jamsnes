@@ -89,6 +89,9 @@ public class CPU extends AMemory {
         if (address == 0x10) {
             return readNmiStatus();
         }
+        if (address == 0x11) {
+            return readIrqStatus();
+        }
         if (address >= 0x100 && address < 0x180) {
             return dmaChannels[(address - 0x100) >>> 4].read(address & 0x0f);
         }
@@ -158,6 +161,13 @@ public class CPU extends AMemory {
         return value;
     }
 
+    private int readIrqStatus() {
+        int value = internalRegisters[0x11];
+        internalRegisters[0x11] = value & 0x7f;
+        isIRQRequested = false;
+        return value;
+    }
+
     public int[] internalRegisters() {
         return internalRegisters;
     }
@@ -173,6 +183,7 @@ public class CPU extends AMemory {
 
     public void requestIRQ() {
         isIRQRequested = true;
+        internalRegisters[0x11] |= 0x80;
     }
 
     public int update(int maxCycles) {
