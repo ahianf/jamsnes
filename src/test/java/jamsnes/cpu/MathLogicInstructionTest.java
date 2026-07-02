@@ -118,6 +118,60 @@ class MathLogicInstructionTest {
     }
 
     @Test
+    void sbcCarryReflectsBorrowInput() {
+        SNES snes = init();
+        snes.cpu.registers().p.m = true;
+        snes.cpu.registers().p.c = false;
+        snes.cpu.registers().a = 0xab00;
+        snes.wram.data()[0] = 0x00;
+
+        snes.cpu.SBC(0);
+
+        assertEquals(0xabff, snes.cpu.registers().a);
+        assertFalse(snes.cpu.registers().p.c);
+        assertTrue(snes.cpu.registers().p.n);
+
+        snes.cpu.registers().p.m = false;
+        snes.cpu.registers().p.c = false;
+        snes.cpu.registers().a = 0x0000;
+        snes.wram.data()[0] = 0x00;
+        snes.wram.data()[1] = 0x00;
+
+        snes.cpu.SBC(0);
+
+        assertEquals(0xffff, snes.cpu.registers().a);
+        assertFalse(snes.cpu.registers().p.c);
+        assertTrue(snes.cpu.registers().p.n);
+    }
+
+    @Test
+    void sbcSetsSignedOverflowForBinarySubtraction() {
+        SNES snes = init();
+        snes.cpu.registers().p.m = true;
+        snes.cpu.registers().p.c = true;
+        snes.cpu.registers().a = 0xab80;
+        snes.wram.data()[0] = 0x01;
+
+        snes.cpu.SBC(0);
+
+        assertEquals(0xab7f, snes.cpu.registers().a);
+        assertTrue(snes.cpu.registers().p.v);
+        assertFalse(snes.cpu.registers().p.n);
+
+        snes.cpu.registers().p.m = false;
+        snes.cpu.registers().p.c = true;
+        snes.cpu.registers().a = 0x7fff;
+        snes.wram.data()[0] = 0xff;
+        snes.wram.data()[1] = 0xff;
+
+        snes.cpu.SBC(0);
+
+        assertEquals(0x8000, snes.cpu.registers().a);
+        assertTrue(snes.cpu.registers().p.v);
+        assertTrue(snes.cpu.registers().p.n);
+    }
+
+    @Test
     void sbcUsesBcdArithmeticWhenDecimalFlagIsSet() {
         SNES snes = init();
         snes.cpu.registers().p.d = true;
