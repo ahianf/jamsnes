@@ -116,12 +116,13 @@ class AddressingModeTest {
         SNES snes = init();
         snes.cpu.registers().setPac(0x808000);
         snes.cpu.registers().d = 0x1000;
+        snes.cpu.registers().y = 0x0005;
         snes.cartridge.data()[0] = 0x10;
         snes.wram.data()[0x1010] = 0x30;
         snes.wram.data()[0x1011] = 0x40;
         snes.wram.data()[0x1012] = 0x23;
 
-        assertEquals(0x234030, snes.cpu._getDirectIndirectIndexedYLongAddr());
+        assertEquals(0x234035, snes.cpu._getDirectIndirectIndexedYLongAddr());
         assertEquals(0x808001, snes.cpu.registers().pac);
     }
 
@@ -137,6 +138,21 @@ class AddressingModeTest {
         snes.wram.data()[0x0001] = 0x88;
 
         assertEquals(0x8801ef, snes.cpu._getDirectIndirectIndexedYLongAddr());
+        assertEquals(0x808001, snes.cpu.registers().pac);
+    }
+
+    @Test
+    void directIndirectIndexedYLongAddsIndexAcrossBankBoundary() {
+        SNES snes = init();
+        snes.cpu.registers().setPac(0x808000);
+        snes.cpu.registers().d = 0x1000;
+        snes.cpu.registers().y = 0x0020;
+        snes.cartridge.data()[0] = 0x10;
+        snes.wram.data()[0x1010] = 0xf0;
+        snes.wram.data()[0x1011] = 0xff;
+        snes.wram.data()[0x1012] = 0x23;
+
+        assertEquals(0x240010, snes.cpu._getDirectIndirectIndexedYLongAddr());
         assertEquals(0x808001, snes.cpu.registers().pac);
     }
 

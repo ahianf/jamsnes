@@ -521,7 +521,7 @@ class CpuOpcodeDispatchTest {
         snes.wram.data()[0x0121] = 0x04;
         snes.wram.data()[0x0130] = 0x20;
         snes.wram.data()[0x0131] = 0x04;
-        snes.wram.data()[0x0140] = 0x00;
+        snes.wram.data()[0x0140] = 0x20;
         snes.wram.data()[0x0141] = 0x05;
         snes.wram.data()[0x0306] = 0x00;
         snes.wram.data()[0x0307] = 0x05;
@@ -543,7 +543,7 @@ class CpuOpcodeDispatchTest {
         assertEquals(0x77, snes.wram.data()[0x0503]);
 
         assertEquals(6, snes.cpu.executeInstruction());
-        assertEquals(0x77, snes.wram.data()[0x0500]);
+        assertEquals(0x77, snes.wram.data()[0x0523]);
         assertEquals(0x020c, snes.cpu.registers().pc);
     }
 

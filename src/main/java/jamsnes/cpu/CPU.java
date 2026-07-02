@@ -546,7 +546,7 @@ public class CPU extends AMemory {
         int base = bus.read(dp);
         base += bus.read(u16(dp + 1)) << 8;
         base += bus.read(u16(dp + 2)) << 16;
-        return u24(base);
+        return u24(base + registers.y);
     }
 
     public int _getDirectIndirectIndexedXAddr() {
