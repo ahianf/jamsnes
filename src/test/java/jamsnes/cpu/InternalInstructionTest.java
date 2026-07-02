@@ -155,12 +155,14 @@ class InternalInstructionTest {
         assertEquals(0xee22, snes.cpu.registers().y);
 
         snes.cpu.registers().p.c = true;
+        snes.cpu.registers().s = 0xabcd;
         snes.cpu.XCE(0);
 
         assertTrue(snes.cpu.isEmulationMode());
         assertFalse(snes.cpu.registers().p.c);
         assertTrue(snes.cpu.registers().p.m);
         assertTrue(snes.cpu.registers().p.x_b);
+        assertEquals(0x01cd, snes.cpu.registers().s);
         assertEquals(0x11, snes.cpu.registers().x);
         assertEquals(0x22, snes.cpu.registers().y);
     }

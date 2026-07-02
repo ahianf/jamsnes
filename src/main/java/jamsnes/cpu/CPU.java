@@ -859,6 +859,7 @@ public class CPU extends AMemory {
         if (emulationMode) {
             registers.p.m = true;
             registers.p.x_b = true;
+            registers.s = 0x0100 | registers.sl();
             registers.x &= 0xff;
             registers.y &= 0xff;
         }
