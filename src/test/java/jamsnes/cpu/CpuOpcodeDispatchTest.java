@@ -113,6 +113,46 @@ class CpuOpcodeDispatchTest {
     }
 
     @Test
+    void executesBlockMoveOpcodesWithFetchedBankOperands() {
+        SNES snes = init();
+        snes.cpu.registers().setPc(0x0200);
+        snes.cpu.registers().a = 0x0002;
+        snes.cpu.registers().x = 0x0300;
+        snes.cpu.registers().y = 0x0400;
+        writeProgram(snes, 0x0200, 0x54, 0x00, 0x00);
+        snes.wram.data()[0x0300] = 0x11;
+        snes.wram.data()[0x0301] = 0x22;
+        snes.wram.data()[0x0302] = 0x33;
+
+        assertEquals(21, snes.cpu.executeInstruction());
+        assertEquals(0x0203, snes.cpu.registers().pc);
+        assertEquals(0xffff, snes.cpu.registers().a);
+        assertEquals(0x0303, snes.cpu.registers().x);
+        assertEquals(0x0403, snes.cpu.registers().y);
+        assertEquals(0x11, snes.wram.data()[0x0400]);
+        assertEquals(0x22, snes.wram.data()[0x0401]);
+        assertEquals(0x33, snes.wram.data()[0x0402]);
+
+        snes.cpu.registers().setPc(0x0210);
+        snes.cpu.registers().a = 0x0002;
+        snes.cpu.registers().x = 0x0312;
+        snes.cpu.registers().y = 0x0412;
+        writeProgram(snes, 0x0210, 0x44, 0x00, 0x00);
+        snes.wram.data()[0x0310] = 0xaa;
+        snes.wram.data()[0x0311] = 0xbb;
+        snes.wram.data()[0x0312] = 0xcc;
+
+        assertEquals(21, snes.cpu.executeInstruction());
+        assertEquals(0x0213, snes.cpu.registers().pc);
+        assertEquals(0xffff, snes.cpu.registers().a);
+        assertEquals(0x030f, snes.cpu.registers().x);
+        assertEquals(0x040f, snes.cpu.registers().y);
+        assertEquals(0xaa, snes.wram.data()[0x0410]);
+        assertEquals(0xbb, snes.wram.data()[0x0411]);
+        assertEquals(0xcc, snes.wram.data()[0x0412]);
+    }
+
+    @Test
     void executesInterruptOpcodes() {
         SNES snes = init();
         snes.cpu.registers().setPc(0x0200);
