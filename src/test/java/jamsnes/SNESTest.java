@@ -4,6 +4,7 @@ import jamsnes.cartridge.CartridgeType;
 import jamsnes.cpu.DMA;
 import jamsnes.input.Joypad;
 import jamsnes.ppu.Background;
+import jamsnes.ppu.PPU;
 import jamsnes.renderer.IRenderer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -104,7 +105,7 @@ class SNESTest {
     }
 
     @Test
-    void updateRequestsNmiForNextFrameWhenEnabled() {
+    void updateDoesNotRequestNmiBeforeVBlankWhenEnabled() {
         SNES snes = new SNES(new TestRenderer());
         snes.bus.mapComponents(snes);
         snes.cpu.isDisabled = true;
@@ -113,8 +114,27 @@ class SNESTest {
 
         snes.update();
 
+        assertEquals(0x00, snes.cpu.internalRegisters()[0x10]);
+        assertEquals(0x00, snes.bus.read(0x4210));
+    }
+
+    @Test
+    void updateRequestsNmiOnceWhenEnteringVBlankAndEnabled() {
+        SNES snes = new SNES(new TestRenderer());
+        snes.bus.mapComponents(snes);
+        snes.cpu.isDisabled = true;
+        snes.apu.isDisabled = true;
+        snes.cpu.internalRegisters()[0x00] = 0x80;
+        snes.ppu.advanceCountersOnly(PPU.H_COUNTER_DOTS * PPU.V_BLANK_START_SCANLINE - 0xff);
+
+        snes.update();
+
         assertEquals(0x80, snes.cpu.internalRegisters()[0x10]);
         assertEquals(0x80, snes.bus.read(0x4210));
+        assertEquals(0x00, snes.bus.read(0x4210));
+
+        snes.update();
+
         assertEquals(0x00, snes.bus.read(0x4210));
     }
 

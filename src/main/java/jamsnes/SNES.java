@@ -27,6 +27,7 @@ public class SNES {
     private int lastTimerIrqHCounter = -1;
     private int lastTimerIrqVCounter = -1;
     private boolean hdmaInitializedThisFrame;
+    private boolean wasInVBlank;
 
     public SNES(IRenderer renderer) {
         this.renderer = renderer;
@@ -118,9 +119,11 @@ public class SNES {
     }
 
     private void requestFrameNmi() {
-        if ((cpu.internalRegisters()[0x00] & 0x80) != 0) {
+        boolean inVBlank = ppu.isInVBlank();
+        if (inVBlank && !wasInVBlank && (cpu.internalRegisters()[0x00] & 0x80) != 0) {
             cpu.requestNMI();
         }
+        wasInVBlank = inVBlank;
     }
 
     private void updateAutoJoypadRegisters() {
