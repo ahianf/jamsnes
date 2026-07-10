@@ -250,6 +250,30 @@ class DataTransmissionOpcodeDispatchTest {
         assertEquals(0xbc, snes.apu.internalRegisters().a);
     }
 
+    @Test
+    void executesIndirectIndexedStoresWithWrappedDirectPagePointers() {
+        SNES snes = init();
+        snes.apu.internalRegisters().pc = 0x300;
+        snes.apu.internalRegisters().p = true;
+        snes.apu.internalRegisters().x = 0x20;
+        snes.apu.internalRegisters().y = 0x10;
+        snes.apu.internalRegisters().a = 0x5a;
+        snes.apu._internalWrite(0x110, 0x34);
+        snes.apu._internalWrite(0x111, 0x12);
+        snes.apu._internalWrite(0x1ff, 0x40);
+        snes.apu._internalWrite(0x100, 0x12);
+        writeProgram(snes, 0x300,
+                0xc7, 0xf0,
+                0xd7, 0xff);
+
+        assertEquals(7, snes.apu.executeInstruction());
+        assertEquals(0x5a, snes.apu._internalRead(0x1234));
+
+        snes.apu.internalRegisters().a = 0xa5;
+        assertEquals(7, snes.apu.executeInstruction());
+        assertEquals(0xa5, snes.apu._internalRead(0x1250));
+    }
+
     private static void writeProgram(SNES snes, int start, int... bytes) {
         for (int i = 0; i < bytes.length; i++) {
             snes.apu._internalWrite(start + i, bytes[i]);
