@@ -33,6 +33,16 @@ class SNESTest {
     }
 
     @Test
+    void loadRomUsesZeroSramSizeWhenHeaderDeclaresNoSram() throws IOException {
+        SNES snes = new SNES(new TestRenderer());
+
+        snes.loadRom(writeGameRom().toString());
+
+        assertEquals(0, snes.cartridge.header.sramSize);
+        assertEquals(0, snes.sram.getSize());
+    }
+
+    @Test
     void updateRunsCpuPpuAndApuForGameCartridges() {
         TestRenderer renderer = new TestRenderer();
         SNES snes = new SNES(renderer);

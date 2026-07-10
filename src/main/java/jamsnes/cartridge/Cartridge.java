@@ -105,7 +105,8 @@ public class Cartridge extends Ram {
         }
         result.romType = data()[base + 0xd6];
         result.romSize = 0x400 << data()[base + 0xd7];
-        result.sramSize = 0x400 << data()[base + 0xd8];
+        int sramSizeByte = data()[base + 0xd8];
+        result.sramSize = sramSizeByte == 0 ? 0 : 0x400 << sramSizeByte;
         result.setCreatorBytes(data()[base + 0xd9], data()[base + 0xda]);
         result.version = data()[base + 0xdb];
         result.setChecksumComplementBytes(data()[base + 0xdc], data()[base + 0xdd]);
