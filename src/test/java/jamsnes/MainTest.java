@@ -1,5 +1,7 @@
 package jamsnes;
 
+import jamsnes.renderer.IRenderer;
+import jamsnes.renderer.NoRenderer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -53,6 +55,30 @@ class MainTest {
     }
 
     @Test
+    void runStartsRendererWindowForLoadedRom() throws IOException {
+        Path rom = writeGameRom();
+        TestRenderer renderer = new TestRenderer();
+
+        int exitCode = Main.run(new String[]{rom.toString()}, printStream(), printStream(), renderer);
+
+        assertEquals(0, exitCode);
+        assertEquals(1, renderer.createWindowCalls);
+        assertEquals(60, renderer.maxFPS);
+        assertEquals(0x8000, renderer.snes.cpu.registers().pc);
+    }
+
+    @Test
+    void noRendererCreateWindowAdvancesEmulatorOnce() {
+        SNES snes = new SNES(new NoRenderer(0, 0, 0));
+        snes.cpu.isDisabled = true;
+        snes.apu.isDisabled = true;
+
+        new NoRenderer(0, 0, 0).createWindow(snes, 60);
+
+        assertEquals(0xff, snes.ppu.hCounter());
+    }
+
+    @Test
     void runReportsInvalidRomPath() {
         ByteArrayOutputStream err = new ByteArrayOutputStream();
 
@@ -81,5 +107,34 @@ class MainTest {
 
     private static PrintStream printStream() {
         return new PrintStream(new ByteArrayOutputStream());
+    }
+
+    private static final class TestRenderer implements IRenderer {
+        private SNES snes;
+        private int maxFPS;
+        private int createWindowCalls;
+
+        @Override
+        public void setWindowName(String newWindowName) {
+        }
+
+        @Override
+        public void drawScreen() {
+        }
+
+        @Override
+        public void putPixel(int y, int x, int rgba) {
+        }
+
+        @Override
+        public void createWindow(SNES snes, int maxFPS) {
+            this.snes = snes;
+            this.maxFPS = maxFPS;
+            createWindowCalls++;
+        }
+
+        @Override
+        public void playAudio(short[] samples) {
+        }
     }
 }

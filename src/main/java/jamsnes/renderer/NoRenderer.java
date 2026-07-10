@@ -20,6 +20,7 @@ public class NoRenderer implements IRenderer {
 
     @Override
     public void createWindow(SNES snes, int maxFPS) {
+        snes.update();
     }
 
     @Override
