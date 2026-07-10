@@ -52,6 +52,41 @@ class ArithmeticOpcodeDispatchTest {
     }
 
     @Test
+    void executesIndirectIndexedAdcAndSbcWithWrappedDirectPagePointers() {
+        SNES snes = init();
+        snes.apu.internalRegisters().pc = 0x300;
+        snes.apu.internalRegisters().p = true;
+        snes.apu.internalRegisters().x = 0x20;
+        snes.apu.internalRegisters().y = 0x10;
+        snes.apu.internalRegisters().a = 0x01;
+        snes.apu._internalWrite(0x110, 0x34);
+        snes.apu._internalWrite(0x111, 0x12);
+        snes.apu._internalWrite(0x1234, 0x10);
+        snes.apu._internalWrite(0x1ff, 0x40);
+        snes.apu._internalWrite(0x100, 0x12);
+        snes.apu._internalWrite(0x1250, 0x20);
+        writeProgram(snes, 0x300,
+                0x87, 0xf0,
+                0x97, 0xff,
+                0xa7, 0xf0,
+                0xb7, 0xff);
+
+        assertEquals(6, snes.apu.executeInstruction());
+        assertEquals(0x11, snes.apu.internalRegisters().a);
+
+        assertEquals(6, snes.apu.executeInstruction());
+        assertEquals(0x31, snes.apu.internalRegisters().a);
+
+        snes.apu.internalRegisters().a = 0x40;
+        snes.apu.internalRegisters().c = true;
+        assertEquals(6, snes.apu.executeInstruction());
+        assertEquals(0x30, snes.apu.internalRegisters().a);
+
+        assertEquals(6, snes.apu.executeInstruction());
+        assertEquals(0x10, snes.apu.internalRegisters().a);
+    }
+
+    @Test
     void executesImmediateArithmeticOpcodesAsValues() {
         SNES snes = init();
         snes.apu.internalRegisters().pc = 0x200;
