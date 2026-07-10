@@ -73,6 +73,49 @@ class LogicalIncrementOpcodeDispatchTest {
     }
 
     @Test
+    void executesIndirectIndexedLogicalOpcodesWithWrappedDirectPagePointers() {
+        SNES snes = init();
+        snes.apu.internalRegisters().pc = 0x300;
+        snes.apu.internalRegisters().p = true;
+        snes.apu.internalRegisters().x = 0x20;
+        snes.apu.internalRegisters().y = 0x10;
+        snes.apu.internalRegisters().a = 0x10;
+        snes.apu._internalWrite(0x110, 0x34);
+        snes.apu._internalWrite(0x111, 0x12);
+        snes.apu._internalWrite(0x1234, 0x03);
+        snes.apu._internalWrite(0x1ff, 0x40);
+        snes.apu._internalWrite(0x100, 0x12);
+        snes.apu._internalWrite(0x1250, 0xff);
+        writeProgram(snes, 0x300,
+                0x07, 0xf0,
+                0x17, 0xff,
+                0x27, 0xf0,
+                0x37, 0xff,
+                0x47, 0xf0,
+                0x57, 0xff);
+
+        assertEquals(6, snes.apu.executeInstruction());
+        assertEquals(0x13, snes.apu.internalRegisters().a);
+
+        assertEquals(6, snes.apu.executeInstruction());
+        assertEquals(0xff, snes.apu.internalRegisters().a);
+
+        assertEquals(6, snes.apu.executeInstruction());
+        assertEquals(0x03, snes.apu.internalRegisters().a);
+
+        assertEquals(6, snes.apu.executeInstruction());
+        assertEquals(0x03, snes.apu.internalRegisters().a);
+
+        assertEquals(6, snes.apu.executeInstruction());
+        assertEquals(0x00, snes.apu.internalRegisters().a);
+        assertTrue(snes.apu.internalRegisters().z);
+
+        assertEquals(6, snes.apu.executeInstruction());
+        assertEquals(0xff, snes.apu.internalRegisters().a);
+        assertTrue(snes.apu.internalRegisters().n);
+    }
+
+    @Test
     void executesByteIncrementAndDecrementOpcodes() {
         SNES snes = init();
         snes.apu.internalRegisters().pc = 0x200;
