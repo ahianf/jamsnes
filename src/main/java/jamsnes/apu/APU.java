@@ -1492,7 +1492,7 @@ public class APU extends AMemory {
     }
 
     public int MOVW(int address, boolean toYa) {
-        int address2 = address + 1 + (internalRegisters.p ? 0x0100 : 0);
+        int address2 = nextDirectPageAddress(address);
         if (toYa) {
             int value = (_internalRead(address2) << 8) | _internalRead(address);
             internalRegisters.setYa(value);
@@ -1574,14 +1574,18 @@ public class APU extends AMemory {
     }
 
     private int readWordWithDirectPage(int address) {
-        int address2 = address + 1 + (internalRegisters.p ? 0x0100 : 0);
+        int address2 = nextDirectPageAddress(address);
         return u16((_internalRead(address2) << 8) | _internalRead(address));
     }
 
     private void writeWordWithDirectPage(int address, int value) {
-        int address2 = address + 1 + (internalRegisters.p ? 0x0100 : 0);
+        int address2 = nextDirectPageAddress(address);
         _internalWrite(address, value);
         _internalWrite(address2, value >>> 8);
+    }
+
+    private int nextDirectPageAddress(int address) {
+        return (address & 0x0100) | u8(address + 1);
     }
 
     private int getRegister(String register) {

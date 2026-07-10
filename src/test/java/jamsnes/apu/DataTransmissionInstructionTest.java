@@ -66,6 +66,24 @@ class DataTransmissionInstructionTest {
         assertEquals(0x56, snes.apu._internalRead(0x51));
     }
 
+    @Test
+    void movesWordsWithWrappedDirectPageHighByte() {
+        SNES snes = init();
+        snes.apu.internalRegisters().p = true;
+        snes.apu._internalWrite(0x1ff, 0x34);
+        snes.apu._internalWrite(0x100, 0x12);
+
+        assertEquals(5, snes.apu.MOVW(0x1ff, true));
+        assertEquals(0x1234, snes.apu.internalRegisters().ya());
+
+        snes.apu.internalRegisters().a = 0x78;
+        snes.apu.internalRegisters().y = 0x56;
+
+        assertEquals(5, snes.apu.MOVW(0x1ff, false));
+        assertEquals(0x78, snes.apu._internalRead(0x1ff));
+        assertEquals(0x56, snes.apu._internalRead(0x100));
+    }
+
     private static SNES init() {
         return new SNES(new NoRenderer(0, 0, 0));
     }

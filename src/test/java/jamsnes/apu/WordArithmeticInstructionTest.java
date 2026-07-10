@@ -28,6 +28,18 @@ class WordArithmeticInstructionTest {
     }
 
     @Test
+    void incrementsDirectWordsWithWrappedHighByte() {
+        SNES snes = init();
+        snes.apu.internalRegisters().p = true;
+        snes.apu._internalWrite(0x1ff, 0x00);
+        snes.apu._internalWrite(0x100, 0x01);
+
+        assertEquals(6, snes.apu.DECW(0x1ff));
+        assertEquals(0xff, snes.apu._internalRead(0x1ff));
+        assertEquals(0x00, snes.apu._internalRead(0x100));
+    }
+
+    @Test
     void addsAndSubtractsDirectWordsToYa() {
         SNES snes = init();
         snes.apu.internalRegisters().setYa(0x4321);
@@ -46,6 +58,19 @@ class WordArithmeticInstructionTest {
         assertFalse(snes.apu.internalRegisters().v);
         assertTrue(snes.apu.internalRegisters().h);
         assertTrue(snes.apu.internalRegisters().c);
+    }
+
+    @Test
+    void addsAndComparesDirectWordsWithWrappedHighByte() {
+        SNES snes = init();
+        snes.apu.internalRegisters().p = true;
+        snes.apu.internalRegisters().setYa(0x1201);
+        snes.apu._internalWrite(0x1ff, 0x01);
+        snes.apu._internalWrite(0x100, 0x12);
+
+        assertEquals(4, snes.apu.CMPW(0x1ff));
+        assertTrue(snes.apu.internalRegisters().c);
+        assertTrue(snes.apu.internalRegisters().z);
     }
 
     @Test
