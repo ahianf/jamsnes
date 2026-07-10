@@ -26,6 +26,7 @@ public class SNES {
     public final APU apu;
     private int lastTimerIrqHCounter = -1;
     private int lastTimerIrqVCounter = -1;
+    private boolean hdmaInitializedThisFrame;
 
     public SNES(IRenderer renderer) {
         this.renderer = renderer;
@@ -62,12 +63,58 @@ public class SNES {
         }
 
         updateAutoJoypadRegisters();
+        int hdmaInitCycles = initializeHdmaAtFrameStart();
+        if (hdmaInitCycles > 0) {
+            ppu.advanceCountersOnly(hdmaInitCycles);
+            apu.update(hdmaInitCycles);
+        }
+
+        int startHCounter = ppu.hCounter();
+        int startVCounter = ppu.vCounter();
         int cycleCount = cpu.update(0x0c);
+        boolean entersHBlank = entersHBlank(startHCounter, startVCounter, cycleCount);
+        boolean startsNewFrame = startsNewFrame(startHCounter, startVCounter, cycleCount);
         ppu.update(cycleCount);
+        if (startsNewFrame) {
+            hdmaInitializedThisFrame = false;
+        }
+        int hdmaCycles = 0;
+        if (entersHBlank && !ppu.isInVBlank()) {
+            hdmaCycles = cpu.runHDMALine();
+            if (hdmaCycles > 0) {
+                ppu.advanceCountersOnly(hdmaCycles);
+            }
+        }
         updateVideoStatusRegisters();
         updateTimerIrq();
         requestFrameNmi();
         apu.update(cycleCount);
+        if (hdmaCycles > 0) {
+            apu.update(hdmaCycles);
+        }
+    }
+
+    private int initializeHdmaAtFrameStart() {
+        if (hdmaInitializedThisFrame || ppu.vCounter() != 0) {
+            return 0;
+        }
+        hdmaInitializedThisFrame = true;
+        return cpu.initializeHDMA();
+    }
+
+    private boolean entersHBlank(int hCounter, int vCounter, int cycles) {
+        if (cycles <= 0 || vCounter >= PPU.V_BLANK_START_SCANLINE || hCounter >= PPU.H_BLANK_START_DOT) {
+            return false;
+        }
+        return hCounter + cycles >= PPU.H_BLANK_START_DOT;
+    }
+
+    private boolean startsNewFrame(int hCounter, int vCounter, int cycles) {
+        if (cycles <= 0) {
+            return false;
+        }
+        int dots = vCounter * PPU.H_COUNTER_DOTS + hCounter + cycles;
+        return dots >= PPU.V_COUNTER_SCANLINES * PPU.H_COUNTER_DOTS;
     }
 
     private void requestFrameNmi() {

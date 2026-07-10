@@ -1,6 +1,7 @@
 package jamsnes;
 
 import jamsnes.cartridge.CartridgeType;
+import jamsnes.cpu.DMA;
 import jamsnes.input.Joypad;
 import jamsnes.ppu.Background;
 import jamsnes.renderer.IRenderer;
@@ -179,6 +180,32 @@ class SNESTest {
     }
 
     @Test
+    void updateInitializesAndRunsHdmaWhenEnteringHBlank() {
+        SNES snes = new SNES(new TestRenderer());
+        snes.bus.mapComponents(snes);
+        snes.cpu.isDisabled = true;
+        snes.apu.isDisabled = true;
+        snes.wram.data()[0x0200] = 0x01;
+        snes.wram.data()[0x0201] = 0x12;
+        snes.wram.data()[0x0202] = 0x34;
+        snes.wram.data()[0x0203] = 0x00;
+
+        snes.bus.write(0x2121, 0x20);
+        setupHdma(snes, DMA.TWO_TO_ONE, 0x22, 0x7e0200);
+        snes.bus.write(0x420c, 0x01);
+
+        snes.update();
+
+        assertEquals(0x12, snes.ppu.cgram.read(0x20));
+        assertEquals(0x34, snes.ppu.cgram.read(0x21));
+        assertEquals(287, snes.ppu.hCounter());
+        assertEquals(0, snes.ppu.vCounter());
+        assertEquals(0, snes.bus.read(0x420b));
+        assertEquals(0x01, snes.bus.read(0x420c));
+        assertEquals(0x40, snes.bus.read(0x4212));
+    }
+
+    @Test
     void loadRomClearsSmcOffsetBeforeLoadingAudioCartridge() throws IOException {
         SNES snes = new SNES(new TestRenderer());
 
@@ -237,6 +264,14 @@ class SNESTest {
         Path spcPath = tempDir.resolve("audio.spc");
         Files.write(spcPath, spc);
         return spcPath;
+    }
+
+    private static void setupHdma(SNES snes, int control, int port, int tableAddress) {
+        snes.bus.write(0x4300, control);
+        snes.bus.write(0x4301, port);
+        snes.bus.write(0x4302, tableAddress);
+        snes.bus.write(0x4303, tableAddress >>> 8);
+        snes.bus.write(0x4304, tableAddress >>> 16);
     }
 
     private static final class TestRenderer implements IRenderer {

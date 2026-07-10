@@ -39,10 +39,10 @@ public class PPU extends AMemory {
     private static final int MODE7_TILE_MAP_WIDTH = 128;
     private static final int MODE7_TILE_SIZE = 8;
     private static final int MODE7_TILE_DATA_ADDRESS = 0x4000;
-    private static final int H_COUNTER_DOTS = 341;
-    private static final int H_BLANK_START_DOT = 256;
-    private static final int V_COUNTER_SCANLINES = 262;
-    private static final int V_BLANK_START_SCANLINE = 225;
+    public static final int H_COUNTER_DOTS = 341;
+    public static final int H_BLANK_START_DOT = 256;
+    public static final int V_COUNTER_SCANLINES = 262;
+    public static final int V_BLANK_START_SCANLINE = 225;
     private static final int PPU1_VERSION = 1;
     private static final int PPU2_VERSION = 3;
 
@@ -196,6 +196,10 @@ public class PPU extends AMemory {
         clearBuffer(subScreen);
         clearSourceMap(mainScreenSourceMap, SOURCE_NONE);
         clearSourceMap(subScreenSourceMap, SOURCE_NONE);
+    }
+
+    public void advanceCountersOnly(int cycles) {
+        advanceCounters(cycles);
     }
 
     public void renderMainAndSubScreen() {
