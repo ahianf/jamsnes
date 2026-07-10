@@ -40,6 +40,25 @@ class DmaTest {
     }
 
     @Test
+    void hdmaBookkeepingRegistersRoundTrip() {
+        SNES snes = init();
+        DMA dma = snes.cpu.dmaChannels()[0];
+
+        snes.bus.write(0x4307, 0x7e);
+        snes.bus.write(0x4308, 0x34);
+        snes.bus.write(0x4309, 0x12);
+        snes.bus.write(0x430a, 0x80);
+
+        assertEquals(0x7e, snes.bus.read(0x4307));
+        assertEquals(0x34, snes.bus.read(0x4308));
+        assertEquals(0x12, snes.bus.read(0x4309));
+        assertEquals(0x80, snes.bus.read(0x430a));
+        assertEquals(0x7e, dma.getIndirectBank());
+        assertEquals(0x1234, dma.getTableAddress());
+        assertEquals(0x80, dma.getLineCounter());
+    }
+
+    @Test
     void vramWriteIncrementsAfterLowByteByDefault() {
         SNES snes = init();
 

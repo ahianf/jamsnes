@@ -23,6 +23,9 @@ public class DMA {
     private int port;
     private int aAddress;
     private int count;
+    private int indirectBank;
+    private int tableAddress;
+    private int lineCounter;
     private IMemoryBus bus;
     private boolean enabled;
 
@@ -47,6 +50,10 @@ public class DMA {
             case 0x4 -> (aAddress >>> 16) & 0xff;
             case 0x5 -> count & 0xff;
             case 0x6 -> (count >>> 8) & 0xff;
+            case 0x7 -> indirectBank;
+            case 0x8 -> tableAddress & 0xff;
+            case 0x9 -> (tableAddress >>> 8) & 0xff;
+            case 0xa -> lineCounter;
             default -> throw new InvalidAddress("DMA read", address);
         };
     }
@@ -61,6 +68,10 @@ public class DMA {
             case 0x4 -> aAddress = u24((aAddress & 0x00ffff) | (value << 16));
             case 0x5 -> count = u16((count & 0xff00) | value);
             case 0x6 -> count = u16((count & 0x00ff) | (value << 8));
+            case 0x7 -> indirectBank = value;
+            case 0x8 -> tableAddress = u16((tableAddress & 0xff00) | value);
+            case 0x9 -> tableAddress = u16((tableAddress & 0x00ff) | (value << 8));
+            case 0xa -> lineCounter = value;
             default -> throw new InvalidAddress("DMA write", address);
         }
     }
@@ -148,6 +159,18 @@ public class DMA {
 
     public int getCount() {
         return count;
+    }
+
+    public int getIndirectBank() {
+        return indirectBank;
+    }
+
+    public int getTableAddress() {
+        return tableAddress;
+    }
+
+    public int getLineCounter() {
+        return lineCounter;
     }
 
     public boolean isEnabled() {
