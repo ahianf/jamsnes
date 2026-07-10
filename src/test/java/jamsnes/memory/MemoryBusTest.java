@@ -153,6 +153,34 @@ class MemoryBusTest {
     }
 
     @Test
+    void mappedLoromReadsMirrorPhysicalRomSize() {
+        SNES snes = init();
+        snes.cartridge.setSize(0x8000);
+        snes.bus.mapComponents(snes);
+        snes.cartridge.data()[0x0000] = 0x12;
+        snes.cartridge.data()[0x7fff] = 0x34;
+
+        assertEquals(0x12, snes.bus.read(0x808000));
+        assertEquals(0x34, snes.bus.read(0x80ffff));
+        assertEquals(0x12, snes.bus.read(0x818000));
+        assertEquals(0x34, snes.bus.read(0x81ffff));
+    }
+
+    @Test
+    void mappedHiromReadsMirrorPhysicalRomSize() {
+        SNES snes = initHirom();
+        snes.cartridge.setSize(0x10000);
+        snes.bus.mapComponents(snes);
+        snes.cartridge.data()[0x0000] = 0x56;
+        snes.cartridge.data()[0xffff] = 0x78;
+
+        assertEquals(0x56, snes.bus.read(0xc00000));
+        assertEquals(0x78, snes.bus.read(0xc0ffff));
+        assertEquals(0x56, snes.bus.read(0xc10000));
+        assertEquals(0x78, snes.bus.read(0xc1ffff));
+    }
+
+    @Test
     void hiromMapsSramBanksAndHighMirrors() {
         SNES snes = initHirom();
         snes.sram.setSize(0x2000 * 0x20);

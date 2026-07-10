@@ -36,7 +36,9 @@ public class Cartridge extends Ram {
 
     @Override
     public int read(int address) {
-        return super.read(address + romStart);
+        int romSize = getSize();
+        int mirroredAddress = romSize == 0 ? 0 : Math.floorMod(address, romSize);
+        return super.read(romStart + mirroredAddress);
     }
 
     @Override
