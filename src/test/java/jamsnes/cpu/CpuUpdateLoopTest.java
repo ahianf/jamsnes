@@ -66,6 +66,46 @@ class CpuUpdateLoopTest {
     }
 
     @Test
+    void updateRunsAbortBeforeNextInstruction() {
+        SNES snes = init();
+        snes.cpu.registers().setPc(0x0200);
+        snes.cpu.registers().s = 0x01ff;
+        snes.cartridge.header.emulationInterrupts.abort = 0x0300;
+        snes.wram.data()[0x0300] = 0xea;
+        int pushedStatus = snes.cpu.registers().p.flags();
+
+        snes.cpu.requestABORT();
+
+        assertEquals(2, snes.cpu.update(2));
+        assertEquals(0x0301, snes.cpu.registers().pc);
+        assertEquals(0, snes.cpu.registers().pbr);
+        assertEquals(pushedStatus, snes.cpu._pop());
+        assertEquals(0x0200, snes.cpu._pop16());
+        assertFalse(snes.cpu.isAbortRequested);
+    }
+
+    @Test
+    void updateRunsNativeAbortWithProgramBankOnStack() {
+        SNES snes = init();
+        snes.cpu.setEmulationMode(false);
+        snes.cpu.registers().setPac(0x120200);
+        snes.cpu.registers().s = 0x01ff;
+        snes.cartridge.header.nativeInterrupts.abort = 0x0300;
+        snes.wram.data()[0x0300] = 0xea;
+        int pushedStatus = snes.cpu.registers().p.flags();
+
+        snes.cpu.requestABORT();
+
+        assertEquals(2, snes.cpu.update(2));
+        assertEquals(0x0301, snes.cpu.registers().pc);
+        assertEquals(0, snes.cpu.registers().pbr);
+        assertEquals(pushedStatus, snes.cpu._pop());
+        assertEquals(0x0200, snes.cpu._pop16());
+        assertEquals(0x12, snes.cpu._pop());
+        assertFalse(snes.cpu.isAbortRequested);
+    }
+
+    @Test
     void updateRunsDmaBeforeInstructions() {
         SNES snes = init();
         snes.wram.data()[0] = 0x34;

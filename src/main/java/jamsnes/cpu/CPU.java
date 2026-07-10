@@ -186,6 +186,10 @@ public class CPU extends AMemory {
         internalRegisters[0x11] |= 0x80;
     }
 
+    public void requestABORT() {
+        isAbortRequested = true;
+    }
+
     public int update(int maxCycles) {
         if (isDisabled) {
             return 0xff;
@@ -1498,6 +1502,11 @@ public class CPU extends AMemory {
         }
         waitingForInterrupt = false;
 
+        if (isAbortRequested) {
+            isAbortRequested = false;
+            runInterrupt(cartridgeHeader.nativeInterrupts.abort, cartridgeHeader.emulationInterrupts.abort);
+            return;
+        }
         if (isNMIRequested) {
             isNMIRequested = false;
             runInterrupt(cartridgeHeader.nativeInterrupts.nmi, cartridgeHeader.emulationInterrupts.nmi);
