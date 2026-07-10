@@ -130,9 +130,30 @@ class OperandTest {
         snes.apu.internalRegisters().x = 0x10;
         snes.apu._internalWrite(0x32, 0x42);
         snes.apu._internalWrite(0x152, 0b00001101);
-        snes.apu._internalWrite(0x253, 0b01101011);
+        snes.apu._internalWrite(0x153, 0b01101011);
 
         assertEquals(0b0110101100001101, snes.apu._getAbsoluteDirectByXAddr());
+    }
+
+    @Test
+    void absoluteDirectByXWrapsPointerWithinDirectPage() {
+        SNES snes = init();
+        snes.apu.internalRegisters().pc = 0x32;
+        snes.apu.internalRegisters().x = 0x20;
+        snes.apu._internalWrite(0x32, 0xf0);
+        snes.apu._internalWrite(0x10, 0x34);
+        snes.apu._internalWrite(0x11, 0x12);
+
+        assertEquals(0x1234, snes.apu._getAbsoluteDirectByXAddr());
+
+        snes.apu.internalRegisters().pc = 0x40;
+        snes.apu.internalRegisters().p = true;
+        snes.apu.internalRegisters().x = 0x01;
+        snes.apu._internalWrite(0x40, 0xff);
+        snes.apu._internalWrite(0x100, 0xcd);
+        snes.apu._internalWrite(0x101, 0xab);
+
+        assertEquals(0xabcd, snes.apu._getAbsoluteDirectByXAddr());
     }
 
     @Test
@@ -143,9 +164,30 @@ class OperandTest {
         snes.apu.internalRegisters().y = 0x10;
         snes.apu._internalWrite(0x32, 0x42);
         snes.apu._internalWrite(0x142, 0b00001101);
-        snes.apu._internalWrite(0x243, 0b01101011);
+        snes.apu._internalWrite(0x143, 0b01101011);
 
         assertEquals(0b0110101100011101, snes.apu._getAbsoluteDirectAddrByY());
+    }
+
+    @Test
+    void absoluteDirectByYWrapsPointerWithinDirectPage() {
+        SNES snes = init();
+        snes.apu.internalRegisters().pc = 0x32;
+        snes.apu.internalRegisters().y = 0x02;
+        snes.apu._internalWrite(0x32, 0xff);
+        snes.apu.counters()[2] = 0x34;
+        snes.apu._internalWrite(0x00, 0x12);
+
+        assertEquals(0x1236, snes.apu._getAbsoluteDirectAddrByY());
+
+        snes.apu.internalRegisters().pc = 0x40;
+        snes.apu.internalRegisters().p = true;
+        snes.apu.internalRegisters().y = 0x10;
+        snes.apu._internalWrite(0x40, 0xff);
+        snes.apu._internalWrite(0x1ff, 0xcd);
+        snes.apu._internalWrite(0x100, 0xab);
+
+        assertEquals(0xabdd, snes.apu._getAbsoluteDirectAddrByY());
     }
 
     private static SNES init() {

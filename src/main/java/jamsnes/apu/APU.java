@@ -258,24 +258,16 @@ public class APU extends AMemory {
     }
 
     public int _getAbsoluteDirectByXAddr() {
-        int directIndexX = _getDirectAddr() + internalRegisters.x;
-        int low = _internalRead(directIndexX);
-        directIndexX += 1;
-        if (internalRegisters.p) {
-            directIndexX += 0x100;
-        }
-        int high = _internalRead(directIndexX);
+        int directIndexX = _getImmediateData() + internalRegisters.x;
+        int low = _internalRead(directPageAddress(directIndexX));
+        int high = _internalRead(directPageAddress(directIndexX + 1));
         return u16((high << 8) | low);
     }
 
     public int _getAbsoluteDirectAddrByY() {
-        int directIndex = _getDirectAddr();
-        int low = _internalRead(directIndex);
-        directIndex += 1;
-        if (internalRegisters.p) {
-            directIndex += 0x100;
-        }
-        int high = _internalRead(directIndex);
+        int directIndex = _getImmediateData();
+        int low = _internalRead(directPageAddress(directIndex));
+        int high = _internalRead(directPageAddress(directIndex + 1));
         return u16(((high << 8) | low) + internalRegisters.y);
     }
 
