@@ -111,6 +111,13 @@ public class CPU extends AMemory {
             }
             return;
         }
+        if (address == 0x0c) {
+            internalRegisters[address] = value;
+            for (int i = 0; i < dmaChannels.length; i++) {
+                dmaChannels[i].setHdmaEnabled((value & (1 << i)) != 0);
+            }
+            return;
+        }
         if (address >= 0x100 && address < 0x180) {
             dmaChannels[(address - 0x100) >>> 4].write(address & 0x0f, data);
             return;
@@ -220,6 +227,22 @@ public class CPU extends AMemory {
                 continue;
             }
             cycles += dmaChannel.run(maxCycles - cycles);
+        }
+        return cycles;
+    }
+
+    public int initializeHDMA() {
+        int cycles = 0;
+        for (DMA dmaChannel : dmaChannels) {
+            cycles += dmaChannel.initializeHDMA();
+        }
+        return cycles;
+    }
+
+    public int runHDMALine() {
+        int cycles = 0;
+        for (DMA dmaChannel : dmaChannels) {
+            cycles += dmaChannel.runHDMALine();
         }
         return cycles;
     }

@@ -28,6 +28,9 @@ public class DMA {
     private int lineCounter;
     private IMemoryBus bus;
     private boolean enabled;
+    private boolean hdmaEnabled;
+    private boolean hdmaDoTransfer;
+    private int hdmaLineRemaining;
 
     public DMA(IMemoryBus bus) {
         this.bus = bus;
@@ -92,6 +95,85 @@ public class DMA {
         return cycles;
     }
 
+    public int initializeHDMA() {
+        if (!hdmaEnabled) {
+            return 0;
+        }
+        tableAddress = getAddressPage();
+        return loadNextHdmaLine();
+    }
+
+    public int runHDMALine() {
+        if (!hdmaEnabled) {
+            return 0;
+        }
+        int cycles = 0;
+        if (hdmaDoTransfer) {
+            cycles += transferHdmaBytes();
+        }
+        hdmaLineRemaining--;
+        if (hdmaLineRemaining <= 0) {
+            cycles += loadNextHdmaLine();
+        } else {
+            lineCounter = (lineCounter & 0x80) | (hdmaLineRemaining & 0x7f);
+            hdmaDoTransfer = isHdmaRepeat();
+        }
+        return cycles;
+    }
+
+    private int loadNextHdmaLine() {
+        int tableBank = aAddress & 0xff0000;
+        lineCounter = bus.read(tableBank | tableAddress);
+        tableAddress = u16(tableAddress + 1);
+        if (lineCounter == 0) {
+            hdmaEnabled = false;
+            hdmaDoTransfer = false;
+            hdmaLineRemaining = 0;
+            return 8;
+        }
+
+        int cycles = 8;
+        hdmaLineRemaining = lineCounter & 0x7f;
+        if (hdmaLineRemaining == 0) {
+            hdmaLineRemaining = 128;
+        }
+        hdmaDoTransfer = true;
+        if (isHdmaIndirect()) {
+            int low = bus.read(tableBank | tableAddress);
+            tableAddress = u16(tableAddress + 1);
+            int high = bus.read(tableBank | tableAddress);
+            tableAddress = u16(tableAddress + 1);
+            count = u16(low | (high << 8));
+            cycles += 16;
+        }
+        return cycles;
+    }
+
+    private int transferHdmaBytes() {
+        int cycles = 0;
+        for (int i = 0; i < getHdmaTransferLength(); i++) {
+            int source = hdmaSourceAddress();
+            cycles += writeOneByte(source, 0x2100 | u8(port + getModeOffset(i)));
+            incrementHdmaSourceAddress();
+        }
+        return cycles;
+    }
+
+    private int hdmaSourceAddress() {
+        if (isHdmaIndirect()) {
+            return (indirectBank << 16) | count;
+        }
+        return (aAddress & 0xff0000) | tableAddress;
+    }
+
+    private void incrementHdmaSourceAddress() {
+        if (isHdmaIndirect()) {
+            count = u16(count + 1);
+        } else {
+            tableAddress = u16(tableAddress + 1);
+        }
+    }
+
     private int writeOneByte(int aAddress, int bAddress) {
         if (port == 0x80) {
             IMemory accessor = bus.getAccessor(aAddress);
@@ -119,6 +201,23 @@ public class DMA {
             case FOUR_TO_FOUR -> index & 0b11;
             default -> 0;
         };
+    }
+
+    private int getHdmaTransferLength() {
+        return switch (getMode()) {
+            case ONE_TO_ONE -> 1;
+            case TWO_TO_TWO, TWO_TO_ONE, TWO_TO_TWO_BIS, TWO_TO_ONE_BIS -> 2;
+            case FOUR_TO_TWO, FOUR_TO_FOUR, FOUR_TO_TWO_BIS -> 4;
+            default -> 1;
+        };
+    }
+
+    private boolean isHdmaIndirect() {
+        return (controlRegister & 0b0100_0000) != 0;
+    }
+
+    private boolean isHdmaRepeat() {
+        return (lineCounter & 0x80) != 0;
     }
 
     private int getAddressPage() {
@@ -179,5 +278,17 @@ public class DMA {
 
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
+    }
+
+    public boolean isHdmaEnabled() {
+        return hdmaEnabled;
+    }
+
+    public void setHdmaEnabled(boolean hdmaEnabled) {
+        this.hdmaEnabled = hdmaEnabled;
+        if (!hdmaEnabled) {
+            hdmaDoTransfer = false;
+            hdmaLineRemaining = 0;
+        }
     }
 }
