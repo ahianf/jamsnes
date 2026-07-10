@@ -111,6 +111,8 @@ public class MemoryBus implements IMemoryBus {
                     .setBankOffset(1));
             rectangleShadows.add(new RectangleShadow(console.cartridge, 0x80, 0xbf, 0x8000, 0xffff)
                     .setBankOffset(1));
+            rectangleShadows.add(new RectangleShadow(console.sram, 0x20, 0x3f, 0x6000, 0x7fff));
+            rectangleShadows.add(new RectangleShadow(console.sram, 0xa0, 0xbf, 0x6000, 0x7fff));
         }
 
         memoryAccessors.addAll(shadows);

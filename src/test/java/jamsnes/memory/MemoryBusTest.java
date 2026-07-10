@@ -152,6 +152,31 @@ class MemoryBusTest {
         assertEquals(0x33, snes.bus.read(0xc10000));
     }
 
+    @Test
+    void hiromMapsSramBanksAndHighMirrors() {
+        SNES snes = initHirom();
+        snes.sram.setSize(0x2000 * 0x20);
+        snes.bus.mapComponents(snes);
+
+        snes.bus.write(0x206000, 0x12);
+        snes.bus.write(0x3f7fff, 0x34);
+        snes.bus.write(0xa16000, 0x56);
+
+        assertMirrors(snes.sram, snes.bus.getAccessor(0x206000));
+        assertMirrors(snes.sram, snes.bus.getAccessor(0x3f7fff));
+        assertMirrors(snes.sram, snes.bus.getAccessor(0xa16000));
+        assertMirrors(snes.sram, snes.bus.getAccessor(0xbf7fff));
+        assertEquals(0x12, snes.bus.read(0xa06000));
+        assertEquals(0x12, snes.bus.read(0x206000));
+        assertEquals(0x56, snes.bus.read(0xa16000));
+        assertEquals(0x56, snes.bus.read(0x216000));
+        assertEquals(0x34, snes.bus.read(0x3f7fff));
+        assertEquals(0x34, snes.bus.read(0xbf7fff));
+        assertEquals(0x12, snes.sram.data()[0]);
+        assertEquals(0x56, snes.sram.data()[0x2000]);
+        assertEquals(0x34, snes.sram.data()[0x2000 * 0x20 - 1]);
+    }
+
     private static SNES init() {
         SNES snes = new SNES(new NoRenderer(0, 0, 0));
         snes.cartridge.setSize(100);
