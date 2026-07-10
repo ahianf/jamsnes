@@ -109,6 +109,113 @@ class DmaTest {
         assertFalse(dma.isEnabled());
     }
 
+    @Test
+    void bBusToABusDmaTransfersBytesAndIncrementsAAddress() {
+        SNES snes = init();
+        snes.ppu.cgram.write(0x20, 0x12);
+        snes.ppu.cgram.write(0x21, 0x34);
+        snes.bus.write(0x2121, 0x20);
+
+        snes.bus.write(0x4301, 0x3b);
+        snes.bus.write(0x4304, 0x7e);
+        snes.bus.write(0x4303, 0x00);
+        snes.bus.write(0x4302, 0x20);
+        snes.bus.write(0x4306, 0x00);
+        snes.bus.write(0x4305, 0x02);
+        snes.bus.write(0x4300, 0x80 | DMA.ONE_TO_ONE);
+        snes.bus.write(0x420b, 0x01);
+
+        DMA dma = snes.cpu.dmaChannels()[0];
+        int cycles = dma.run(1_000_000);
+
+        assertEquals(8 + 8 * 2, cycles);
+        assertEquals(0x12, snes.wram.data()[0x20]);
+        assertEquals(0x34, snes.wram.data()[0x21]);
+        assertEquals(0x7e0022, dma.getAAddress());
+        assertEquals(0, dma.getCount());
+        assertFalse(dma.isEnabled());
+    }
+
+    @Test
+    void fixedAddressDmaDoesNotChangeAAddress() {
+        SNES snes = init();
+        snes.wram.data()[0x40] = 0x12;
+        snes.bus.write(0x2121, 0x20);
+
+        snes.bus.write(0x4301, 0x22);
+        snes.bus.write(0x4304, 0x7e);
+        snes.bus.write(0x4303, 0x00);
+        snes.bus.write(0x4302, 0x40);
+        snes.bus.write(0x4306, 0x00);
+        snes.bus.write(0x4305, 0x03);
+        snes.bus.write(0x4300, 0x08 | DMA.ONE_TO_ONE);
+        snes.bus.write(0x420b, 0x01);
+
+        DMA dma = snes.cpu.dmaChannels()[0];
+        int cycles = dma.run(1_000_000);
+
+        assertEquals(8 + 8 * 3, cycles);
+        assertEquals(0x7e0040, dma.getAAddress());
+        assertEquals(0x12, snes.ppu.cgram.read(0x20));
+        assertEquals(0x12, snes.ppu.cgram.read(0x21));
+    }
+
+    @Test
+    void decrementAddressDmaMovesBackwardWithinSourceBank() {
+        SNES snes = init();
+        snes.wram.data()[0x51] = 0x22;
+        snes.wram.data()[0x52] = 0x33;
+        snes.bus.write(0x2121, 0x20);
+
+        snes.bus.write(0x4301, 0x22);
+        snes.bus.write(0x4304, 0x7e);
+        snes.bus.write(0x4303, 0x00);
+        snes.bus.write(0x4302, 0x52);
+        snes.bus.write(0x4306, 0x00);
+        snes.bus.write(0x4305, 0x02);
+        snes.bus.write(0x4300, 0x10 | DMA.ONE_TO_ONE);
+        snes.bus.write(0x420b, 0x01);
+
+        DMA dma = snes.cpu.dmaChannels()[0];
+        int cycles = dma.run(1_000_000);
+
+        assertEquals(8 + 8 * 2, cycles);
+        assertEquals(0x7e0050, dma.getAAddress());
+        assertEquals(0x33, snes.ppu.cgram.read(0x20));
+        assertEquals(0x22, snes.ppu.cgram.read(0x21));
+    }
+
+    @Test
+    void wramDataPortDmaSpecialCasesAvoidWramBusConflict() {
+        SNES snes = init();
+        snes.wram.data()[0x60] = 0x44;
+
+        snes.bus.write(0x4301, 0x80);
+        snes.bus.write(0x4304, 0x7e);
+        snes.bus.write(0x4303, 0x00);
+        snes.bus.write(0x4302, 0x60);
+        snes.bus.write(0x4306, 0x00);
+        snes.bus.write(0x4305, 0x01);
+        snes.bus.write(0x4300, DMA.ONE_TO_ONE);
+        snes.bus.write(0x420b, 0x01);
+
+        DMA dma = snes.cpu.dmaChannels()[0];
+        assertEquals(8 + 8, dma.run(1_000_000));
+        assertEquals(0x44, snes.wram.data()[0x60]);
+
+        snes.bus.write(0x4301, 0x80);
+        snes.bus.write(0x4304, 0x7e);
+        snes.bus.write(0x4303, 0x00);
+        snes.bus.write(0x4302, 0x60);
+        snes.bus.write(0x4306, 0x00);
+        snes.bus.write(0x4305, 0x01);
+        snes.bus.write(0x4300, 0x80 | DMA.ONE_TO_ONE);
+        snes.bus.write(0x420b, 0x01);
+
+        assertEquals(8 + 4, dma.run(1_000_000));
+        assertEquals(0xff, snes.wram.data()[0x60]);
+    }
+
     private static SNES init() {
         SNES snes = new SNES(new NoRenderer(0, 0, 0));
         snes.bus.mapComponents(snes);
