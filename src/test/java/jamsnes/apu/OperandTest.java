@@ -52,6 +52,27 @@ class OperandTest {
     }
 
     @Test
+    void directIndexedWrapsWithinSelectedDirectPage() {
+        SNES snes = init();
+        snes.apu.internalRegisters().pc = 0x32;
+        snes.apu.internalRegisters().x = 0x20;
+        snes.apu.internalRegisters().y = 0x30;
+        snes.apu._internalWrite(0x32, 0xf0);
+        snes.apu._internalWrite(0x33, 0xe8);
+
+        assertEquals(0x10, snes.apu._getDirectAddrByX());
+        assertEquals(0x18, snes.apu._getDirectAddrByY());
+
+        snes.apu.internalRegisters().pc = 0x40;
+        snes.apu.internalRegisters().p = true;
+        snes.apu._internalWrite(0x40, 0xf0);
+        snes.apu._internalWrite(0x41, 0xe8);
+
+        assertEquals(0x110, snes.apu._getDirectAddrByX());
+        assertEquals(0x118, snes.apu._getDirectAddrByY());
+    }
+
+    @Test
     void absolute() {
         SNES snes = init();
         snes.apu.internalRegisters().pc = 0x32;
