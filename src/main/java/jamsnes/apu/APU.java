@@ -1235,15 +1235,14 @@ public class APU extends AMemory {
 
     public int ROR(int operand, int cycles, boolean accumulator) {
         int value = accumulator ? operand : _internalRead(operand);
-        int result = u8((value >>> 1) + (internalRegisters.c ? 1 : 0));
+        int result = u8((value >>> 1) | (internalRegisters.c ? 0x80 : 0));
         internalRegisters.c = (value & 0x01) != 0;
         if (accumulator) {
             internalRegisters.a = result;
         } else {
             _internalWrite(operand, result);
         }
-        internalRegisters.n = (result & 0x01) != 0;
-        internalRegisters.z = result == 0;
+        setNzFlags(result);
         return cycles;
     }
 
