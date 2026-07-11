@@ -63,6 +63,8 @@ public class SNES {
             return;
         }
 
+        int timerStartHCounter = ppu.hCounter();
+        int timerStartVCounter = ppu.vCounter();
         int hdmaInitCycles = initializeHdmaAtFrameStart();
         if (hdmaInitCycles > 0) {
             ppu.advanceCountersOnly(hdmaInitCycles);
@@ -86,7 +88,7 @@ public class SNES {
             }
         }
         updateVideoStatusRegisters();
-        updateTimerIrq();
+        updateTimerIrq(timerStartHCounter, timerStartVCounter, hdmaInitCycles + cycleCount + hdmaCycles);
         requestFrameNmi();
         apu.update(cycleCount);
         if (hdmaCycles > 0) {
@@ -156,6 +158,10 @@ public class SNES {
     }
 
     void updateTimerIrq() {
+        updateTimerIrq(ppu.hCounter(), ppu.vCounter(), 0);
+    }
+
+    private void updateTimerIrq(int startHCounter, int startVCounter, int cycles) {
         int nmitimen = cpu.internalRegisters()[0x00];
         boolean hTimerEnabled = (nmitimen & NMITIMEN_H_IRQ_ENABLE) != 0;
         boolean vTimerEnabled = (nmitimen & NMITIMEN_V_IRQ_ENABLE) != 0;
@@ -163,16 +169,58 @@ public class SNES {
             return;
         }
 
-        int hCounter = ppu.hCounter();
-        int vCounter = ppu.vCounter();
-        boolean matched = timerMatches(hTimerEnabled, vTimerEnabled, hCounter, vCounter);
-        if (!matched || (hCounter == lastTimerIrqHCounter && vCounter == lastTimerIrqVCounter)) {
+        int[] matchedPosition = timerMatchPosition(hTimerEnabled, vTimerEnabled, startHCounter, startVCounter, cycles);
+        if (matchedPosition == null
+                || (matchedPosition[0] == lastTimerIrqHCounter && matchedPosition[1] == lastTimerIrqVCounter)) {
             return;
         }
 
-        lastTimerIrqHCounter = hCounter;
-        lastTimerIrqVCounter = vCounter;
+        lastTimerIrqHCounter = matchedPosition[0];
+        lastTimerIrqVCounter = matchedPosition[1];
         cpu.requestIRQ();
+    }
+
+    private int[] timerMatchPosition(boolean hTimerEnabled, boolean vTimerEnabled, int startHCounter, int startVCounter, int cycles) {
+        if (cycles <= 0) {
+            int hCounter = ppu.hCounter();
+            int vCounter = ppu.vCounter();
+            return timerMatches(hTimerEnabled, vTimerEnabled, hCounter, vCounter)
+                    ? new int[]{hCounter, vCounter}
+                    : null;
+        }
+
+        int hTarget = cpu.internalRegisters()[0x07] | ((cpu.internalRegisters()[0x08] & 1) << 8);
+        int vTarget = cpu.internalRegisters()[0x09] | ((cpu.internalRegisters()[0x0a] & 1) << 8);
+        if (hTimerEnabled && hTarget >= PPU.H_COUNTER_DOTS) {
+            return null;
+        }
+        if (vTimerEnabled && vTarget >= PPU.V_COUNTER_SCANLINES) {
+            return null;
+        }
+        long start = (long) startVCounter * PPU.H_COUNTER_DOTS + startHCounter;
+        long end = start + cycles;
+        if (hTimerEnabled && !vTimerEnabled) {
+            long firstLine = start / PPU.H_COUNTER_DOTS;
+            long lastLine = end / PPU.H_COUNTER_DOTS;
+            for (long line = firstLine; line <= lastLine; line++) {
+                long candidate = line * PPU.H_COUNTER_DOTS + hTarget;
+                if (start < candidate && candidate <= end) {
+                    return new int[]{hTarget, (int) (line % PPU.V_COUNTER_SCANLINES)};
+                }
+            }
+            return null;
+        }
+
+        int targetH = hTimerEnabled ? hTarget : 0;
+        int targetV = vTarget;
+        long target = (long) targetV * PPU.H_COUNTER_DOTS + targetH;
+        long frameDots = (long) PPU.V_COUNTER_SCANLINES * PPU.H_COUNTER_DOTS;
+        for (long candidate = target; candidate <= end; candidate += frameDots) {
+            if (start < candidate) {
+                return new int[]{targetH, targetV};
+            }
+        }
+        return null;
     }
 
     private boolean timerMatches(boolean hTimerEnabled, boolean vTimerEnabled, int hCounter, int vCounter) {

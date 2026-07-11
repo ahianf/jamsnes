@@ -199,6 +199,21 @@ class SNESTest {
     }
 
     @Test
+    void updateTimerIrqRequestsIrqWhenUpdateCrossesHTimerCounter() {
+        SNES snes = new SNES(new TestRenderer());
+        snes.bus.mapComponents(snes);
+        snes.cpu.isDisabled = true;
+        snes.apu.isDisabled = true;
+        snes.bus.write(0x4200, 0x10);
+        snes.bus.write(0x4207, 0x08);
+        snes.bus.write(0x4208, 0x00);
+
+        snes.update();
+
+        assertEquals(0x80, snes.bus.read(0x4211));
+    }
+
+    @Test
     void updateTimerIrqDoesNotReassertAtSameCounterPosition() {
         SNES snes = new SNES(new TestRenderer());
         snes.bus.mapComponents(snes);
