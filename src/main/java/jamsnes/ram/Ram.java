@@ -50,6 +50,10 @@ public class Ram extends ARectangleMemory {
         return data;
     }
 
+    public void clear() {
+        Arrays.fill(data, 0);
+    }
+
     @Override
     public String getName() {
         return ramName;

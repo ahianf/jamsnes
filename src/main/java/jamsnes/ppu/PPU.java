@@ -229,6 +229,12 @@ public class PPU extends AMemory {
         updateBackgroundTilesets(2, 3);
     }
 
+    public void resetMemoryState() {
+        vram.clear();
+        oamram.clear();
+        cgram.clear();
+    }
+
     public void renderMainAndSubScreen() {
         for (Background background : backgrounds) {
             background.renderBackground();

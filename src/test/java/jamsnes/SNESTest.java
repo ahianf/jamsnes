@@ -116,6 +116,21 @@ class SNESTest {
     }
 
     @Test
+    void loadRomClearsPpuMemoryState() throws IOException {
+        SNES snes = new SNES(new TestRenderer());
+        snes.bus.mapComponents(snes);
+        snes.ppu.vram.write(0x1234, 0x12);
+        snes.ppu.oamram.write(0x0200, 0x34);
+        snes.ppu.cgram.write(0x0040, 0x56);
+
+        snes.loadRom(writeGameRom().toString());
+
+        assertEquals(0x00, snes.ppu.vram.read(0x1234));
+        assertEquals(0x00, snes.ppu.oamram.read(0x0200));
+        assertEquals(0x00, snes.ppu.cgram.read(0x0040));
+    }
+
+    @Test
     void loadRomClearsLastTimerIrqPosition() throws IOException {
         SNES snes = new SNES(new TestRenderer());
         snes.bus.mapComponents(snes);
