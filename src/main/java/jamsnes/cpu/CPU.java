@@ -976,6 +976,12 @@ public class CPU extends AMemory {
         registers.s = 0x0100 | registers.sl();
         registers.setPc(cartridgeHeader.emulationInterrupts.reset);
         stopped = false;
+        waitingForInterrupt = false;
+        isNMIRequested = false;
+        isIRQRequested = false;
+        isAbortRequested = false;
+        internalRegisters[0x10] &= 0x7f;
+        internalRegisters[0x11] &= 0x7f;
         return 0;
     }
 

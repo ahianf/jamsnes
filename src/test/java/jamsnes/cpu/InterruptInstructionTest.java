@@ -112,6 +112,10 @@ class InterruptInstructionTest {
         snes.cpu.registers().p.m = false;
         snes.cpu.registers().p.x_b = false;
         snes.cartridge.header.emulationInterrupts.reset = 0x8123;
+        snes.cpu.WAI(0);
+        snes.cpu.requestNMI();
+        snes.cpu.requestIRQ();
+        snes.cpu.requestABORT();
 
         snes.cpu.RESB();
 
@@ -122,6 +126,12 @@ class InterruptInstructionTest {
         assertTrue(snes.cpu.registers().p.x_b);
         assertEquals(0x8123, snes.cpu.registers().pc);
         assertFalse(snes.cpu.isStopped());
+        assertFalse(snes.cpu.isWaitingForInterrupt());
+        assertFalse(snes.cpu.isNMIRequested);
+        assertFalse(snes.cpu.isIRQRequested);
+        assertFalse(snes.cpu.isAbortRequested);
+        assertEquals(0, snes.cpu.internalRegisters()[0x10] & 0x80);
+        assertEquals(0, snes.cpu.internalRegisters()[0x11] & 0x80);
     }
 
     @Test
