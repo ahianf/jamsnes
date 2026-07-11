@@ -78,6 +78,44 @@ class SNESTest {
     }
 
     @Test
+    void loadRomResetsPpuVideoRegisterState() throws IOException {
+        SNES snes = new SNES(new TestRenderer());
+        snes.bus.mapComponents(snes);
+        snes.bus.write(0x2100, 0x80);
+        snes.bus.write(0x2115, 0x80);
+        snes.bus.write(0x2116, 0x34);
+        snes.bus.write(0x2117, 0x12);
+
+        snes.loadRom(writeGameRom().toString());
+        snes.bus.write(0x2118, 0x42);
+
+        assertEquals(0x00, snes.ppu.registers()[0x00]);
+        assertEquals(0x00, snes.ppu.registers()[0x15]);
+        assertEquals(0x42, snes.ppu.vram.read(0));
+        assertEquals(1, snes.ppu.getVramAddressRegister());
+    }
+
+    @Test
+    void loadRomResetsPpuCgramWriteLatchAndAddress() throws IOException {
+        SNES snes = new SNES(new TestRenderer());
+        snes.bus.mapComponents(snes);
+        snes.bus.write(0x2121, 0x20);
+        snes.bus.write(0x2122, 0x12);
+
+        snes.loadRom(writeGameRom().toString());
+        snes.bus.write(0x2122, 0x34);
+        assertEquals(0, snes.ppu.cgram.read(0));
+        assertEquals(0, snes.ppu.ppuRegisters().cgAddress());
+        assertEquals(false, snes.ppu.ppuRegisters().isCgLowByte());
+
+        snes.bus.write(0x2122, 0x56);
+        assertEquals(0x34, snes.ppu.cgram.read(0));
+        assertEquals(0x56, snes.ppu.cgram.read(1));
+        assertEquals(2, snes.ppu.ppuRegisters().cgAddress());
+        assertEquals(true, snes.ppu.ppuRegisters().isCgLowByte());
+    }
+
+    @Test
     void loadRomClearsLastTimerIrqPosition() throws IOException {
         SNES snes = new SNES(new TestRenderer());
         snes.bus.mapComponents(snes);

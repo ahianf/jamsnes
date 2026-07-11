@@ -212,6 +212,23 @@ public class PPU extends AMemory {
         counterLatchFlag = false;
     }
 
+    public void resetRegisterState() {
+        Arrays.fill(registers, 0);
+        ppuRegisters.reset();
+        vramAddress = 0;
+        vmain = 0;
+        vramIncrementAmount = 1;
+        vramReadBuffer = 0;
+        hvSharedScrollPreviousValue = 0;
+        hScrollPreviousValue = 0;
+        updateBackgroundModes();
+        for (int i = 0; i < backgrounds.length; i++) {
+            updateBackgroundTileMap(i);
+        }
+        updateBackgroundTilesets(0, 1);
+        updateBackgroundTilesets(2, 3);
+    }
+
     public void renderMainAndSubScreen() {
         for (Background background : backgrounds) {
             background.renderBackground();

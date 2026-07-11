@@ -55,6 +55,7 @@ public class SNES {
         bus.mapComponents(this);
         cpu.RESB();
         apu.reset();
+        ppu.resetRegisterState();
         ppu.resetTimingState();
         resetRuntimeTimingState();
         if (cartridge.getType() == CartridgeType.AUDIO) {

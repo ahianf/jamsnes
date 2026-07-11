@@ -1,5 +1,7 @@
 package jamsnes.ppu;
 
+import java.util.Arrays;
+
 import static jamsnes.models.Unsigned.u16;
 import static jamsnes.models.Unsigned.u8;
 
@@ -17,6 +19,18 @@ public class PPURegisters {
 
     public PPURegisters(int[] raw) {
         this.raw = raw;
+    }
+
+    void reset() {
+        Arrays.fill(m7, 0);
+        Arrays.fill(m7Center, 0);
+        Arrays.fill(bgOffsets, 0);
+        fixedColorRed = 0;
+        fixedColorGreen = 0;
+        fixedColorBlue = 0;
+        cgAddress = 0;
+        cgData = 0;
+        cgLowByte = true;
     }
 
     public boolean inidispFblank() {
