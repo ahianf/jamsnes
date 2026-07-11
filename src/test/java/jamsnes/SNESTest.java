@@ -83,6 +83,21 @@ class SNESTest {
     }
 
     @Test
+    void loadRomClearsDmaAndHdmaEnableState() throws IOException {
+        SNES snes = new SNES(new TestRenderer());
+        snes.bus.mapComponents(snes);
+        snes.bus.write(0x420b, 0x01);
+        snes.bus.write(0x420c, 0x01);
+
+        snes.loadRom(writeGameRom().toString());
+
+        assertEquals(0x00, snes.bus.read(0x420b));
+        assertEquals(0x00, snes.bus.read(0x420c));
+        assertEquals(false, snes.cpu.dmaChannels()[0].isEnabled());
+        assertEquals(false, snes.cpu.dmaChannels()[0].isHdmaEnabled());
+    }
+
+    @Test
     void updateRunsCpuPpuAndApuForGameCartridges() {
         TestRenderer renderer = new TestRenderer();
         SNES snes = new SNES(renderer);

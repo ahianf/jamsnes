@@ -40,6 +40,13 @@ public class DMA {
         this.bus = bus;
     }
 
+    public void resetRuntimeState() {
+        enabled = false;
+        hdmaEnabled = false;
+        hdmaDoTransfer = false;
+        hdmaLineRemaining = 0;
+    }
+
     public IMemoryBus getBus() {
         return bus;
     }
