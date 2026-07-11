@@ -237,8 +237,9 @@ public class APU extends AMemory {
         int high = _getImmediateData();
         int full = u16((high << 8) | low);
 
-        low = _internalRead(full + internalRegisters.x);
-        high = _internalRead(full + internalRegisters.x + 1);
+        int pointer = u16(full + internalRegisters.x);
+        low = _internalRead(pointer);
+        high = _internalRead(u16(pointer + 1));
         return u16((high << 8) | low);
     }
 

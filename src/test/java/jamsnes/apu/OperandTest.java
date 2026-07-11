@@ -95,6 +95,20 @@ class OperandTest {
     }
 
     @Test
+    void absoluteByXWrapsPointerAtEndOfAddressSpace() {
+        SNES snes = init();
+        snes.apu.internalRegisters().pc = 0x32;
+        snes.apu.internalRegisters().x = 0x10;
+        snes.apu._internalWrite(0xf1, 0x00);
+        snes.apu._internalWrite(0x32, 0xef);
+        snes.apu._internalWrite(0x33, 0xff);
+        snes.apu._internalWrite(0xffff, 0x34);
+        snes.apu._internalWrite(0x0000, 0x12);
+
+        assertEquals(0x1234, snes.apu._getAbsoluteByXAddr());
+    }
+
+    @Test
     void absoluteAddrByXAndY() {
         SNES snes = init();
         snes.apu.internalRegisters().pc = 0x32;
