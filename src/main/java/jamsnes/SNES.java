@@ -55,9 +55,18 @@ public class SNES {
         bus.mapComponents(this);
         cpu.RESB();
         apu.reset();
+        resetRuntimeTimingState();
         if (cartridge.getType() == CartridgeType.AUDIO) {
             apu.loadFromSPC(cartridge);
         }
+    }
+
+    private void resetRuntimeTimingState() {
+        lastTimerIrqHCounter = -1;
+        lastTimerIrqVCounter = -1;
+        hdmaInitializedThisFrame = false;
+        wasInVBlank = ppu.isInVBlank();
+        autoJoypadReadCyclesRemaining = 0;
     }
 
     public void update() {

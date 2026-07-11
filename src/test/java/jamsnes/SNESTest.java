@@ -45,6 +45,44 @@ class SNESTest {
     }
 
     @Test
+    void loadRomClearsAutoJoypadBusyStatus() throws IOException {
+        SNES snes = new SNES(new TestRenderer());
+        snes.bus.mapComponents(snes);
+        snes.cpu.isDisabled = true;
+        snes.apu.isDisabled = true;
+        snes.cpu.internalRegisters()[0x00] = 0x01;
+        snes.ppu.advanceCountersOnly(PPU.H_COUNTER_DOTS * PPU.V_BLANK_START_SCANLINE - 0xff);
+        snes.update();
+        assertEquals(0x81, snes.bus.read(0x4212));
+
+        snes.loadRom(writeGameRom().toString());
+        snes.updateVideoStatusRegisters();
+
+        assertEquals(0x80, snes.bus.read(0x4212));
+    }
+
+    @Test
+    void loadRomClearsLastTimerIrqPosition() throws IOException {
+        SNES snes = new SNES(new TestRenderer());
+        snes.bus.mapComponents(snes);
+        snes.bus.write(0x4200, 0x10);
+        snes.bus.write(0x4207, 0x08);
+        snes.bus.write(0x4208, 0x00);
+
+        snes.ppu.update(8);
+        snes.updateTimerIrq();
+        assertEquals(0x80, snes.bus.read(0x4211));
+
+        snes.loadRom(writeGameRom().toString());
+        snes.bus.write(0x4200, 0x10);
+        snes.bus.write(0x4207, 0x08);
+        snes.bus.write(0x4208, 0x00);
+        snes.updateTimerIrq();
+
+        assertEquals(0x80, snes.bus.read(0x4211));
+    }
+
+    @Test
     void updateRunsCpuPpuAndApuForGameCartridges() {
         TestRenderer renderer = new TestRenderer();
         SNES snes = new SNES(renderer);
