@@ -9,6 +9,7 @@ public final class PPUUtils {
     }
 
     public static int cgramColorToRGBA(int cgramColor) {
+        cgramColor &= 0x7fff;
         int b = to8Bit(cgramColor >> 10);
         int g = to8Bit((cgramColor >> 5) & 0x1f);
         int r = to8Bit(cgramColor & 0x1f);

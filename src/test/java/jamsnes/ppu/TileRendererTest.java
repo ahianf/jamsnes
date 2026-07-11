@@ -237,6 +237,8 @@ class TileRendererTest {
         assertEquals(0x000000ff, PPUUtils.cgramColorToRGBA(0x0000));
         assertEquals(0xffffffff, PPUUtils.cgramColorToRGBA(0x7fff));
         assertEquals(0xff0000ff, PPUUtils.cgramColorToRGBA(0x001f));
+        assertEquals(0x000000ff, PPUUtils.cgramColorToRGBA(0x8000));
+        assertEquals(0xffffffff, PPUUtils.cgramColorToRGBA(0xffff));
     }
 
     @Test
