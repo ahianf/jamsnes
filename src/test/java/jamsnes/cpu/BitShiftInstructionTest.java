@@ -65,6 +65,36 @@ class BitShiftInstructionTest {
     }
 
     @Test
+    void bitUsesAccumulatorWidthForZeroFlag() {
+        SNES snes = init();
+        snes.cpu.registers().p.m = true;
+        snes.cpu.registers().a = 0xab00;
+        snes.wram.data()[0] = 0xab;
+
+        snes.cpu.BIT(0, AddressingMode.DIRECT_PAGE);
+
+        assertTrue(snes.cpu.registers().p.z);
+        assertTrue(snes.cpu.registers().p.n);
+        assertFalse(snes.cpu.registers().p.v);
+    }
+
+    @Test
+    void bitOpcodeUsesAccumulatorWidthForZeroFlag() {
+        SNES snes = init();
+        snes.cpu.registers().setPc(0x0200);
+        snes.cpu.registers().p.m = true;
+        snes.cpu.registers().a = 0xab00;
+        snes.wram.data()[0x0200] = 0x24;
+        snes.wram.data()[0x0201] = 0x10;
+        snes.wram.data()[0x0010] = 0xab;
+
+        assertEquals(3, snes.cpu.executeInstruction());
+        assertTrue(snes.cpu.registers().p.z);
+        assertTrue(snes.cpu.registers().p.n);
+        assertFalse(snes.cpu.registers().p.v);
+    }
+
+    @Test
     void aslShiftsMemoryAndAccumulator() {
         SNES snes = init();
         snes.cpu.registers().p.m = true;

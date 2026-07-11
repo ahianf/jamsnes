@@ -1429,7 +1429,7 @@ public class CPU extends AMemory {
             registers.p.n = (value & negativeMask) != 0;
             registers.p.v = (value & (negativeMask >>> 1)) != 0;
         }
-        registers.p.z = (value & registers.a) == 0;
+        registers.p.z = (value & accumulatorValue()) == 0;
         return registers.p.m ? 0 : 1;
     }
 
