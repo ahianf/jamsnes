@@ -16,6 +16,20 @@ public class Header {
     public final InterruptVectors nativeInterrupts = new InterruptVectors();
     public final InterruptVectors emulationInterrupts = new InterruptVectors();
 
+    public void reset() {
+        gameName = "";
+        mappingMode = 0;
+        romType = 0;
+        romSize = 0;
+        sramSize = 0;
+        creatorId = 0;
+        version = 0;
+        checksumComplement = 0;
+        checksum = 0;
+        nativeInterrupts.reset();
+        emulationInterrupts.reset();
+    }
+
     public boolean hasMappingMode(MappingMode mode) {
         return (mappingMode & mode.mask()) != 0;
     }

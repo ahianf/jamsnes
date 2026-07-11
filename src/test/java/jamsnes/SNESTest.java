@@ -45,6 +45,20 @@ class SNESTest {
     }
 
     @Test
+    void loadRomClearsSramContentsForNewCartridge() throws IOException {
+        SNES snes = new SNES(new TestRenderer());
+        Path rom = writeGameRomWithSram();
+        snes.loadRom(rom.toString());
+        assertEquals(0x8000, snes.sram.getSize());
+        snes.sram.write(0, 0x5a);
+
+        snes.loadRom(rom.toString());
+
+        assertEquals(0x8000, snes.sram.getSize());
+        assertEquals(0x00, snes.sram.read(0));
+    }
+
+    @Test
     void loadRomClearsAutoJoypadBusyStatus() throws IOException {
         SNES snes = new SNES(new TestRenderer());
         snes.bus.mapComponents(snes);
@@ -426,46 +440,66 @@ class SNESTest {
     void loadRomClearsSmcOffsetBeforeLoadingAudioCartridge() throws IOException {
         SNES snes = new SNES(new TestRenderer());
 
-        snes.loadRom(writeHeaderedGameRom().toString());
+        snes.loadRom(writeHeaderedGameRomWithSram().toString());
+        assertEquals(0x8000, snes.sram.getSize());
         snes.loadRom(writeSpcFile().toString());
 
         assertEquals(CartridgeType.AUDIO, snes.cartridge.getType());
+        assertEquals(0, snes.cartridge.header.sramSize);
+        assertEquals(0, snes.sram.getSize());
         assertEquals(0x1234, snes.apu.internalRegisters().pc);
     }
 
     private Path writeGameRom() throws IOException {
-        byte[] rom = new byte[0x8000];
-        int base = 0x7f00;
-        rom[0] = 0x78;
-        byte[] name = "JAMSNES TEST ROM".getBytes(StandardCharsets.ISO_8859_1);
-        System.arraycopy(name, 0, rom, 0x7fc0, name.length);
-        rom[base + 0xd5] = 0x20;
-        rom[base + 0xd6] = 0x00;
-        rom[base + 0xd7] = 0x05;
-        rom[base + 0xd8] = 0x00;
-        rom[base + 0xfc] = 0x00;
-        rom[base + 0xfd] = (byte) 0x80;
+        byte[] rom = gameRomBytes("JAMSNES TEST ROM", 0x00);
         Path romPath = tempDir.resolve("game.sfc");
         Files.write(romPath, rom);
         return romPath;
     }
 
-    private Path writeHeaderedGameRom() throws IOException {
+    private Path writeGameRomWithSram() throws IOException {
+        byte[] rom = gameRomBytes("JAMSNES SRAM ROM", 0x05);
+        Path romPath = tempDir.resolve("game-sram.sfc");
+        Files.write(romPath, rom);
+        return romPath;
+    }
+
+    private Path writeHeaderedGameRomWithSram() throws IOException {
+        byte[] rom = headeredGameRomBytes("JAMSNES SMC SRAM", 0x05);
+        Path romPath = tempDir.resolve("game-smc-sram.sfc");
+        Files.write(romPath, rom);
+        return romPath;
+    }
+
+    private byte[] gameRomBytes(String title, int sramSizeByte) {
+        byte[] rom = new byte[0x8000];
+        int base = 0x7f00;
+        rom[0] = 0x78;
+        byte[] name = title.getBytes(StandardCharsets.ISO_8859_1);
+        System.arraycopy(name, 0, rom, 0x7fc0, name.length);
+        rom[base + 0xd5] = 0x20;
+        rom[base + 0xd6] = 0x00;
+        rom[base + 0xd7] = 0x05;
+        rom[base + 0xd8] = (byte) sramSizeByte;
+        rom[base + 0xfc] = 0x00;
+        rom[base + 0xfd] = (byte) 0x80;
+        return rom;
+    }
+
+    private byte[] headeredGameRomBytes(String title, int sramSizeByte) {
         byte[] rom = new byte[0x8200];
         int base = 0x8100;
         rom[0] = 0x78;
         rom[0x200] = 0x78;
-        byte[] name = "JAMSNES SMC ROM".getBytes(StandardCharsets.ISO_8859_1);
+        byte[] name = title.getBytes(StandardCharsets.ISO_8859_1);
         System.arraycopy(name, 0, rom, 0x81c0, name.length);
         rom[base + 0xd5] = 0x20;
         rom[base + 0xd6] = 0x00;
         rom[base + 0xd7] = 0x05;
-        rom[base + 0xd8] = 0x00;
+        rom[base + 0xd8] = (byte) sramSizeByte;
         rom[base + 0xfc] = 0x00;
         rom[base + 0xfd] = (byte) 0x80;
-        Path romPath = tempDir.resolve("game-smc.sfc");
-        Files.write(romPath, rom);
-        return romPath;
+        return rom;
     }
 
     private Path writeSpcFile() throws IOException {

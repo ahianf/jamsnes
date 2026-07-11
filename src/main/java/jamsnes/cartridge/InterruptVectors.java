@@ -11,6 +11,15 @@ public class InterruptVectors {
     public int reset;
     public int irq;
 
+    public void reset() {
+        cop = 0;
+        brk = 0;
+        abort = 0;
+        nmi = 0;
+        reset = 0;
+        irq = 0;
+    }
+
     public void setCopBytes(int low, int high) {
         cop = word(low, high);
     }

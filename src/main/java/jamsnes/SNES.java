@@ -52,6 +52,7 @@ public class SNES {
     public void loadRom(String path) {
         cartridge.loadRom(path);
         sram.setSize(cartridge.header.sramSize);
+        sram.clear();
         bus.mapComponents(this);
         cpu.RESB();
         apu.reset();
