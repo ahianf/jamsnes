@@ -5,6 +5,8 @@ import jamsnes.renderer.NoRenderer;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DataTransmissionInstructionTest {
     @Test
@@ -64,6 +66,26 @@ class DataTransmissionInstructionTest {
         assertEquals(5, snes.apu.MOVW(0x50, false));
         assertEquals(0x78, snes.apu._internalRead(0x50));
         assertEquals(0x56, snes.apu._internalRead(0x51));
+    }
+
+    @Test
+    void movingWordToYaSetsFlagsFromFullWord() {
+        SNES snes = init();
+        snes.apu._internalWrite(0x42, 0x00);
+        snes.apu._internalWrite(0x43, 0x80);
+
+        assertEquals(5, snes.apu.MOVW(0x42, true));
+        assertEquals(0x8000, snes.apu.internalRegisters().ya());
+        assertTrue(snes.apu.internalRegisters().n);
+        assertFalse(snes.apu.internalRegisters().z);
+
+        snes.apu._internalWrite(0x42, 0x00);
+        snes.apu._internalWrite(0x43, 0x00);
+
+        assertEquals(5, snes.apu.MOVW(0x42, true));
+        assertEquals(0x0000, snes.apu.internalRegisters().ya());
+        assertFalse(snes.apu.internalRegisters().n);
+        assertTrue(snes.apu.internalRegisters().z);
     }
 
     @Test

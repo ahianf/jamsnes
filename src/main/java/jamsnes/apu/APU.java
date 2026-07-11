@@ -1496,7 +1496,7 @@ public class APU extends AMemory {
         if (toYa) {
             int value = (_internalRead(address2) << 8) | _internalRead(address);
             internalRegisters.setYa(value);
-            setNzFlags(value);
+            setNzWordFlags(value);
         } else {
             _internalWrite(address, internalRegisters.a);
             _internalWrite(address2, internalRegisters.y);
