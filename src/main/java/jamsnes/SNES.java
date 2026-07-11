@@ -63,7 +63,6 @@ public class SNES {
             return;
         }
 
-        updateAutoJoypadRegisters();
         int hdmaInitCycles = initializeHdmaAtFrameStart();
         if (hdmaInitCycles > 0) {
             ppu.advanceCountersOnly(hdmaInitCycles);
@@ -120,6 +119,9 @@ public class SNES {
 
     private void requestFrameNmi() {
         boolean inVBlank = ppu.isInVBlank();
+        if (inVBlank && !wasInVBlank) {
+            updateAutoJoypadRegisters();
+        }
         if (inVBlank && !wasInVBlank && (cpu.internalRegisters()[0x00] & 0x80) != 0) {
             cpu.requestNMI();
         }

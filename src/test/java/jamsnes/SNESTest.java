@@ -71,13 +71,28 @@ class SNESTest {
     }
 
     @Test
-    void updateCopiesJoypadStateToAutoReadRegistersWhenEnabled() {
+    void updateDoesNotCopyJoypadStateBeforeVBlankWhenAutoReadIsEnabled() {
+        SNES snes = new SNES(new TestRenderer());
+        snes.cpu.isDisabled = true;
+        snes.apu.isDisabled = true;
+        snes.cpu.internalRegisters()[0x00] = 0x01;
+        snes.cpu.internalRegisters()[0x18] = 0x55;
+        snes.joypad.setControllerState(0, Joypad.BUTTON_B | Joypad.BUTTON_START | Joypad.BUTTON_A);
+
+        snes.update();
+
+        assertEquals(0x55, snes.cpu.internalRegisters()[0x18]);
+    }
+
+    @Test
+    void updateCopiesJoypadStateToAutoReadRegistersOnVBlankEntry() {
         SNES snes = new SNES(new TestRenderer());
         snes.cpu.isDisabled = true;
         snes.apu.isDisabled = true;
         snes.cpu.internalRegisters()[0x00] = 0x01;
         snes.joypad.setControllerState(0, Joypad.BUTTON_B | Joypad.BUTTON_START | Joypad.BUTTON_A);
         snes.joypad.setControllerState(1, Joypad.BUTTON_Y | Joypad.BUTTON_L | Joypad.BUTTON_R);
+        snes.ppu.advanceCountersOnly(PPU.H_COUNTER_DOTS * PPU.V_BLANK_START_SCANLINE - 0xff);
 
         snes.update();
 
