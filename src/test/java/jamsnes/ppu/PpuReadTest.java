@@ -83,6 +83,18 @@ class PpuReadTest {
     }
 
     @Test
+    void oamDataReadMapsUpperAddressRangeToHighTable() {
+        SNES snes = init();
+        snes.bus.write(0x2102, 0x21);
+        snes.bus.write(0x2103, 0x01);
+        snes.ppu.oamram.write(0x201, 0x77);
+        snes.ppu.oamram.write(0x121, 0x55);
+
+        assertEquals(0x77, snes.bus.read(0x2138));
+        assertEquals(0x122, snes.ppu.ppuRegisters().oamAddress());
+    }
+
+    @Test
     void mode7MultiplicationResultReadsLowMiddleAndHighBytes() {
         SNES snes = init();
         writeMode7Register(snes, 0x211b, 0x0100);

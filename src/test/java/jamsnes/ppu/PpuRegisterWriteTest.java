@@ -70,6 +70,27 @@ class PpuRegisterWriteTest {
     }
 
     @Test
+    void oamDataWriteMapsUpperAddressRangeToHighTable() {
+        SNES snes = init();
+
+        snes.bus.write(0x2102, 0x00);
+        snes.bus.write(0x2103, 0x01);
+        snes.bus.write(0x2104, 0x55);
+
+        assertEquals(0x55, snes.ppu.oamram.read(0x200));
+        assertEquals(0, snes.ppu.oamram.read(0x100));
+        assertEquals(0x101, snes.ppu.ppuRegisters().oamAddress());
+
+        snes.bus.write(0x2102, 0x3f);
+        snes.bus.write(0x2103, 0x01);
+        snes.bus.write(0x2104, 0x66);
+
+        assertEquals(0x66, snes.ppu.oamram.read(0x21f));
+        assertEquals(0, snes.ppu.oamram.read(0x13f));
+        assertEquals(0x140, snes.ppu.ppuRegisters().oamAddress());
+    }
+
+    @Test
     void decodesBgModeAndMosaic() {
         SNES snes = init();
 

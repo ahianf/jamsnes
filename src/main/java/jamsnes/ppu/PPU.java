@@ -462,7 +462,7 @@ public class PPU extends AMemory {
     }
 
     private int readOamData() {
-        int value = oamram.read(ppuRegisters.oamAddress());
+        int value = oamram.read(getOamDataAddress());
         ppuRegisters.incrementOamAddress();
         return value;
     }
@@ -481,8 +481,16 @@ public class PPU extends AMemory {
     }
 
     private void writeOamData(int value) {
-        oamram.write(ppuRegisters.oamAddress(), value);
+        oamram.write(getOamDataAddress(), value);
         ppuRegisters.incrementOamAddress();
+    }
+
+    private int getOamDataAddress() {
+        int address = ppuRegisters.oamAddress();
+        if (address >= OBJ_LOW_TABLE_SIZE / 2) {
+            return OBJ_LOW_TABLE_SIZE + (address & 0x1f);
+        }
+        return address;
     }
 
     private void writeBgHorizontalOffset(int address, int value) {
