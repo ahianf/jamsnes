@@ -56,6 +56,19 @@ class PpuReadTest {
     }
 
     @Test
+    void cgramDataReadMasksHighColorBit() {
+        SNES snes = init();
+        snes.ppu.cgram.write(0x20, 0xff);
+        snes.ppu.cgram.write(0x21, 0xff);
+
+        snes.bus.write(0x2121, 0x20);
+
+        assertEquals(0xff, snes.bus.read(0x213b));
+        assertEquals(0x7f, snes.bus.read(0x213b));
+        assertEquals(0x22, snes.ppu.ppuRegisters().cgAddress());
+    }
+
+    @Test
     void oamDataReadReturnsCurrentAddressAndIncrements() {
         SNES snes = init();
         snes.bus.write(0x2102, 0x0b);

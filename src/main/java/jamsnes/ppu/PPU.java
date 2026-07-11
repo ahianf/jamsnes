@@ -395,7 +395,11 @@ public class PPU extends AMemory {
     }
 
     private int readCgData() {
-        int value = cgram.read(ppuRegisters.cgAddress());
+        int address = ppuRegisters.cgAddress();
+        int value = cgram.read(address);
+        if ((address & 1) != 0) {
+            value &= 0x7f;
+        }
         ppuRegisters.incrementCgAddress();
         return value;
     }
