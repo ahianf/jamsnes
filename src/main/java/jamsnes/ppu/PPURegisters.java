@@ -359,7 +359,7 @@ public class PPURegisters {
     }
 
     void setCgDataHigh(int value) {
-        cgData = u16((cgData & 0x00ff) | (u8(value) << 8));
+        cgData = u16((cgData & 0x00ff) | ((u8(value) & 0x7f) << 8));
     }
 
     void incrementCgAddress() {

@@ -150,7 +150,7 @@ class DmaTest {
         assertEquals(16 + 8, snes.cpu.runHDMALine());
 
         assertEquals(0xab, snes.ppu.cgram.read(0x20));
-        assertEquals(0xcd, snes.ppu.cgram.read(0x21));
+        assertEquals(0x4d, snes.ppu.cgram.read(0x21));
         assertEquals(0x0402, dma.getCount());
         assertEquals(0x0204, dma.getTableAddress());
         assertFalse(dma.isHdmaEnabled());
