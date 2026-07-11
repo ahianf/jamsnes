@@ -36,7 +36,7 @@ class ShiftRotationInstructionTest {
         assertEquals(2, snes.apu.LSR(snes.apu.internalRegisters().a, 2, true));
         assertEquals(0x33, snes.apu.internalRegisters().a);
         assertFalse(snes.apu.internalRegisters().c);
-        assertTrue(snes.apu.internalRegisters().n);
+        assertFalse(snes.apu.internalRegisters().n);
         assertFalse(snes.apu.internalRegisters().z);
 
         snes.apu._internalWrite(0x55, 0xdd);

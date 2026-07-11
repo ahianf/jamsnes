@@ -1207,8 +1207,7 @@ public class APU extends AMemory {
         } else {
             _internalWrite(operand, value);
         }
-        internalRegisters.n = (value & 0x01) != 0;
-        internalRegisters.z = value == 0;
+        setNzFlags(value);
         return cycles;
     }
 

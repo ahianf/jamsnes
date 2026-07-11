@@ -165,7 +165,7 @@ class BitShiftOpcodeDispatchTest {
         assertEquals(4, snes.apu.executeInstruction());
         assertEquals(0x01, snes.apu._internalRead(0x50));
         assertFalse(snes.apu.internalRegisters().c);
-        assertTrue(snes.apu.internalRegisters().n);
+        assertFalse(snes.apu.internalRegisters().n);
 
         assertEquals(5, snes.apu.executeInstruction());
         assertEquals(0x00, snes.apu._internalRead(0x0300));
@@ -227,7 +227,7 @@ class BitShiftOpcodeDispatchTest {
         assertEquals(2, snes.apu.executeInstruction());
         assertEquals(0x01, snes.apu.internalRegisters().a);
         assertTrue(snes.apu.internalRegisters().c);
-        assertTrue(snes.apu.internalRegisters().n);
+        assertFalse(snes.apu.internalRegisters().n);
 
         assertEquals(2, snes.apu.executeInstruction());
         assertEquals(0x80, snes.apu.internalRegisters().a);
