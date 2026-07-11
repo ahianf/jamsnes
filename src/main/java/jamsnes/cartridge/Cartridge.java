@@ -161,7 +161,11 @@ public class Cartridge extends Ram {
             if (info.emulationInterrupts.reset < 0x8000) {
                 continue;
             }
-            int resetOpcode = data()[info.emulationInterrupts.reset - 0x8000];
+            int resetOpcodeAddress = smc + info.emulationInterrupts.reset - 0x8000;
+            if (resetOpcodeAddress >= getSize()) {
+                continue;
+            }
+            int resetOpcode = data()[resetOpcodeAddress];
             score += switch (resetOpcode) {
                 case 0x18, 0x78, 0x4c, 0x5c, 0x20, 0x22, 0x9c -> 8;
                 case 0xc2, 0xe2, 0xa9, 0xa2, 0xa0 -> 4;

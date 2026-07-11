@@ -468,6 +468,22 @@ class SNESTest {
         assertEquals(0x1234, snes.apu.internalRegisters().pc);
     }
 
+    @Test
+    void loadRomScoresSmcHeaderResetOpcodeFromRomPayload() throws IOException {
+        SNES snes = new SNES(new TestRenderer());
+        byte[] rom = headeredGameRomBytes("JAMSNES SMC RESET", 0x00);
+        rom[0] = 0x00;
+        rom[0x200] = 0x78;
+        Path romPath = tempDir.resolve("game-smc-reset.sfc");
+        Files.write(romPath, rom);
+
+        snes.loadRom(romPath.toString());
+
+        assertEquals(0x8000, snes.cpu.registers().pc);
+        assertEquals(0x78, snes.cartridge.read(0));
+        assertEquals(0x8000, snes.cartridge.getSize());
+    }
+
     private Path writeGameRom() throws IOException {
         byte[] rom = gameRomBytes("JAMSNES TEST ROM", 0x00);
         Path romPath = tempDir.resolve("game.sfc");
