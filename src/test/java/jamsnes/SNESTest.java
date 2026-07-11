@@ -58,7 +58,23 @@ class SNESTest {
         snes.loadRom(writeGameRom().toString());
         snes.updateVideoStatusRegisters();
 
+        assertEquals(0x00, snes.bus.read(0x4212));
+    }
+
+    @Test
+    void loadRomResetsPpuCountersToFrameStart() throws IOException {
+        SNES snes = new SNES(new TestRenderer());
+        snes.bus.mapComponents(snes);
+        snes.ppu.advanceCountersOnly(PPU.H_COUNTER_DOTS * PPU.V_BLANK_START_SCANLINE + 12);
+        snes.updateVideoStatusRegisters();
         assertEquals(0x80, snes.bus.read(0x4212));
+
+        snes.loadRom(writeGameRom().toString());
+        snes.updateVideoStatusRegisters();
+
+        assertEquals(0, snes.ppu.hCounter());
+        assertEquals(0, snes.ppu.vCounter());
+        assertEquals(0x00, snes.bus.read(0x4212));
     }
 
     @Test
@@ -77,6 +93,7 @@ class SNESTest {
         snes.bus.write(0x4200, 0x10);
         snes.bus.write(0x4207, 0x08);
         snes.bus.write(0x4208, 0x00);
+        snes.ppu.advanceCountersOnly(8);
         snes.updateTimerIrq();
 
         assertEquals(0x80, snes.bus.read(0x4211));

@@ -202,6 +202,16 @@ public class PPU extends AMemory {
         advanceCounters(cycles);
     }
 
+    public void resetTimingState() {
+        hCounter = 0;
+        vCounter = 0;
+        latchedHCounter = 0;
+        latchedVCounter = 0;
+        hCounterHighByte = false;
+        vCounterHighByte = false;
+        counterLatchFlag = false;
+    }
+
     public void renderMainAndSubScreen() {
         for (Background background : backgrounds) {
             background.renderBackground();
