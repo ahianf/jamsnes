@@ -107,6 +107,37 @@ class SNESTest {
     }
 
     @Test
+    void updateSetsAutoJoypadBusyStatusWhenAutoReadStartsAtVBlankEntry() {
+        SNES snes = new SNES(new TestRenderer());
+        snes.bus.mapComponents(snes);
+        snes.cpu.isDisabled = true;
+        snes.apu.isDisabled = true;
+        snes.cpu.internalRegisters()[0x00] = 0x01;
+        snes.ppu.advanceCountersOnly(PPU.H_COUNTER_DOTS * PPU.V_BLANK_START_SCANLINE - 0xff);
+
+        snes.update();
+
+        assertEquals(0x81, snes.bus.read(0x4212));
+    }
+
+    @Test
+    void updateClearsAutoJoypadBusyStatusAfterReadDuration() {
+        SNES snes = new SNES(new TestRenderer());
+        snes.bus.mapComponents(snes);
+        snes.cpu.isDisabled = true;
+        snes.apu.isDisabled = true;
+        snes.cpu.internalRegisters()[0x00] = 0x01;
+        snes.ppu.advanceCountersOnly(PPU.H_COUNTER_DOTS * PPU.V_BLANK_START_SCANLINE - 0xff);
+
+        snes.update();
+        for (int i = 0; i < 17; i++) {
+            snes.update();
+        }
+
+        assertEquals(0x80, snes.bus.read(0x4212));
+    }
+
+    @Test
     void updateDoesNotCopyJoypadStateWhenAutoReadIsDisabled() {
         SNES snes = new SNES(new TestRenderer());
         snes.cpu.isDisabled = true;
@@ -117,6 +148,19 @@ class SNESTest {
         snes.update();
 
         assertEquals(0x55, snes.cpu.internalRegisters()[0x18]);
+    }
+
+    @Test
+    void updateDoesNotSetAutoJoypadBusyStatusWhenAutoReadIsDisabled() {
+        SNES snes = new SNES(new TestRenderer());
+        snes.bus.mapComponents(snes);
+        snes.cpu.isDisabled = true;
+        snes.apu.isDisabled = true;
+        snes.ppu.advanceCountersOnly(PPU.H_COUNTER_DOTS * PPU.V_BLANK_START_SCANLINE - 0xff);
+
+        snes.update();
+
+        assertEquals(0x80, snes.bus.read(0x4212));
     }
 
     @Test

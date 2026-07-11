@@ -12,8 +12,10 @@ import jamsnes.ram.Ram;
 import jamsnes.renderer.IRenderer;
 
 public class SNES {
+    private static final int NMITIMEN_AUTO_JOYPAD_ENABLE = 0x01;
     private static final int NMITIMEN_H_IRQ_ENABLE = 0x10;
     private static final int NMITIMEN_V_IRQ_ENABLE = 0x20;
+    private static final int AUTO_JOYPAD_READ_CYCLES = 4224;
 
     private final IRenderer renderer;
     public final MemoryBus bus;
@@ -28,6 +30,7 @@ public class SNES {
     private int lastTimerIrqVCounter = -1;
     private boolean hdmaInitializedThisFrame;
     private boolean wasInVBlank;
+    private int autoJoypadReadCyclesRemaining;
 
     public SNES(IRenderer renderer) {
         this.renderer = renderer;
@@ -87,9 +90,11 @@ public class SNES {
                 ppu.advanceCountersOnly(hdmaCycles);
             }
         }
+        boolean enteredVBlank = requestFrameNmi();
+        updateAutoJoypadBusy(enteredVBlank, timerStartHCounter, timerStartVCounter,
+                hdmaInitCycles + cycleCount + hdmaCycles);
         updateVideoStatusRegisters();
         updateTimerIrq(timerStartHCounter, timerStartVCounter, hdmaInitCycles + cycleCount + hdmaCycles);
-        requestFrameNmi();
         apu.update(cycleCount);
         if (hdmaCycles > 0) {
             apu.update(hdmaCycles);
@@ -119,19 +124,21 @@ public class SNES {
         return dots >= PPU.V_COUNTER_SCANLINES * PPU.H_COUNTER_DOTS;
     }
 
-    private void requestFrameNmi() {
+    private boolean requestFrameNmi() {
         boolean inVBlank = ppu.isInVBlank();
-        if (inVBlank && !wasInVBlank) {
+        boolean enteredVBlank = inVBlank && !wasInVBlank;
+        if (enteredVBlank) {
             updateAutoJoypadRegisters();
         }
-        if (inVBlank && !wasInVBlank && (cpu.internalRegisters()[0x00] & 0x80) != 0) {
+        if (enteredVBlank && (cpu.internalRegisters()[0x00] & 0x80) != 0) {
             cpu.requestNMI();
         }
         wasInVBlank = inVBlank;
+        return enteredVBlank;
     }
 
     private void updateAutoJoypadRegisters() {
-        if ((cpu.internalRegisters()[0x00] & 1) == 0) {
+        if (!autoJoypadEnabled()) {
             return;
         }
 
@@ -148,6 +155,9 @@ public class SNES {
 
     void updateVideoStatusRegisters() {
         int value = 0;
+        if (autoJoypadReadCyclesRemaining > 0) {
+            value |= 0x01;
+        }
         if (ppu.isInVBlank()) {
             value |= 0x80;
         }
@@ -155,6 +165,40 @@ public class SNES {
             value |= 0x40;
         }
         cpu.internalRegisters()[0x12] = value;
+    }
+
+    private void updateAutoJoypadBusy(boolean enteredVBlank, int startHCounter, int startVCounter, int cycles) {
+        if (enteredVBlank && autoJoypadEnabled()) {
+            autoJoypadReadCyclesRemaining = AUTO_JOYPAD_READ_CYCLES;
+            autoJoypadReadCyclesRemaining = Math.max(0,
+                    autoJoypadReadCyclesRemaining - cyclesAfterVBlankStart(startHCounter, startVCounter, cycles));
+            return;
+        }
+        if (autoJoypadReadCyclesRemaining > 0) {
+            autoJoypadReadCyclesRemaining = Math.max(0, autoJoypadReadCyclesRemaining - Math.max(0, cycles));
+        }
+    }
+
+    private int cyclesAfterVBlankStart(int startHCounter, int startVCounter, int cycles) {
+        if (cycles <= 0) {
+            return 0;
+        }
+
+        int frameDots = PPU.H_COUNTER_DOTS * PPU.V_COUNTER_SCANLINES;
+        int vBlankStartDot = PPU.H_COUNTER_DOTS * PPU.V_BLANK_START_SCANLINE;
+        int startDot = startVCounter * PPU.H_COUNTER_DOTS + startHCounter;
+        int endDot = startDot + cycles;
+        if (startDot < vBlankStartDot && endDot >= vBlankStartDot) {
+            return endDot - vBlankStartDot;
+        }
+        if (startDot >= vBlankStartDot && startDot < frameDots) {
+            return cycles;
+        }
+        return 0;
+    }
+
+    private boolean autoJoypadEnabled() {
+        return (cpu.internalRegisters()[0x00] & NMITIMEN_AUTO_JOYPAD_ENABLE) != 0;
     }
 
     void updateTimerIrq() {
