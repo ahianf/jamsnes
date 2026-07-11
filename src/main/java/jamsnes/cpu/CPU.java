@@ -1086,7 +1086,6 @@ public class CPU extends AMemory {
     }
 
     public int TXA(int valueAddr) {
-        int negativeFlag = registers.p.m ? 0x80 : 0x8000;
         if (registers.p.m) {
             registers.setAl(registers.xl());
         } else {
@@ -1095,13 +1094,11 @@ public class CPU extends AMemory {
                 registers.setAh(0);
             }
         }
-        registers.p.n = (registers.a & negativeFlag) != 0;
-        registers.p.z = registers.a == 0;
+        setZNAccumulator(registers.a);
         return 0;
     }
 
     public int TYA(int valueAddr) {
-        int negativeFlag = registers.p.m ? 0x80 : 0x8000;
         if (registers.p.m) {
             registers.setAl(registers.yl());
         } else {
@@ -1110,8 +1107,7 @@ public class CPU extends AMemory {
                 registers.setAh(0);
             }
         }
-        registers.p.n = (registers.a & negativeFlag) != 0;
-        registers.p.z = registers.a == 0;
+        setZNAccumulator(registers.a);
         return 0;
     }
 

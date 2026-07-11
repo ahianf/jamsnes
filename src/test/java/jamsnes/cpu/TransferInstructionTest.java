@@ -125,6 +125,44 @@ class TransferInstructionTest {
     }
 
     @Test
+    void txaAndTyaSetFlagsFromAccumulatorWidth() {
+        SNES snes = init();
+        snes.cpu.registers().p.m = true;
+        snes.cpu.registers().a = 0x1201;
+        snes.cpu.registers().x = 0x0000;
+
+        snes.cpu.TXA(0);
+
+        assertEquals(0x1200, snes.cpu.registers().a);
+        assertTrue(snes.cpu.registers().p.z);
+        assertFalse(snes.cpu.registers().p.n);
+
+        snes.cpu.registers().a = 0x0000;
+        snes.cpu.registers().y = 0x0080;
+
+        snes.cpu.TYA(0);
+
+        assertEquals(0x0080, snes.cpu.registers().a);
+        assertFalse(snes.cpu.registers().p.z);
+        assertTrue(snes.cpu.registers().p.n);
+    }
+
+    @Test
+    void txaOpcodeSetsZeroFromEightBitAccumulatorResult() {
+        SNES snes = init();
+        snes.cpu.registers().setPc(0x0200);
+        snes.cpu.registers().p.m = true;
+        snes.cpu.registers().a = 0x3401;
+        snes.cpu.registers().x = 0x0000;
+        snes.wram.data()[0x0200] = 0x8a;
+
+        assertEquals(2, snes.cpu.executeInstruction());
+        assertEquals(0x3400, snes.cpu.registers().a);
+        assertTrue(snes.cpu.registers().p.z);
+        assertFalse(snes.cpu.registers().p.n);
+    }
+
+    @Test
     void indexTransfersPreserveHighByteInEightBitMode() {
         SNES snes = init();
         snes.cpu.registers().p.x_b = true;
