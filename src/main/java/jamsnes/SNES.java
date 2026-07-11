@@ -30,6 +30,7 @@ public class SNES {
     private int lastTimerIrqVCounter = -1;
     private boolean hdmaInitializedThisFrame;
     private boolean wasInVBlank;
+    private boolean wasNmiEnabled;
     private int autoJoypadReadCyclesRemaining;
 
     public SNES(IRenderer renderer) {
@@ -70,6 +71,7 @@ public class SNES {
         lastTimerIrqVCounter = -1;
         hdmaInitializedThisFrame = false;
         wasInVBlank = ppu.isInVBlank();
+        wasNmiEnabled = nmiEnabled();
         autoJoypadReadCyclesRemaining = 0;
     }
 
@@ -139,14 +141,17 @@ public class SNES {
 
     private boolean requestFrameNmi() {
         boolean inVBlank = ppu.isInVBlank();
+        boolean nmiEnabled = nmiEnabled();
         boolean enteredVBlank = inVBlank && !wasInVBlank;
+        boolean enabledDuringVBlank = inVBlank && nmiEnabled && !wasNmiEnabled;
         if (enteredVBlank) {
             updateAutoJoypadRegisters();
         }
-        if (enteredVBlank && (cpu.internalRegisters()[0x00] & 0x80) != 0) {
+        if ((enteredVBlank || enabledDuringVBlank) && nmiEnabled) {
             cpu.requestNMI();
         }
         wasInVBlank = inVBlank;
+        wasNmiEnabled = nmiEnabled;
         return enteredVBlank;
     }
 
@@ -212,6 +217,10 @@ public class SNES {
 
     private boolean autoJoypadEnabled() {
         return (cpu.internalRegisters()[0x00] & NMITIMEN_AUTO_JOYPAD_ENABLE) != 0;
+    }
+
+    private boolean nmiEnabled() {
+        return (cpu.internalRegisters()[0x00] & 0x80) != 0;
     }
 
     void updateTimerIrq() {
