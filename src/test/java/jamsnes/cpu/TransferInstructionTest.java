@@ -29,7 +29,7 @@ class TransferInstructionTest {
     }
 
     @Test
-    void tayAndTxsHandleEightBitTransfers() {
+    void tayHandlesEightBitTransfers() {
         SNES snes = init();
         snes.cpu.registers().p.x_b = true;
         snes.cpu.registers().y = 0xfe12;
@@ -37,11 +37,45 @@ class TransferInstructionTest {
         snes.cpu.TAY(0);
         assertEquals(0xfeab, snes.cpu.registers().y);
         assertTrue(snes.cpu.registers().p.n);
+    }
+
+    @Test
+    void txsDoesNotAffectStatusFlags() {
+        SNES snes = init();
+        snes.cpu.registers().p.x_b = true;
+        snes.cpu.registers().p.n = false;
+        snes.cpu.registers().p.z = true;
 
         snes.cpu.registers().x = 0xabcd;
         snes.cpu.TXS(0);
         assertEquals(0x00cd, snes.cpu.registers().s);
+        assertFalse(snes.cpu.registers().p.n);
+        assertTrue(snes.cpu.registers().p.z);
+
+        snes.cpu.registers().p.x_b = false;
+        snes.cpu.registers().p.n = true;
+        snes.cpu.registers().p.z = false;
+        snes.cpu.registers().x = 0x0000;
+        snes.cpu.TXS(0);
+        assertEquals(0x0000, snes.cpu.registers().s);
         assertTrue(snes.cpu.registers().p.n);
+        assertFalse(snes.cpu.registers().p.z);
+    }
+
+    @Test
+    void txsOpcodePreservesStatusFlags() {
+        SNES snes = init();
+        snes.cpu.registers().setPc(0x0200);
+        snes.cpu.registers().p.x_b = true;
+        snes.cpu.registers().p.n = false;
+        snes.cpu.registers().p.z = true;
+        snes.cpu.registers().x = 0x0080;
+        snes.wram.data()[0x0200] = 0x9a;
+
+        assertEquals(2, snes.cpu.executeInstruction());
+        assertEquals(0x0080, snes.cpu.registers().s);
+        assertFalse(snes.cpu.registers().p.n);
+        assertTrue(snes.cpu.registers().p.z);
     }
 
     @Test

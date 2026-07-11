@@ -1044,12 +1044,8 @@ public class CPU extends AMemory {
     public int TXS(int valueAddr) {
         if (registers.p.x_b) {
             registers.s = registers.xl();
-            registers.p.z = registers.s == 0;
-            registers.p.n = (registers.s & 0x80) != 0;
         } else {
             registers.s = u16(registers.x);
-            registers.p.z = registers.s == 0;
-            registers.p.n = (registers.s & 0x8000) != 0;
         }
         return 0;
     }
