@@ -358,6 +358,17 @@ class AddressingModeTest {
     }
 
     @Test
+    void stackRelativeWrapsAtSixteenBits() {
+        SNES snes = init();
+        snes.cpu.registers().setPac(0x808000);
+        snes.cartridge.data()[0] = 0x02;
+        snes.cpu.registers().s = 0xffff;
+
+        assertEquals(0x0001, snes.cpu._getStackRelativeAddr());
+        assertEquals(0x808001, snes.cpu.registers().pac);
+    }
+
+    @Test
     void stackRelativeIndirectIndexedY() {
         SNES snes = init();
         snes.cpu.registers().setPac(0x808000);

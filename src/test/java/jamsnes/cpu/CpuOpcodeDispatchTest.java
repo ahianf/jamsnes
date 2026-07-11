@@ -619,6 +619,19 @@ class CpuOpcodeDispatchTest {
     }
 
     @Test
+    void executesStackRelativeOpcodeWithWrappedAddress() {
+        SNES snes = init();
+        snes.cpu.registers().setPc(0x0200);
+        snes.cpu.registers().s = 0xffff;
+        snes.wram.data()[0x0001] = 0x42;
+        writeProgram(snes, 0x0200, 0xa3, 0x02);
+
+        assertEquals(4, snes.cpu.executeInstruction());
+        assertEquals(0x42, snes.cpu.registers().a);
+        assertEquals(0x0202, snes.cpu.registers().pc);
+    }
+
+    @Test
     void executesBlockMoveOpcodes() {
         SNES snes = init();
         snes.cpu.registers().setPc(0x0200);

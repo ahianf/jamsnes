@@ -663,7 +663,7 @@ public class CPU extends AMemory {
     }
 
     public int _getStackRelativeAddr() {
-        return u24(readPC() + registers.s);
+        return u16(readPC() + registers.s);
     }
 
     public int _getStackRelativeIndirectIndexedYAddr() {
