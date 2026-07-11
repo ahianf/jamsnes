@@ -247,7 +247,7 @@ public class DSP {
                 echo.enabled = (value & 0x20) != 0;
                 noise.clock = value & 0x0f;
             }
-            case 0x7c -> setVoiceFlags(value, Flag.ENDX);
+            case 0x7c -> setVoiceFlags(0, Flag.ENDX);
             case 0x0d -> echo.feedback = value;
             case 0x1d -> master.unused = value;
             case 0x2d -> setVoiceFlags(value, Flag.PMON);

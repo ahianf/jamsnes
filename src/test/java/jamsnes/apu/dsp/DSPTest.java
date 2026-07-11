@@ -292,6 +292,22 @@ class DSPTest {
     }
 
     @Test
+    void endxWriteClearsSampleEndFlags() {
+        DSP dsp = new DSP();
+        dsp.setVoiceRuntimeState(0, 0, true, false, false, false);
+        dsp.setVoiceRuntimeState(1, 0, true, false, false, false);
+        dsp.voice5(0);
+        dsp.voice5(1);
+        assertEquals(0x03, dsp.read(0x7c));
+
+        dsp.write(0x7c, 0xff);
+
+        assertEquals(0x00, dsp.read(0x7c));
+        assertFalse(dsp.voiceEndx(0));
+        assertFalse(dsp.voiceEndx(1));
+    }
+
+    @Test
     void loadEchoReadsSignedSampleFromRam() {
         DSP dsp = new DSP();
         dsp.setEchoRuntimeState(0x3000, 0, 0, 0, 0, false);
