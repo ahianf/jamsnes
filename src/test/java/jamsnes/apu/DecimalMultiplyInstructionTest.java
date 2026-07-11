@@ -5,6 +5,8 @@ import jamsnes.renderer.NoRenderer;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DecimalMultiplyInstructionTest {
     @Test
@@ -33,6 +35,15 @@ class DecimalMultiplyInstructionTest {
 
         assertEquals(9, snes.apu.MUL());
         assertEquals(230, snes.apu.internalRegisters().ya());
+        assertFalse(snes.apu.internalRegisters().n);
+        assertTrue(snes.apu.internalRegisters().z);
+
+        snes.apu.internalRegisters().a = 0xff;
+        snes.apu.internalRegisters().y = 0xff;
+        assertEquals(9, snes.apu.MUL());
+        assertEquals(0xfe01, snes.apu.internalRegisters().ya());
+        assertTrue(snes.apu.internalRegisters().n);
+        assertFalse(snes.apu.internalRegisters().z);
     }
 
     @Test
