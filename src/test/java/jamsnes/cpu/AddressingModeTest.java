@@ -200,6 +200,19 @@ class AddressingModeTest {
     }
 
     @Test
+    void directIndexedByXUsesEightBitIndexWidth() {
+        SNES snes = init();
+        snes.cpu.registers().p.x_b = true;
+        snes.cartridge.data()[0] = 0x10;
+        snes.cpu.registers().d = 0x1000;
+        snes.cpu.registers().x = 0x1202;
+        snes.cpu.registers().setPac(0x808000);
+
+        assertEquals(0x1012, snes.cpu._getDirectIndexedByXAddr());
+        assertEquals(0x808001, snes.cpu.registers().pac);
+    }
+
+    @Test
     void directIndexedByY() {
         SNES snes = init();
         snes.cartridge.data()[0] = 0x10;
@@ -208,6 +221,24 @@ class AddressingModeTest {
         snes.cpu.registers().setPac(0x808000);
 
         assertEquals(0x1012, snes.cpu._getDirectIndexedByYAddr());
+        assertEquals(0x808001, snes.cpu.registers().pac);
+    }
+
+    @Test
+    void directIndexedIndirectXUsesEightBitIndexWidth() {
+        SNES snes = init();
+        snes.cartridge.data()[0] = 0xfe;
+        snes.cpu.registers().p.x_b = true;
+        snes.cpu.registers().d = 0x0100;
+        snes.cpu.registers().x = 0x1201;
+        snes.cpu.registers().dbr = 0x80;
+        snes.cpu.registers().setPac(0x808000);
+        snes.wram.data()[0x01ff] = 0x34;
+        snes.wram.data()[0x0200] = 0x12;
+        snes.wram.data()[0x13ff] = 0xaa;
+        snes.wram.data()[0x1400] = 0xbb;
+
+        assertEquals(0x801234, snes.cpu._getDirectIndirectIndexedXAddr());
         assertEquals(0x808001, snes.cpu.registers().pac);
     }
 
@@ -248,6 +279,20 @@ class AddressingModeTest {
 
         assertEquals(0x801300, snes.cpu._getAbsoluteIndexedByXAddr());
         assertTrue(snes.cpu.hasIndexCrossedPageBoundary());
+    }
+
+    @Test
+    void absoluteIndexedByYUsesEightBitIndexWidthForAddressAndBoundary() {
+        SNES snes = init();
+        snes.cpu.registers().setPac(0x808000);
+        snes.cartridge.data()[0] = 0xf0;
+        snes.cartridge.data()[1] = 0x12;
+        snes.cpu.registers().p.x_b = true;
+        snes.cpu.registers().dbr = 0x80;
+        snes.cpu.registers().y = 0x120f;
+
+        assertEquals(0x8012ff, snes.cpu._getAbsoluteIndexedByYAddr());
+        assertFalse(snes.cpu.hasIndexCrossedPageBoundary());
     }
 
     @Test

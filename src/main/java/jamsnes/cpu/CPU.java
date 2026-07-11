@@ -564,8 +564,9 @@ public class CPU extends AMemory {
         int base = bus.read(dp);
         base += bus.read(u16(dp + 1)) << 8;
         base += registers.dbr << 16;
-        markIndexBoundary(base, registers.y);
-        return u24(base + registers.y);
+        int index = indexYValue();
+        markIndexBoundary(base, index);
+        return u24(base + index);
     }
 
     public int _getDirectIndirectIndexedYLongAddr() {
@@ -573,12 +574,12 @@ public class CPU extends AMemory {
         int base = bus.read(dp);
         base += bus.read(u16(dp + 1)) << 8;
         base += bus.read(u16(dp + 2)) << 16;
-        return u24(base + registers.y);
+        return u24(base + indexYValue());
     }
 
     public int _getDirectIndirectIndexedXAddr() {
         int dp = u16(readPC() + registers.d);
-        dp = u16(dp + registers.x);
+        dp = u16(dp + indexXValue());
         int base = bus.read(dp);
         base += bus.read(u16(dp + 1)) << 8;
         base += registers.dbr << 16;
@@ -587,35 +588,37 @@ public class CPU extends AMemory {
 
     public int _getDirectIndexedByXAddr() {
         int dp = u16(readPC() + registers.d);
-        return u16(dp + registers.x);
+        return u16(dp + indexXValue());
     }
 
     public int _getDirectIndexedByYAddr() {
         int dp = u16(readPC() + registers.d);
-        return u16(dp + registers.y);
+        return u16(dp + indexYValue());
     }
 
     public int _getAbsoluteIndexedByXAddr() {
         int abs = readPC();
         abs = u16(abs + (readPC() << 8));
         int effective = abs + (registers.dbr << 16);
-        markIndexBoundary(effective, registers.x);
-        return u24(effective + registers.x);
+        int index = indexXValue();
+        markIndexBoundary(effective, index);
+        return u24(effective + index);
     }
 
     public int _getAbsoluteIndexedByYAddr() {
         int abs = readPC();
         abs = u16(abs + (readPC() << 8));
         int effective = abs + (registers.dbr << 16);
-        markIndexBoundary(effective, registers.y);
-        return u24(effective + registers.y);
+        int index = indexYValue();
+        markIndexBoundary(effective, index);
+        return u24(effective + index);
     }
 
     public int _getAbsoluteIndexedByXLongAddr() {
         int value = readPC();
         value += readPC() << 8;
         value += readPC() << 16;
-        return u24(value + registers.x);
+        return u24(value + indexXValue());
     }
 
     public int _getAbsoluteIndirectAddr() {
@@ -638,7 +641,7 @@ public class CPU extends AMemory {
     public int _getAbsoluteIndirectIndexedByXAddr() {
         int abs = readPC();
         abs = u16(abs + (readPC() << 8));
-        abs = u24(abs + registers.x);
+        abs = u16(abs + indexXValue());
         int effective = bus.read(abs);
         effective += bus.read(abs + 1) << 8;
         return u24(effective);
@@ -669,7 +672,7 @@ public class CPU extends AMemory {
     public int _getStackRelativeIndirectIndexedYAddr() {
         int pointer = u16(readPC() + registers.s);
         int base = bus.read(pointer) | (bus.read(u16(pointer + 1)) << 8);
-        return u24((registers.dbr << 16) + base + registers.y);
+        return u24((registers.dbr << 16) + base + indexYValue());
     }
 
     public void _push8(int data) {
@@ -1608,6 +1611,14 @@ public class CPU extends AMemory {
 
     private int accumulatorValue() {
         return registers.p.m ? registers.al() : registers.a;
+    }
+
+    private int indexXValue() {
+        return registers.p.x_b ? registers.xl() : registers.x;
+    }
+
+    private int indexYValue() {
+        return registers.p.x_b ? registers.yl() : registers.y;
     }
 
     private int decimalAdd(int value) {
