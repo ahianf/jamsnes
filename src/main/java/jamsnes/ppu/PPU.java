@@ -70,6 +70,7 @@ public class PPU extends AMemory {
     private int vCounter;
     private int latchedHCounter;
     private int latchedVCounter;
+    private int oamLowTableLatch;
     private boolean hCounterHighByte;
     private boolean vCounterHighByte;
     private boolean counterLatchFlag;
@@ -221,6 +222,7 @@ public class PPU extends AMemory {
         vramReadBuffer = 0;
         hvSharedScrollPreviousValue = 0;
         hScrollPreviousValue = 0;
+        oamLowTableLatch = 0;
         updateBackgroundModes();
         for (int i = 0; i < backgrounds.length; i++) {
             updateBackgroundTileMap(i);
@@ -481,8 +483,22 @@ public class PPU extends AMemory {
     }
 
     private void writeOamData(int value) {
-        oamram.write(getOamDataAddress(), value);
+        int address = ppuRegisters.oamAddress();
+        if (address < OBJ_LOW_TABLE_SIZE / 2) {
+            writeOamLowTableData(address, value);
+        } else {
+            oamram.write(getOamDataAddress(), value);
+        }
         ppuRegisters.incrementOamAddress();
+    }
+
+    private void writeOamLowTableData(int address, int value) {
+        if ((address & 1) == 0) {
+            oamLowTableLatch = value;
+            return;
+        }
+        oamram.write(address - 1, oamLowTableLatch);
+        oamram.write(address, value);
     }
 
     private int getOamDataAddress() {

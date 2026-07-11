@@ -65,8 +65,31 @@ class PpuRegisterWriteTest {
         assertTrue(snes.ppu.ppuRegisters().oamObjPriorityActivationBit());
 
         snes.bus.write(0x2104, 0x24);
-        assertEquals(0x24, snes.ppu.oamram.read(0x0c));
+        assertEquals(0, snes.ppu.oamram.read(0x0c));
         assertEquals(0x0d, snes.ppu.ppuRegisters().oamAddress());
+
+        snes.bus.write(0x2104, 0x66);
+        assertEquals(0x24, snes.ppu.oamram.read(0x0c));
+        assertEquals(0x66, snes.ppu.oamram.read(0x0d));
+        assertEquals(0x0e, snes.ppu.ppuRegisters().oamAddress());
+    }
+
+    @Test
+    void oamLowTableWritesCommitEvenOddPairs() {
+        SNES snes = init();
+
+        snes.bus.write(0x2102, 0x00);
+        snes.bus.write(0x2103, 0x00);
+        snes.bus.write(0x2104, 0x12);
+
+        assertEquals(0, snes.ppu.oamram.read(0x00));
+        assertEquals(0x01, snes.ppu.ppuRegisters().oamAddress());
+
+        snes.bus.write(0x2104, 0x34);
+
+        assertEquals(0x12, snes.ppu.oamram.read(0x00));
+        assertEquals(0x34, snes.ppu.oamram.read(0x01));
+        assertEquals(0x02, snes.ppu.ppuRegisters().oamAddress());
     }
 
     @Test
