@@ -232,6 +232,23 @@ class InternalMemoryMapTest {
     }
 
     @Test
+    void loadFromSpcResetsTimerRuntimeStateBeforeApplyingSnapshot() throws IOException {
+        SNES snes = init();
+        snes.apu._internalWrite(0x00fa, 0x02);
+        snes.apu._internalWrite(0x00f1, 0x01);
+        snes.apu.update(128);
+
+        Cartridge cartridge = new Cartridge(writeTimerSpcFile().toString());
+        snes.apu.loadFromSPC(cartridge);
+
+        snes.apu.update(128);
+        assertEquals(0x00, snes.apu._internalRead(0x00fd));
+
+        snes.apu.update(128);
+        assertEquals(0x01, snes.apu._internalRead(0x00fd));
+    }
+
+    @Test
     void loadFromSpcRejectsShortCartridge() throws IOException {
         SNES snes = init();
         byte[] spc = spcHeader(0x25);
@@ -317,6 +334,15 @@ class InternalMemoryMapTest {
         spc[0x1016c] = (byte) 0xe5;
 
         Path path = tempDir.resolve("state.spc");
+        Files.write(path, spc);
+        return path;
+    }
+
+    private Path writeTimerSpcFile() throws IOException {
+        byte[] spc = spcHeader(0x101c0);
+        spc[0x1f1] = 0x01;
+        spc[0x1fa] = 0x02;
+        Path path = tempDir.resolve("timer-state.spc");
         Files.write(path, spc);
         return path;
     }

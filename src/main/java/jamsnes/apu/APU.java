@@ -866,6 +866,8 @@ public class APU extends AMemory {
             throw new InvalidAddress("Cartridge is not the right size", size);
         }
 
+        reset();
+
         internalRegisters.setPcLow(cartridge.read(0x25));
         internalRegisters.setPcHigh(cartridge.read(0x26));
         internalRegisters.a = cartridge.read(0x27);
