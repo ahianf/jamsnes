@@ -28,6 +28,24 @@ class PpuReadTest {
     }
 
     @Test
+    void vramDataReadRefreshesBufferAfterHighByteIncrement() {
+        SNES snes = init();
+        snes.ppu.vram.write(0, 0x12);
+        snes.ppu.vram.write(1, 0x34);
+        snes.ppu.vram.write(2, 0x56);
+        snes.ppu.vram.write(3, 0x78);
+
+        snes.bus.write(0x2115, 0b1000_0000);
+        snes.bus.write(0x2116, 0);
+        snes.bus.write(0x2117, 0);
+
+        assertEquals(0x12, snes.bus.read(0x2139));
+        assertEquals(0x34, snes.bus.read(0x213a));
+        assertEquals(1, snes.ppu.getVramAddressRegister());
+        assertEquals(0x56, snes.bus.read(0x2139));
+    }
+
+    @Test
     void vramDataReadWorksWithDefaultIncrementMode() {
         SNES snes = init();
         snes.ppu.vram.write(0, 0b0110_1001);

@@ -386,8 +386,8 @@ public class PPU extends AMemory {
     private int readVramHigh() {
         int value = (vramReadBuffer >>> 8) & 0xff;
         if (isVramIncrementAfterHighByte()) {
-            updateVramReadBuffer();
             incrementVramAddress();
+            updateVramReadBuffer();
         }
         return value;
     }
