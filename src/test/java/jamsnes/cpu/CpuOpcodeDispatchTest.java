@@ -115,6 +115,8 @@ class CpuOpcodeDispatchTest {
     @Test
     void executesBlockMoveOpcodesWithFetchedBankOperands() {
         SNES snes = init();
+        snes.cpu.setEmulationMode(false);
+        snes.cpu.registers().p.x_b = false;
         snes.cpu.registers().setPc(0x0200);
         snes.cpu.registers().a = 0x0002;
         snes.cpu.registers().x = 0x0300;
@@ -638,6 +640,8 @@ class CpuOpcodeDispatchTest {
     @Test
     void executesBlockMoveOpcodes() {
         SNES snes = init();
+        snes.cpu.setEmulationMode(false);
+        snes.cpu.registers().p.x_b = false;
         snes.cpu.registers().setPc(0x0200);
         snes.cpu.registers().a = 1;
         snes.cpu.registers().x = 0x0400;

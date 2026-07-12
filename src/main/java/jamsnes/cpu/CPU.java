@@ -1166,10 +1166,10 @@ public class CPU extends AMemory {
 
         registers.dbr = destBank;
         while (registers.a != 0xffff) {
-            int data = bus.read(u24((srcBank << 16) | registers.x));
-            bus.write(u24((destBank << 16) | registers.y), data);
-            registers.x = u16(registers.x + 1);
-            registers.y = u16(registers.y + 1);
+            int data = bus.read(u24((srcBank << 16) | blockMoveIndexValue(registers.x)));
+            bus.write(u24((destBank << 16) | blockMoveIndexValue(registers.y)), data);
+            registers.x = advanceBlockMoveIndex(registers.x, 1);
+            registers.y = advanceBlockMoveIndex(registers.y, 1);
             registers.a = u16(registers.a - 1);
         }
         return 7 * length;
@@ -1182,13 +1182,25 @@ public class CPU extends AMemory {
 
         registers.dbr = destBank;
         while (registers.a != 0xffff) {
-            int data = bus.read(u24((srcBank << 16) | registers.x));
-            bus.write(u24((destBank << 16) | registers.y), data);
-            registers.x = u16(registers.x - 1);
-            registers.y = u16(registers.y - 1);
+            int data = bus.read(u24((srcBank << 16) | blockMoveIndexValue(registers.x)));
+            bus.write(u24((destBank << 16) | blockMoveIndexValue(registers.y)), data);
+            registers.x = advanceBlockMoveIndex(registers.x, -1);
+            registers.y = advanceBlockMoveIndex(registers.y, -1);
             registers.a = u16(registers.a - 1);
         }
         return 7 * length;
+    }
+
+    private int blockMoveIndexValue(int value) {
+        return blockMoveUsesEightBitIndex() ? u8(value) : u16(value);
+    }
+
+    private int advanceBlockMoveIndex(int value, int delta) {
+        return blockMoveUsesEightBitIndex() ? u8(value + delta) : u16(value + delta);
+    }
+
+    private boolean blockMoveUsesEightBitIndex() {
+        return emulationMode || registers.p.x_b;
     }
 
     public int INX(int valueAddr) {

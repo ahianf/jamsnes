@@ -222,6 +222,8 @@ class TransferInstructionTest {
     @Test
     void mvnCopiesForwardAndUpdatesRegisters() {
         SNES snes = init();
+        snes.cpu.setEmulationMode(false);
+        snes.cpu.registers().p.x_b = false;
         snes.cpu.registers().a = 0x10;
         snes.cpu.registers().x = 0x0000;
         snes.cpu.registers().y = 0x1000;
@@ -246,6 +248,8 @@ class TransferInstructionTest {
     @Test
     void mvpCopiesBackwardAndUpdatesRegisters() {
         SNES snes = init();
+        snes.cpu.setEmulationMode(false);
+        snes.cpu.registers().p.x_b = false;
         snes.cpu.registers().a = 0x10;
         snes.cpu.registers().x = 0x0010;
         snes.cpu.registers().y = 0x1010;
@@ -265,6 +269,50 @@ class TransferInstructionTest {
         for (int i = 0; i < 0x11; i++) {
             assertEquals(i, snes.wram.data()[0x1000 + i]);
         }
+    }
+
+    @Test
+    void mvnInEmulationModeUsesLowIndexBytes() {
+        SNES snes = init();
+        snes.cpu.setEmulationMode(true);
+        snes.cpu.registers().a = 0x0001;
+        snes.cpu.registers().x = 0x1201;
+        snes.cpu.registers().y = 0x3405;
+        snes.wram.data()[0x1ff0] = 0x00;
+        snes.wram.data()[0x1ff1] = 0x00;
+        snes.wram.data()[0x0001] = 0xaa;
+        snes.wram.data()[0x0002] = 0xbb;
+
+        int cycles = snes.cpu.MVN(0x1ff0);
+
+        assertEquals(14, cycles);
+        assertEquals(0xaa, snes.wram.data()[0x0005]);
+        assertEquals(0xbb, snes.wram.data()[0x0006]);
+        assertEquals(0x0003, snes.cpu.registers().x);
+        assertEquals(0x0007, snes.cpu.registers().y);
+        assertEquals(0xffff, snes.cpu.registers().a);
+    }
+
+    @Test
+    void mvpInEmulationModeUsesLowIndexBytes() {
+        SNES snes = init();
+        snes.cpu.setEmulationMode(true);
+        snes.cpu.registers().a = 0x0001;
+        snes.cpu.registers().x = 0x1202;
+        snes.cpu.registers().y = 0x3406;
+        snes.wram.data()[0x1ff0] = 0x00;
+        snes.wram.data()[0x1ff1] = 0x00;
+        snes.wram.data()[0x0002] = 0xaa;
+        snes.wram.data()[0x0001] = 0xbb;
+
+        int cycles = snes.cpu.MVP(0x1ff0);
+
+        assertEquals(14, cycles);
+        assertEquals(0xbb, snes.wram.data()[0x0005]);
+        assertEquals(0xaa, snes.wram.data()[0x0006]);
+        assertEquals(0x0000, snes.cpu.registers().x);
+        assertEquals(0x0004, snes.cpu.registers().y);
+        assertEquals(0xffff, snes.cpu.registers().a);
     }
 
     private static SNES init() {
