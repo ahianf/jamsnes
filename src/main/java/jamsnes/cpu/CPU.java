@@ -68,6 +68,7 @@ public class CPU extends AMemory {
         this.emulationMode = emulationMode;
         if (emulationMode) {
             registers.s = 0x0100 | registers.sl();
+            enforceStatusWidth();
         }
     }
 

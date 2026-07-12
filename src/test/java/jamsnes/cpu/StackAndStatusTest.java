@@ -87,11 +87,19 @@ class StackAndStatusTest {
     void enteringEmulationModeForcesStackPageOne() {
         SNES snes = init();
         snes.cpu.setEmulationMode(false);
+        snes.cpu.registers().p.m = false;
+        snes.cpu.registers().p.x_b = false;
         snes.cpu.registers().s = 0xabcd;
+        snes.cpu.registers().x = 0x1234;
+        snes.cpu.registers().y = 0x5678;
 
         snes.cpu.setEmulationMode(true);
 
         assertEquals(0x01cd, snes.cpu.registers().s);
+        assertTrue(snes.cpu.registers().p.m);
+        assertTrue(snes.cpu.registers().p.x_b);
+        assertEquals(0x0034, snes.cpu.registers().x);
+        assertEquals(0x0078, snes.cpu.registers().y);
     }
 
     private static SNES init() {
