@@ -130,6 +130,36 @@ class DmaTest {
     }
 
     @Test
+    void zeroLowLineCountRunsOneHundredTwentyEightHdmaLines() {
+        SNES snes = init();
+        DMA dma = snes.cpu.dmaChannels()[0];
+
+        snes.wram.data()[0x0200] = 0x80;
+        for (int i = 0; i < 128; i++) {
+            snes.wram.data()[0x0201 + i] = i + 1;
+        }
+        snes.wram.data()[0x0281] = 0x00;
+
+        setupHdma(snes, DMA.ONE_TO_ONE, 0x00, 0x7e0200);
+        snes.bus.write(0x420c, 0x01);
+
+        assertEquals(8, snes.cpu.initializeHDMA());
+        for (int i = 0; i < 127; i++) {
+            assertEquals(8, snes.cpu.runHDMALine());
+            assertEquals(i + 1, snes.ppu.registers()[0x00]);
+            assertTrue(dma.isHdmaEnabled());
+        }
+
+        assertEquals(0x81, dma.getLineCounter());
+        assertEquals(0x0280, dma.getTableAddress());
+        assertEquals(16, snes.cpu.runHDMALine());
+
+        assertEquals(0x80, snes.ppu.registers()[0x00]);
+        assertEquals(0x0282, dma.getTableAddress());
+        assertFalse(dma.isHdmaEnabled());
+    }
+
+    @Test
     void indirectHdmaReadsDataFromIndirectBankAndAdvancesPointer() {
         SNES snes = init();
         DMA dma = snes.cpu.dmaChannels()[0];
