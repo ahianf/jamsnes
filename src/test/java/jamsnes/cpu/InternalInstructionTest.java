@@ -250,6 +250,7 @@ class InternalInstructionTest {
     @Test
     void pushesEffectiveOperands() {
         SNES snes = init();
+        snes.cpu.setEmulationMode(false);
         snes.cpu.registers().setPac(0x008005);
         snes.cpu.registers().s = 0x1fff;
         snes.wram.data()[0] = 0xff;

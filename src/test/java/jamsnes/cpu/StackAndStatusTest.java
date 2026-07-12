@@ -29,6 +29,7 @@ class StackAndStatusTest {
     @Test
     void pushAndPopEightBits() {
         SNES snes = init();
+        snes.cpu.setEmulationMode(false);
         snes.cpu.registers().s = 0x0010;
 
         snes.cpu._push8(0xab);
@@ -42,6 +43,7 @@ class StackAndStatusTest {
     @Test
     void pushAndPopSixteenBitsHighByteFirst() {
         SNES snes = init();
+        snes.cpu.setEmulationMode(false);
         snes.cpu.registers().s = 0x0010;
 
         snes.cpu._push16(0xabcd);
@@ -56,6 +58,7 @@ class StackAndStatusTest {
     @Test
     void stackPointerWrapsAtSixteenBits() {
         SNES snes = init();
+        snes.cpu.setEmulationMode(false);
         snes.cpu.registers().s = 0x0000;
 
         snes.cpu._push8(0x42);
@@ -63,6 +66,21 @@ class StackAndStatusTest {
         assertEquals(0xffff, snes.cpu.registers().s);
         assertEquals(0x42, snes.cpu._pop());
         assertEquals(0x0000, snes.cpu.registers().s);
+    }
+
+    @Test
+    void emulationStackWrapsWithinPageOne() {
+        SNES snes = init();
+        snes.cpu.setEmulationMode(true);
+        snes.cpu.registers().s = 0x0100;
+
+        snes.cpu._push16(0xabcd);
+
+        assertEquals(0x01fe, snes.cpu.registers().s);
+        assertEquals(0xab, snes.wram.data()[0x0100]);
+        assertEquals(0xcd, snes.wram.data()[0x01ff]);
+        assertEquals(0xabcd, snes.cpu._pop16());
+        assertEquals(0x0100, snes.cpu.registers().s);
     }
 
     private static SNES init() {

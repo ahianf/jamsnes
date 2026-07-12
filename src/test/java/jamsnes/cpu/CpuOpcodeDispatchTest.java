@@ -786,6 +786,7 @@ class CpuOpcodeDispatchTest {
     @Test
     void executesPeiOpcodeFromFetchedDirectAddress() {
         SNES snes = init();
+        snes.cpu.setEmulationMode(false);
         snes.cpu.registers().setPc(0x0200);
         snes.cpu.registers().d = 0x0100;
         snes.cpu.registers().s = 0x1fff;

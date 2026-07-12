@@ -684,28 +684,40 @@ public class CPU extends AMemory {
     }
 
     public void _push8(int data) {
-        bus.write(registers.s, data);
-        registers.s = u16(registers.s - 1);
+        bus.write(stackAddress(), data);
+        decrementStackPointer();
     }
 
     public void _push16(int data) {
-        bus.write(registers.s, data >>> 8);
-        registers.s = u16(registers.s - 1);
-        bus.write(registers.s, data);
-        registers.s = u16(registers.s - 1);
+        bus.write(stackAddress(), data >>> 8);
+        decrementStackPointer();
+        bus.write(stackAddress(), data);
+        decrementStackPointer();
     }
 
     public int _pop() {
-        registers.s = u16(registers.s + 1);
-        return bus.read(registers.s);
+        incrementStackPointer();
+        return bus.read(stackAddress());
     }
 
     public int _pop16() {
-        registers.s = u16(registers.s + 1);
-        int value = bus.read(registers.s);
-        registers.s = u16(registers.s + 1);
-        value += bus.read(registers.s) << 8;
+        incrementStackPointer();
+        int value = bus.read(stackAddress());
+        incrementStackPointer();
+        value += bus.read(stackAddress()) << 8;
         return u16(value);
+    }
+
+    private int stackAddress() {
+        return emulationMode ? (0x0100 | registers.sl()) : registers.s;
+    }
+
+    private void decrementStackPointer() {
+        registers.s = emulationMode ? (0x0100 | u8(registers.s - 1)) : u16(registers.s - 1);
+    }
+
+    private void incrementStackPointer() {
+        registers.s = emulationMode ? (0x0100 | u8(registers.s + 1)) : u16(registers.s + 1);
     }
 
     public int SEC(int valueAddr) {
