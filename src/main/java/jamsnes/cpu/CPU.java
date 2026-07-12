@@ -674,11 +674,11 @@ public class CPU extends AMemory {
     }
 
     public int _getStackRelativeAddr() {
-        return u16(readPC() + registers.s);
+        return u16(readPC() + stackAddress());
     }
 
     public int _getStackRelativeIndirectIndexedYAddr() {
-        int pointer = u16(readPC() + registers.s);
+        int pointer = u16(readPC() + stackAddress());
         int base = bus.read(pointer) | (bus.read(u16(pointer + 1)) << 8);
         return u24((registers.dbr << 16) + base + indexYValue());
     }

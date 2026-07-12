@@ -513,6 +513,7 @@ class CpuOpcodeDispatchTest {
     @Test
     void executesIndirectLoadAndArithmeticOpcodes() {
         SNES snes = init();
+        snes.cpu.setEmulationMode(false);
         snes.cpu.registers().setPc(0x0200);
         snes.cpu.registers().d = 0x0100;
         snes.cpu.registers().s = 0x0300;
@@ -549,6 +550,7 @@ class CpuOpcodeDispatchTest {
     @Test
     void executesIndirectStoreOpcodes() {
         SNES snes = init();
+        snes.cpu.setEmulationMode(false);
         snes.cpu.registers().setPc(0x0200);
         snes.cpu.registers().d = 0x0100;
         snes.cpu.registers().s = 0x0300;
@@ -590,6 +592,7 @@ class CpuOpcodeDispatchTest {
     @Test
     void executesIndirectCompareAndSubtractOpcodes() {
         SNES snes = init();
+        snes.cpu.setEmulationMode(false);
         snes.cpu.registers().setPc(0x0200);
         snes.cpu.registers().d = 0x0100;
         snes.cpu.registers().s = 0x0300;
@@ -621,6 +624,7 @@ class CpuOpcodeDispatchTest {
     @Test
     void executesStackRelativeOpcodeWithWrappedAddress() {
         SNES snes = init();
+        snes.cpu.setEmulationMode(false);
         snes.cpu.registers().setPc(0x0200);
         snes.cpu.registers().s = 0xffff;
         snes.wram.data()[0x0001] = 0x42;

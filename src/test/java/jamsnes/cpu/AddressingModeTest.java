@@ -394,6 +394,7 @@ class AddressingModeTest {
     @Test
     void stackRelative() {
         SNES snes = init();
+        snes.cpu.setEmulationMode(false);
         snes.cpu.registers().setPac(0x808000);
         snes.cartridge.data()[0] = 0x06;
         snes.cpu.registers().s = 0x1010;
@@ -405,6 +406,7 @@ class AddressingModeTest {
     @Test
     void stackRelativeWrapsAtSixteenBits() {
         SNES snes = init();
+        snes.cpu.setEmulationMode(false);
         snes.cpu.registers().setPac(0x808000);
         snes.cartridge.data()[0] = 0x02;
         snes.cpu.registers().s = 0xffff;
@@ -416,6 +418,7 @@ class AddressingModeTest {
     @Test
     void stackRelativeIndirectIndexedY() {
         SNES snes = init();
+        snes.cpu.setEmulationMode(false);
         snes.cpu.registers().setPac(0x808000);
         snes.cartridge.data()[0] = 0x06;
         snes.cpu.registers().s = 0x1010;
@@ -423,6 +426,34 @@ class AddressingModeTest {
         snes.cpu.registers().dbr = 0x88;
         snes.wram.data()[0x1016] = 0xef;
         snes.wram.data()[0x1017] = 0x01;
+
+        assertEquals(0x8801f4, snes.cpu._getStackRelativeIndirectIndexedYAddr());
+        assertEquals(0x808001, snes.cpu.registers().pac);
+    }
+
+    @Test
+    void stackRelativeInEmulationModeUsesPageOneStackBase() {
+        SNES snes = init();
+        snes.cpu.setEmulationMode(true);
+        snes.cpu.registers().setPac(0x808000);
+        snes.cartridge.data()[0] = 0x06;
+        snes.cpu.registers().s = 0x1010;
+
+        assertEquals(0x0116, snes.cpu._getStackRelativeAddr());
+        assertEquals(0x808001, snes.cpu.registers().pac);
+    }
+
+    @Test
+    void stackRelativeIndirectIndexedYInEmulationModeUsesPageOneStackBase() {
+        SNES snes = init();
+        snes.cpu.setEmulationMode(true);
+        snes.cpu.registers().setPac(0x808000);
+        snes.cartridge.data()[0] = 0x06;
+        snes.cpu.registers().s = 0x1010;
+        snes.cpu.registers().y = 0x5;
+        snes.cpu.registers().dbr = 0x88;
+        snes.wram.data()[0x0116] = 0xef;
+        snes.wram.data()[0x0117] = 0x01;
 
         assertEquals(0x8801f4, snes.cpu._getStackRelativeIndirectIndexedYAddr());
         assertEquals(0x808001, snes.cpu.registers().pac);
