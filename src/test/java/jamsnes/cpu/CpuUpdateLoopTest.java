@@ -85,6 +85,40 @@ class CpuUpdateLoopTest {
     }
 
     @Test
+    void updateLeavesMaskedIrqPendingAndRunsNextInstruction() {
+        SNES snes = init();
+        snes.cpu.registers().setPc(0x0200);
+        snes.cpu.registers().p.i = true;
+        snes.cpu.WAI(0);
+        snes.cpu.requestIRQ();
+        writeProgram(snes, 0x0200, 0xea);
+
+        assertEquals(2, snes.cpu.update(2));
+        assertEquals(0x0201, snes.cpu.registers().pc);
+        assertFalse(snes.cpu.isWaitingForInterrupt());
+        assertTrue(snes.cpu.isIRQRequested);
+    }
+
+    @Test
+    void updateRunsIrqBeforeNextInstructionWhenInterruptsAreEnabled() {
+        SNES snes = init();
+        snes.cpu.registers().setPc(0x0200);
+        snes.cpu.registers().s = 0x01ff;
+        snes.cpu.registers().p.i = false;
+        snes.cartridge.header.emulationInterrupts.irq = 0x0300;
+        snes.cpu.requestIRQ();
+        snes.wram.data()[0x0300] = 0xea;
+        int pushedStatus = snes.cpu.registers().p.flags();
+
+        assertEquals(2, snes.cpu.update(2));
+        assertEquals(0x0301, snes.cpu.registers().pc);
+        assertEquals(0, snes.cpu.registers().pbr);
+        assertEquals(pushedStatus, snes.cpu._pop());
+        assertEquals(0x0200, snes.cpu._pop16());
+        assertFalse(snes.cpu.isIRQRequested);
+    }
+
+    @Test
     void updateRunsNativeAbortWithProgramBankOnStack() {
         SNES snes = init();
         snes.cpu.setEmulationMode(false);
