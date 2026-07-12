@@ -136,6 +136,28 @@ class DataTransmissionOpcodeDispatchTest {
     }
 
     @Test
+    void executesWordMoveOpcodesWithWrappedDirectPageHighByte() {
+        SNES snes = init();
+        snes.apu.internalRegisters().p = true;
+        snes.apu.internalRegisters().pc = 0x200;
+        snes.apu._internalWrite(0x1ff, 0x34);
+        snes.apu._internalWrite(0x100, 0x12);
+        snes.apu._internalWrite(0x200, 0xba);
+        snes.apu._internalWrite(0x201, 0xff);
+        snes.apu._internalWrite(0x202, 0xda);
+        snes.apu._internalWrite(0x203, 0xff);
+
+        assertEquals(5, snes.apu.executeInstruction());
+        assertEquals(0x1234, snes.apu.internalRegisters().ya());
+
+        snes.apu.internalRegisters().a = 0x78;
+        snes.apu.internalRegisters().y = 0x56;
+        assertEquals(5, snes.apu.executeInstruction());
+        assertEquals(0x78, snes.apu._internalRead(0x1ff));
+        assertEquals(0x56, snes.apu._internalRead(0x100));
+    }
+
+    @Test
     void executesDirectAndIndexedLoadOpcodes() {
         SNES snes = init();
         snes.apu.internalRegisters().pc = 0x200;
