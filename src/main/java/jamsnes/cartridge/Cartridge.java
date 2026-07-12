@@ -161,7 +161,7 @@ public class Cartridge extends Ram {
             if (info.emulationInterrupts.reset < 0x8000) {
                 continue;
             }
-            int resetOpcodeAddress = smc + info.emulationInterrupts.reset - 0x8000;
+            int resetOpcodeAddress = getResetOpcodeAddress(info, smc);
             if (resetOpcodeAddress >= getSize()) {
                 continue;
             }
@@ -179,6 +179,13 @@ public class Cartridge extends Ram {
             }
         }
         return bestAddress;
+    }
+
+    private int getResetOpcodeAddress(Header info, int smc) {
+        if (info.hasMappingMode(MappingMode.HIROM)) {
+            return smc + info.emulationInterrupts.reset;
+        }
+        return smc + info.emulationInterrupts.reset - 0x8000;
     }
 
     private boolean isSPCFile() {

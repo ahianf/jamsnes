@@ -1,6 +1,7 @@
 package jamsnes;
 
 import jamsnes.cartridge.CartridgeType;
+import jamsnes.cartridge.MappingMode;
 import jamsnes.cpu.DMA;
 import jamsnes.input.Joypad;
 import jamsnes.ppu.Background;
@@ -484,6 +485,21 @@ class SNESTest {
         assertEquals(0x8000, snes.cartridge.getSize());
     }
 
+    @Test
+    void loadRomScoresHiromResetOpcodeFromBankZeroMirror() throws IOException {
+        SNES snes = new SNES(new TestRenderer());
+        byte[] rom = ambiguousLoHiRomBytes();
+        Path romPath = tempDir.resolve("game-hirom-reset.sfc");
+        Files.write(romPath, rom);
+
+        snes.loadRom(romPath.toString());
+
+        assertEquals(true, snes.cartridge.header.hasMappingMode(MappingMode.HIROM));
+        assertEquals(false, snes.cartridge.header.hasMappingMode(MappingMode.LOROM));
+        assertEquals(0x8000, snes.cpu.registers().pc);
+        assertEquals(0x5c, snes.bus.read(0x008000));
+    }
+
     private Path writeGameRom() throws IOException {
         byte[] rom = gameRomBytes("JAMSNES TEST ROM", 0x00);
         Path romPath = tempDir.resolve("game.sfc");
@@ -534,6 +550,32 @@ class SNESTest {
         rom[base + 0xfc] = 0x00;
         rom[base + 0xfd] = (byte) 0x80;
         return rom;
+    }
+
+    private byte[] ambiguousLoHiRomBytes() {
+        byte[] rom = new byte[0x10000];
+        rom[0x0000] = 0x00;
+        rom[0x0001] = 0x78;
+        rom[0x8000] = 0x5c;
+        writeRomHeader(rom, 0x7f00, 0x20, "JAMSNES LOROM TIE", 0x01, 0x80, 0, 0);
+        writeRomHeader(rom, 0xff00, 0x21, "JAMSNES HIROM WIN", 0x00, 0x80, 0x1234, 0xedcb);
+        return rom;
+    }
+
+    private void writeRomHeader(byte[] rom, int base, int mode, String title, int resetLow, int resetHigh,
+                                int checksumComplement, int checksum) {
+        byte[] name = title.getBytes(StandardCharsets.ISO_8859_1);
+        System.arraycopy(name, 0, rom, base + 0xc0, name.length);
+        rom[base + 0xd5] = (byte) mode;
+        rom[base + 0xd6] = 0x00;
+        rom[base + 0xd7] = 0x06;
+        rom[base + 0xd8] = 0x00;
+        rom[base + 0xdc] = (byte) checksumComplement;
+        rom[base + 0xdd] = (byte) (checksumComplement >>> 8);
+        rom[base + 0xde] = (byte) checksum;
+        rom[base + 0xdf] = (byte) (checksum >>> 8);
+        rom[base + 0xfc] = (byte) resetLow;
+        rom[base + 0xfd] = (byte) resetHigh;
     }
 
     private Path writeSpcFile() throws IOException {
