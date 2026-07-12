@@ -27,7 +27,7 @@ class CpuOpcodeDispatchTest {
         snes.wram.data()[0x0200] = 0xd0;
         snes.wram.data()[0x0201] = 0xfe;
 
-        assertEquals(4, snes.cpu.executeInstruction());
+        assertEquals(3, snes.cpu.executeInstruction());
         assertEquals(0x0200, snes.cpu.registers().pc);
 
         snes.cpu.registers().p.z = true;
@@ -41,7 +41,7 @@ class CpuOpcodeDispatchTest {
         snes.cpu.registers().setPc(0x0200);
         writeProgram(snes, 0x0200, 0x10, 0x02, 0x10, 0x02);
 
-        assertEquals(4, snes.cpu.executeInstruction());
+        assertEquals(3, snes.cpu.executeInstruction());
         assertEquals(0x0204, snes.cpu.registers().pc);
 
         snes.cpu.registers().p.n = true;

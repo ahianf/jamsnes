@@ -188,7 +188,7 @@ class InternalInstructionTest {
         SNES snes = init();
         snes.cpu.registers().setPc(0x80);
         snes.wram.data()[0] = 0x50;
-        assertEquals(2, snes.cpu.BCC(0));
+        assertEquals(1, snes.cpu.BCC(0));
         assertEquals(0xd0, snes.cpu.registers().pc);
 
         snes.cpu.registers().setPc(0x80);
@@ -208,10 +208,42 @@ class InternalInstructionTest {
         assertEquals(0, snes.cpu.BCC(0));
         assertEquals(0x80, snes.cpu.registers().pc);
 
-        snes.cpu.setEmulationMode(false);
+        snes.cpu.setEmulationMode(true);
         snes.cpu.registers().p.c = false;
         assertEquals(1, snes.cpu.BCC(0));
         assertEquals(0x90, snes.cpu.registers().pc);
+
+        snes.cpu.registers().setPc(0x00f0);
+        snes.wram.data()[0] = 0x20;
+        assertEquals(2, snes.cpu.BCC(0));
+        assertEquals(0x0110, snes.cpu.registers().pc);
+
+        snes.cpu.setEmulationMode(false);
+        snes.cpu.registers().setPc(0x00f0);
+        snes.cpu.registers().p.c = false;
+        assertEquals(1, snes.cpu.BCC(0));
+        assertEquals(0x0110, snes.cpu.registers().pc);
+    }
+
+    @Test
+    void alwaysBranchOnlyAddsEmulationCycleWhenCrossingPage() {
+        SNES snes = init();
+        snes.cpu.setEmulationMode(true);
+        snes.cpu.registers().setPc(0x0080);
+        snes.wram.data()[0] = 0x10;
+
+        assertEquals(0, snes.cpu.BRA(0));
+        assertEquals(0x0090, snes.cpu.registers().pc);
+
+        snes.cpu.registers().setPc(0x00f0);
+        snes.wram.data()[0] = 0x20;
+        assertEquals(1, snes.cpu.BRA(0));
+        assertEquals(0x0110, snes.cpu.registers().pc);
+
+        snes.cpu.setEmulationMode(false);
+        snes.cpu.registers().setPc(0x00f0);
+        assertEquals(0, snes.cpu.BRA(0));
+        assertEquals(0x0110, snes.cpu.registers().pc);
     }
 
     @Test

@@ -938,8 +938,10 @@ public class CPU extends AMemory {
     }
 
     public int BRA(int valueAddr) {
-        registers.setPc(registers.pc + (byte) bus.read(valueAddr));
-        return emulationMode ? 1 : 0;
+        int oldPc = registers.pc;
+        int target = u16(oldPc + (byte) bus.read(valueAddr));
+        registers.setPc(target);
+        return relativePageCrossExtraCycle(oldPc, target);
     }
 
     public int BRL(int valueAddr) {
@@ -1542,10 +1544,17 @@ public class CPU extends AMemory {
     }
 
     private int branch(int valueAddr, boolean condition) {
-        if (condition) {
-            registers.setPc(registers.pc + (byte) bus.read(valueAddr));
+        if (!condition) {
+            return 0;
         }
-        return condition ? 1 + (emulationMode ? 1 : 0) : 0;
+        int oldPc = registers.pc;
+        int target = u16(oldPc + (byte) bus.read(valueAddr));
+        registers.setPc(target);
+        return 1 + relativePageCrossExtraCycle(oldPc, target);
+    }
+
+    private int relativePageCrossExtraCycle(int oldPc, int target) {
+        return emulationMode && (oldPc & 0xff00) != (target & 0xff00) ? 1 : 0;
     }
 
     private void checkInterrupts() {
