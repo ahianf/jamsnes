@@ -306,6 +306,26 @@ class PpuRenderIntegrationTest {
     }
 
     @Test
+    void largeObjectsWrapLowTileNibbleHorizontally() {
+        SNES snes = init(new TestRenderer());
+        writeColor(snes, 129, 0x001f);
+        writeColor(snes, 130, 0x03e0);
+        snes.ppu.oamram.write(0x000, 0x00);
+        snes.ppu.oamram.write(0x001, 0x00);
+        snes.ppu.oamram.write(0x002, 0x0f);
+        snes.ppu.oamram.write(0x003, 0x30);
+        snes.ppu.oamram.write(0x200, 0x02);
+        snes.ppu.vram.write(0x0000, 0x80);
+        snes.ppu.vram.write(0x0201, 0x80);
+        snes.bus.write(0x212c, 0x10);
+
+        snes.ppu.renderMainAndSubScreen();
+
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][8]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), snes.ppu.mainScreen()[8][8]);
+    }
+
+    @Test
     void updateDrawsComposedScreenToRenderer() {
         TestRenderer renderer = new TestRenderer();
         SNES snes = init(renderer);

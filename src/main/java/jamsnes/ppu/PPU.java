@@ -672,7 +672,7 @@ public class PPU extends AMemory {
         int tileY = sourceY / Tile.NB_PIXELS_HEIGHT;
         int pixelX = sourceX % Tile.NB_PIXELS_WIDTH;
         int pixelY = sourceY % Tile.NB_PIXELS_HEIGHT;
-        int tileNumber = tile + tileY * 16 + tileX;
+        int tileNumber = objectTileNumber(tile, tileX, tileY);
         int rowAddress = u16(baseAddress + tileNumber * OBJ_TILE_BYTE_SIZE + pixelY * 2);
         int colorIndex = readObjectPixelReference(rowAddress, pixelX);
         if (colorIndex == 0) {
@@ -681,6 +681,10 @@ public class PPU extends AMemory {
         int cgramAddress = (OBJ_PALETTE_BASE + palette * 16 + colorIndex) * 2;
         int color = cgram.read(cgramAddress) | (cgram.read(cgramAddress + 1) << 8);
         return PPUUtils.cgramColorToRGBA(color);
+    }
+
+    private int objectTileNumber(int tile, int tileX, int tileY) {
+        return (tile & 0xf0) + ((tile + tileX) & 0x0f) + tileY * 16;
     }
 
     private int readObjectPixelReference(int rowAddress, int pixelX) {
