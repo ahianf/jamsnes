@@ -157,6 +157,37 @@ class DmaTest {
     }
 
     @Test
+    void multipleHdmaChannelsInitializeAndTransferInChannelOrder() {
+        SNES snes = init();
+        DMA first = snes.cpu.dmaChannels()[0];
+        DMA second = snes.cpu.dmaChannels()[1];
+
+        snes.wram.data()[0x0200] = 0x01;
+        snes.wram.data()[0x0201] = 0x12;
+        snes.wram.data()[0x0202] = 0x34;
+        snes.wram.data()[0x0203] = 0x00;
+        snes.wram.data()[0x0300] = 0x01;
+        snes.wram.data()[0x0301] = 0x8f;
+        snes.wram.data()[0x0302] = 0x00;
+
+        snes.bus.write(0x2121, 0x20);
+        setupHdmaChannel(snes, 0, DMA.TWO_TO_ONE, 0x22, 0x7e0200);
+        setupHdmaChannel(snes, 1, DMA.ONE_TO_ONE, 0x00, 0x7e0300);
+        snes.bus.write(0x420c, 0x03);
+
+        assertEquals(16, snes.cpu.initializeHDMA());
+        assertEquals(40, snes.cpu.runHDMALine());
+
+        assertEquals(0x12, snes.ppu.cgram.read(0x20));
+        assertEquals(0x34, snes.ppu.cgram.read(0x21));
+        assertEquals(0x8f, snes.ppu.registers()[0x00]);
+        assertEquals(0x0204, first.getTableAddress());
+        assertEquals(0x0303, second.getTableAddress());
+        assertFalse(first.isHdmaEnabled());
+        assertFalse(second.isHdmaEnabled());
+    }
+
+    @Test
     void vramWriteIncrementsAfterLowByteByDefault() {
         SNES snes = init();
 
@@ -340,10 +371,15 @@ class DmaTest {
     }
 
     private static void setupHdma(SNES snes, int control, int port, int tableAddress) {
-        snes.bus.write(0x4300, control);
-        snes.bus.write(0x4301, port);
-        snes.bus.write(0x4302, tableAddress);
-        snes.bus.write(0x4303, tableAddress >>> 8);
-        snes.bus.write(0x4304, tableAddress >>> 16);
+        setupHdmaChannel(snes, 0, control, port, tableAddress);
+    }
+
+    private static void setupHdmaChannel(SNES snes, int channel, int control, int port, int tableAddress) {
+        int base = 0x4300 + channel * 0x10;
+        snes.bus.write(base, control);
+        snes.bus.write(base + 0x01, port);
+        snes.bus.write(base + 0x02, tableAddress);
+        snes.bus.write(base + 0x03, tableAddress >>> 8);
+        snes.bus.write(base + 0x04, tableAddress >>> 16);
     }
 }
