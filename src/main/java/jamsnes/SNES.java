@@ -232,6 +232,7 @@ public class SNES {
         boolean hTimerEnabled = (nmitimen & NMITIMEN_H_IRQ_ENABLE) != 0;
         boolean vTimerEnabled = (nmitimen & NMITIMEN_V_IRQ_ENABLE) != 0;
         if (!hTimerEnabled && !vTimerEnabled) {
+            clearLastTimerIrqPosition();
             return;
         }
 
@@ -244,6 +245,11 @@ public class SNES {
         lastTimerIrqHCounter = matchedPosition[0];
         lastTimerIrqVCounter = matchedPosition[1];
         cpu.requestIRQ();
+    }
+
+    private void clearLastTimerIrqPosition() {
+        lastTimerIrqHCounter = -1;
+        lastTimerIrqVCounter = -1;
     }
 
     private int[] timerMatchPosition(boolean hTimerEnabled, boolean vTimerEnabled, int startHCounter, int startVCounter, int cycles) {
