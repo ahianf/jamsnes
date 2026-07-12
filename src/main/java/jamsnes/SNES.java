@@ -28,6 +28,7 @@ public class SNES {
     public final APU apu;
     private int lastTimerIrqHCounter = -1;
     private int lastTimerIrqVCounter = -1;
+    private int lastTimerEnableGeneration;
     private boolean hdmaInitializedThisFrame;
     private boolean wasInVBlank;
     private boolean wasNmiEnabled;
@@ -69,6 +70,7 @@ public class SNES {
     private void resetRuntimeTimingState() {
         lastTimerIrqHCounter = -1;
         lastTimerIrqVCounter = -1;
+        lastTimerEnableGeneration = cpu.timerEnableGeneration();
         hdmaInitializedThisFrame = false;
         wasInVBlank = ppu.isInVBlank();
         wasNmiEnabled = nmiEnabled();
@@ -229,6 +231,10 @@ public class SNES {
 
     private void updateTimerIrq(int startHCounter, int startVCounter, int cycles) {
         int nmitimen = cpu.internalRegisters()[0x00];
+        if (lastTimerEnableGeneration != cpu.timerEnableGeneration()) {
+            clearLastTimerIrqPosition();
+            lastTimerEnableGeneration = cpu.timerEnableGeneration();
+        }
         boolean hTimerEnabled = (nmitimen & NMITIMEN_H_IRQ_ENABLE) != 0;
         boolean vTimerEnabled = (nmitimen & NMITIMEN_V_IRQ_ENABLE) != 0;
         if (!hTimerEnabled && !vTimerEnabled) {

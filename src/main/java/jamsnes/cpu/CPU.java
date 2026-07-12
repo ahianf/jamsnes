@@ -17,6 +17,7 @@ public class CPU extends AMemory {
     private final DMA[] dmaChannels = new DMA[8];
     private final Header cartridgeHeader;
     private IMemoryBus bus;
+    private int timerEnableGeneration;
     private boolean hasIndexCrossedPageBoundary;
     private boolean emulationMode = true;
     private boolean stopped;
@@ -125,6 +126,9 @@ public class CPU extends AMemory {
         if (!isInternalRegister(address)) {
             throw new InvalidAddress("CPU Internal Registers write", address + start);
         }
+        if (address == 0x00 && ((internalRegisters[address] ^ value) & 0x30) != 0) {
+            timerEnableGeneration++;
+        }
         internalRegisters[address] = value;
         if (address == 0x03) {
             runMultiplication();
@@ -181,6 +185,10 @@ public class CPU extends AMemory {
 
     public DMA[] dmaChannels() {
         return dmaChannels;
+    }
+
+    public int timerEnableGeneration() {
+        return timerEnableGeneration;
     }
 
     public void requestNMI() {

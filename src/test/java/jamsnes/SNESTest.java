@@ -450,6 +450,25 @@ class SNESTest {
     }
 
     @Test
+    void updateTimerIrqCanReassertWhenTimerEnableMaskChangesBetweenChecks() {
+        SNES snes = new SNES(new TestRenderer());
+        snes.bus.mapComponents(snes);
+        snes.bus.write(0x4200, 0x10);
+        snes.bus.write(0x4207, 0x08);
+        snes.bus.write(0x4208, 0x00);
+
+        snes.ppu.update(8);
+        snes.updateTimerIrq();
+        assertEquals(0x80, snes.bus.read(0x4211));
+
+        snes.bus.write(0x4200, 0x00);
+        snes.bus.write(0x4200, 0x10);
+        snes.updateTimerIrq();
+
+        assertEquals(0x80, snes.bus.read(0x4211));
+    }
+
+    @Test
     void updateInitializesAndRunsHdmaWhenEnteringHBlank() {
         SNES snes = new SNES(new TestRenderer());
         snes.bus.mapComponents(snes);
