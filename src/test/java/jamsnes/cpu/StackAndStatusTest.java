@@ -83,6 +83,17 @@ class StackAndStatusTest {
         assertEquals(0x0100, snes.cpu.registers().s);
     }
 
+    @Test
+    void enteringEmulationModeForcesStackPageOne() {
+        SNES snes = init();
+        snes.cpu.setEmulationMode(false);
+        snes.cpu.registers().s = 0xabcd;
+
+        snes.cpu.setEmulationMode(true);
+
+        assertEquals(0x01cd, snes.cpu.registers().s);
+    }
+
     private static SNES init() {
         SNES snes = new SNES(new NoRenderer(0, 0, 0));
         snes.cartridge.setSize(100);

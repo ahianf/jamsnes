@@ -66,6 +66,9 @@ public class CPU extends AMemory {
 
     public void setEmulationMode(boolean emulationMode) {
         this.emulationMode = emulationMode;
+        if (emulationMode) {
+            registers.s = 0x0100 | registers.sl();
+        }
     }
 
     public boolean isStopped() {
