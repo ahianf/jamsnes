@@ -1278,7 +1278,8 @@ public class APU extends AMemory {
 
     public int MUL() {
         internalRegisters.setYa(internalRegisters.y * internalRegisters.a);
-        setNzFlags(internalRegisters.y);
+        internalRegisters.n = (internalRegisters.a & 0x80) != 0;
+        internalRegisters.z = internalRegisters.y == 0;
         return 9;
     }
 

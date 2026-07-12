@@ -189,7 +189,7 @@ class ArithmeticOpcodeDispatchTest {
         snes.apu._internalWrite(0x210, 0xcf);
         assertEquals(9, snes.apu.executeInstruction());
         assertEquals(230, snes.apu.internalRegisters().ya());
-        assertFalse(snes.apu.internalRegisters().n);
+        assertTrue(snes.apu.internalRegisters().n);
         assertTrue(snes.apu.internalRegisters().z);
 
         snes.apu.internalRegisters().pc = 0x220;
