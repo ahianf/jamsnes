@@ -139,14 +139,14 @@ class InternalInstructionTest {
         snes.cpu.registers().y = 0xef00;
         snes.cpu._push8(0x00);
         snes.cpu.PLX(0);
-        assertEquals(0xcd00, snes.cpu.registers().x);
+        assertEquals(0x0000, snes.cpu.registers().x);
         assertTrue(snes.cpu.registers().p.z);
         assertFalse(snes.cpu.registers().p.n);
 
         snes.cpu.registers().s = 0x0010;
         snes.cpu._push8(0x80);
         snes.cpu.PLY(0);
-        assertEquals(0xef80, snes.cpu.registers().y);
+        assertEquals(0x0080, snes.cpu.registers().y);
         assertTrue(snes.cpu.registers().p.n);
         assertFalse(snes.cpu.registers().p.z);
     }

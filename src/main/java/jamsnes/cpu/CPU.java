@@ -840,7 +840,7 @@ public class CPU extends AMemory {
 
     public int PLX(int valueAddr) {
         if (registers.p.x_b) {
-            registers.x = u16((registers.x & 0xff00) | _pop());
+            registers.x = _pop();
         } else {
             registers.x = _pop16();
         }
@@ -850,7 +850,7 @@ public class CPU extends AMemory {
 
     public int PLY(int valueAddr) {
         if (registers.p.x_b) {
-            registers.y = u16((registers.y & 0xff00) | _pop());
+            registers.y = _pop();
         } else {
             registers.y = _pop16();
         }
