@@ -2,6 +2,7 @@ package jamsnes;
 
 import jamsnes.renderer.IRenderer;
 import jamsnes.renderer.NoRenderer;
+import jamsnes.renderer.lwjgl.LwjglRenderer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -14,6 +15,7 @@ import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class MainTest {
@@ -86,6 +88,22 @@ class MainTest {
 
         assertEquals(1, exitCode);
         assertTrue(err.toString(StandardCharsets.UTF_8).contains("Could not open the rom file"));
+    }
+
+    @Test
+    void defaultRendererUsesLwjglWhenRequested() {
+        String previous = System.getProperty("jamsnes.renderer");
+        try {
+            System.setProperty("jamsnes.renderer", "lwjgl");
+
+            assertInstanceOf(LwjglRenderer.class, Main.defaultRenderer());
+        } finally {
+            if (previous == null) {
+                System.clearProperty("jamsnes.renderer");
+            } else {
+                System.setProperty("jamsnes.renderer", previous);
+            }
+        }
     }
 
     private Path writeGameRom() throws IOException {
