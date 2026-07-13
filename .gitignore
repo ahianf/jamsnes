@@ -4,3 +4,7 @@ ui/*.h
 out/
 .vs/
 target/
+local-roms/
+*.sfc
+*.smc
+*.spc
