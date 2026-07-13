@@ -12,6 +12,7 @@ import static jamsnes.models.Unsigned.u24;
 import static jamsnes.models.Unsigned.u8;
 
 public class CPU extends AMemory {
+    private static final int CPU_VERSION = 2;
     private final Registers registers = new Registers();
     private final int[] internalRegisters = new int[0x300];
     private final DMA[] dmaChannels = new DMA[8];
@@ -202,14 +203,14 @@ public class CPU extends AMemory {
     }
 
     private int readNmiStatus() {
-        int value = internalRegisters[0x10];
-        internalRegisters[0x10] = value & 0x7f;
+        int value = (internalRegisters[0x10] & 0x80) | (bus.getOpenBus() & 0x70) | CPU_VERSION;
+        internalRegisters[0x10] &= 0x7f;
         isNMIRequested = false;
         return value;
     }
 
     private int readIrqStatus() {
-        int value = internalRegisters[0x11];
+        int value = (internalRegisters[0x11] & 0x80) | (bus.getOpenBus() & 0x7f);
         clearIrqStatus();
         return value;
     }

@@ -157,6 +157,7 @@ public class MemoryBus implements IMemoryBus {
         shadows.add(new MemoryShadow(console.cpu, (normalizedBank << 16) + 0x4300, (normalizedBank << 16) + 0x437f, 0x100));
     }
 
+    @Override
     public int getOpenBus() {
         return openBus;
     }

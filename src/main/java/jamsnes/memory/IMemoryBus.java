@@ -9,6 +9,8 @@ public interface IMemoryBus {
 
     int peekValue(int address);
 
+    int getOpenBus();
+
     void write(int address, int data);
 
     IMemory getAccessor(int address);

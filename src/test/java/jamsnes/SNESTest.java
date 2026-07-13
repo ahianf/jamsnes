@@ -411,7 +411,7 @@ class SNESTest {
         snes.update();
 
         assertEquals(0x00, snes.cpu.internalRegisters()[0x10]);
-        assertEquals(0x00, snes.bus.read(0x4210));
+        assertEquals(0x02, snes.bus.read(0x4210));
     }
 
     @Test
@@ -426,12 +426,12 @@ class SNESTest {
         snes.update();
 
         assertEquals(0x80, snes.cpu.internalRegisters()[0x10]);
-        assertEquals(0x80, snes.bus.read(0x4210));
-        assertEquals(0x00, snes.bus.read(0x4210));
+        assertEquals(0x82, snes.bus.read(0x4210));
+        assertEquals(0x02, snes.bus.read(0x4210));
 
         snes.update();
 
-        assertEquals(0x00, snes.bus.read(0x4210));
+        assertEquals(0x02, snes.bus.read(0x4210));
     }
 
     @Test
@@ -443,13 +443,13 @@ class SNESTest {
         snes.ppu.advanceCountersOnly(PPU.H_COUNTER_DOTS * PPU.V_BLANK_START_SCANLINE + 12);
 
         snes.update();
-        assertEquals(0x00, snes.bus.read(0x4210));
+        assertEquals(0x02, snes.bus.read(0x4210));
 
         snes.bus.write(0x4200, 0x80);
         snes.update();
 
-        assertEquals(0x80, snes.bus.read(0x4210));
-        assertEquals(0x00, snes.bus.read(0x4210));
+        assertEquals(0x82, snes.bus.read(0x4210));
+        assertEquals(0x02, snes.bus.read(0x4210));
     }
 
     @Test

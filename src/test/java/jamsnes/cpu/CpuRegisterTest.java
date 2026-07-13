@@ -60,9 +60,19 @@ class CpuRegisterTest {
 
         snes.cpu.requestNMI();
 
-        assertEquals(0x80, snes.bus.read(0x4210));
-        assertEquals(0x00, snes.bus.read(0x4210));
+        assertEquals(0x82, snes.bus.read(0x4210));
+        assertEquals(0x02, snes.bus.read(0x4210));
         assertFalse(snes.cpu.isNMIRequested);
+    }
+
+    @Test
+    void rdnmiReadCarriesOpenBusBitsAndCpuVersion() {
+        SNES snes = init();
+        snes.bus.setOpenBus(0x7a);
+        snes.cpu.requestNMI();
+
+        assertEquals(0xf2, snes.bus.read(0x4210));
+        assertEquals(0x72, snes.bus.read(0x4210));
     }
 
     @Test
@@ -74,6 +84,16 @@ class CpuRegisterTest {
         assertEquals(0x80, snes.bus.read(0x4211));
         assertEquals(0x00, snes.bus.read(0x4211));
         assertFalse(snes.cpu.isIRQRequested);
+    }
+
+    @Test
+    void timeupReadCarriesOpenBusLowerBits() {
+        SNES snes = init();
+        snes.bus.setOpenBus(0x5a);
+        snes.cpu.requestIRQ();
+
+        assertEquals(0xda, snes.bus.read(0x4211));
+        assertEquals(0x5a, snes.bus.read(0x4211));
     }
 
     @Test
@@ -130,8 +150,8 @@ class CpuRegisterTest {
         snes.bus.write(0x4216, 0xff);
         snes.bus.write(0x4218, 0xab);
 
-        assertEquals(0x80, snes.bus.read(0x4210));
-        assertEquals(0x80, snes.bus.read(0x4211));
+        assertEquals(0x82, snes.bus.read(0x4210));
+        assertEquals(0x82, snes.bus.read(0x4211));
         assertEquals(0xa8, snes.bus.read(0x4216));
         assertEquals(0x56, snes.bus.read(0x4218));
     }
