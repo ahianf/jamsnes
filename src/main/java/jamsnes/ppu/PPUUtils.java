@@ -17,12 +17,12 @@ public final class PPUUtils {
     }
 
     public static int directColorToRGBA(int palette, int colorIndex) {
-        int cgramColor = ((palette << 2) & 0x1c00)
-                | ((colorIndex & 0xc0) << 5)
-                | ((palette << 1) & 0x00e0)
-                | ((colorIndex & 0x38) << 2)
-                | (palette & 0x0003)
-                | ((colorIndex & 0x07) << 2);
+        int cgramColor = ((colorIndex & 0xc0) << 7)
+                | ((palette & 0x04) << 10)
+                | ((colorIndex & 0x38) << 4)
+                | ((palette & 0x02) << 5)
+                | ((colorIndex & 0x07) << 2)
+                | ((palette & 0x01) << 1);
         return cgramColorToRGBA(cgramColor);
     }
 }

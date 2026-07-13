@@ -244,6 +244,12 @@ class TileRendererTest {
     @Test
     void directColorToRGBA() {
         assertEquals(0xe70000ff, PPUUtils.directColorToRGBA(0, 0x07));
+        assertEquals(PPUUtils.cgramColorToRGBA(0x0002), PPUUtils.directColorToRGBA(0b001, 0x00));
+        assertEquals(PPUUtils.cgramColorToRGBA(0x0040), PPUUtils.directColorToRGBA(0b010, 0x00));
+        assertEquals(PPUUtils.cgramColorToRGBA(0x1000), PPUUtils.directColorToRGBA(0b100, 0x00));
+        assertEquals(PPUUtils.cgramColorToRGBA(0x0380), PPUUtils.directColorToRGBA(0, 0x38));
+        assertEquals(PPUUtils.cgramColorToRGBA(0x6000), PPUUtils.directColorToRGBA(0, 0xc0));
+        assertEquals(PPUUtils.cgramColorToRGBA(0x73de), PPUUtils.directColorToRGBA(0b111, 0xff));
     }
 
     private static TileRenderer renderer(Ram vram) {
