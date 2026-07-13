@@ -88,6 +88,15 @@ public class CPU extends AMemory {
     }
 
     @Override
+    public boolean hasMemoryAt(int address) {
+        int normalized = u24(address);
+        if (normalized < start || normalized > end) {
+            return false;
+        }
+        return isInternalRegister(normalized - start);
+    }
+
+    @Override
     public int read(int address) {
         if (address == 0x0b) {
             int value = 0;

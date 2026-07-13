@@ -135,7 +135,8 @@ public class MemoryBus implements IMemoryBus {
         shadows.add(new MemoryShadow(console.wramPort, (normalizedBank << 16) + 0x2180, (normalizedBank << 16) + 0x2183));
         shadows.add(new MemoryShadow(console.apu, (normalizedBank << 16) + 0x2140, (normalizedBank << 16) + 0x2143));
         shadows.add(new MemoryShadow(console.joypad, (normalizedBank << 16) + 0x4016, (normalizedBank << 16) + 0x4017));
-        shadows.add(new MemoryShadow(console.cpu, (normalizedBank << 16) + 0x4200, (normalizedBank << 16) + 0x421f));
+        shadows.add(new MemoryShadow(console.cpu, (normalizedBank << 16) + 0x4200, (normalizedBank << 16) + 0x420d));
+        shadows.add(new MemoryShadow(console.cpu, (normalizedBank << 16) + 0x4210, (normalizedBank << 16) + 0x421f));
         shadows.add(new MemoryShadow(console.cpu, (normalizedBank << 16) + 0x4300, (normalizedBank << 16) + 0x437f, 0x100));
     }
 

@@ -40,6 +40,10 @@ class MemoryBusTest {
         assertMirrors(snes.cpu, snes.bus.getAccessor(0x004300));
         assertMirrors(snes.cpu, snes.bus.getAccessor(0x00437f));
         assertSame(snes.cpu, snes.bus.getAccessor(0x004212));
+        assertNull(snes.bus.getAccessor(0x00420e));
+        assertNull(snes.bus.getAccessor(0x00420f));
+        assertNull(snes.bus.getAccessor(0x80420e));
+        assertNull(snes.bus.getAccessor(0xbf420f));
         assertNull(snes.bus.getAccessor(0x004380));
         assertNull(snes.bus.getAccessor(0x004400));
         assertMirrors(snes.cpu, snes.bus.getAccessor(0x804212));
@@ -148,11 +152,17 @@ class MemoryBusTest {
         SNES snes = init();
         snes.bus.setOpenBus(0x5a);
 
+        assertEquals(0x5a, snes.bus.read(0x00420e));
+        assertEquals(0x5a, snes.bus.read(0x80420f));
         assertEquals(0x5a, snes.bus.read(0x004380));
         assertEquals(0x5a, snes.bus.read(0x004400));
 
+        snes.bus.write(0x00420e, 0x56);
+        snes.bus.write(0x80420f, 0x78);
         snes.bus.write(0x004380, 0x12);
         snes.bus.write(0x004400, 0x34);
+        assertEquals(0x5a, snes.bus.read(0x00420e));
+        assertEquals(0x5a, snes.bus.read(0x80420f));
         assertEquals(0x5a, snes.bus.read(0x004380));
         assertEquals(0x5a, snes.bus.read(0x004400));
     }
