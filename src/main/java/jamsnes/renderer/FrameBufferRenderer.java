@@ -3,6 +3,7 @@ package jamsnes.renderer;
 import jamsnes.SNES;
 
 import java.util.Arrays;
+import java.util.zip.CRC32;
 
 public class FrameBufferRenderer implements IRenderer {
     private final int height;
@@ -96,5 +97,16 @@ public class FrameBufferRenderer implements IRenderer {
 
     public int[] frameBufferCopy() {
         return Arrays.copyOf(frameBuffer, frameBuffer.length);
+    }
+
+    public long frameBufferCrc32() {
+        CRC32 crc = new CRC32();
+        for (int pixel : frameBuffer) {
+            crc.update((pixel >>> 24) & 0xff);
+            crc.update((pixel >>> 16) & 0xff);
+            crc.update((pixel >>> 8) & 0xff);
+            crc.update(pixel & 0xff);
+        }
+        return crc.getValue();
     }
 }

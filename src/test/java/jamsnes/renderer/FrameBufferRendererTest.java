@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -36,6 +37,19 @@ class FrameBufferRendererTest {
 
         assertArrayEquals(new int[]{0, 0x12345678}, snapshot);
         assertNotSame(renderer.frameBuffer(), snapshot);
+    }
+
+    @Test
+    void exposesFrameBufferCrc32ForGoldenChecks() {
+        FrameBufferRenderer renderer = new FrameBufferRenderer(1, 2, 60);
+        renderer.putPixel(0, 0, 0x11223344);
+        renderer.putPixel(0, 1, 0xaabbccdd);
+        long firstHash = renderer.frameBufferCrc32();
+
+        assertEquals(firstHash, renderer.frameBufferCrc32());
+
+        renderer.putPixel(0, 1, 0xaabbccde);
+        assertNotEquals(firstHash, renderer.frameBufferCrc32());
     }
 
     @Test

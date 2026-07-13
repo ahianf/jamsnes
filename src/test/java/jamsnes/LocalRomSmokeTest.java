@@ -1,18 +1,21 @@
 package jamsnes;
 
-import jamsnes.renderer.IRenderer;
+import jamsnes.ppu.Background;
+import jamsnes.renderer.FrameBufferRenderer;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 class LocalRomSmokeTest {
     private static final String ROM_PROPERTY = "jamsnes.smoke.rom";
     private static final String UPDATES_PROPERTY = "jamsnes.smoke.updates";
+    private static final String FRAME_CRC32_PROPERTY = "jamsnes.smoke.frameCrc32";
     private static final int DEFAULT_UPDATES = 600;
 
     @Test
@@ -23,7 +26,7 @@ class LocalRomSmokeTest {
         Path rom = Path.of(romProperty);
         assumeTrue(Files.isRegularFile(rom), () -> "Local smoke ROM does not exist: " + rom);
 
-        SmokeRenderer renderer = new SmokeRenderer();
+        FrameBufferRenderer renderer = new FrameBufferRenderer(Background.BUFFER_SIZE, Background.BUFFER_SIZE, 60);
         SNES snes = assertDoesNotThrow(() -> new SNES(rom.toString(), renderer));
         int updates = smokeUpdates();
 
@@ -34,10 +37,15 @@ class LocalRomSmokeTest {
         });
 
         if (snes.cartridge.getType() == jamsnes.cartridge.CartridgeType.AUDIO) {
-            assertTrue(renderer.audioCalls > 0 || renderer.audioSamples > 0,
+            assertTrue(renderer.audioCalls() > 0 || renderer.audioSamples() > 0,
                     "SPC smoke run should produce or attempt audio samples");
         } else {
-            assertTrue(renderer.drawScreenCalls > 0, "Game smoke run should draw at least one frame");
+            assertTrue(renderer.drawScreenCalls() > 0, "Game smoke run should draw at least one frame");
+            String expectedFrameCrc32 = System.getProperty(FRAME_CRC32_PROPERTY);
+            if (expectedFrameCrc32 != null && !expectedFrameCrc32.isBlank()) {
+                assertEquals(parseCrc32(expectedFrameCrc32), renderer.frameBufferCrc32(),
+                        "Local smoke frame CRC32 mismatch");
+            }
         }
     }
 
@@ -53,32 +61,11 @@ class LocalRomSmokeTest {
         return updates;
     }
 
-    private static final class SmokeRenderer implements IRenderer {
-        private int drawScreenCalls;
-        private int audioCalls;
-        private int audioSamples;
-
-        @Override
-        public void setWindowName(String newWindowName) {
+    private static long parseCrc32(String value) {
+        String normalized = value.trim();
+        if (normalized.startsWith("0x") || normalized.startsWith("0X")) {
+            normalized = normalized.substring(2);
         }
-
-        @Override
-        public void drawScreen() {
-            drawScreenCalls++;
-        }
-
-        @Override
-        public void putPixel(int y, int x, int rgba) {
-        }
-
-        @Override
-        public void createWindow(SNES snes, int maxFPS) {
-        }
-
-        @Override
-        public void playAudio(short[] samples) {
-            audioCalls++;
-            audioSamples += samples.length;
-        }
+        return Long.parseUnsignedLong(normalized, 16) & 0xffffffffL;
     }
 }
