@@ -1,6 +1,7 @@
 package jamsnes.renderer;
 
 import jamsnes.SNES;
+import jamsnes.runtime.EmulatorLoop;
 
 public class NoRenderer implements IRenderer {
     public NoRenderer(int height, int width, int maxFPS) {
@@ -20,7 +21,7 @@ public class NoRenderer implements IRenderer {
 
     @Override
     public void createWindow(SNES snes, int maxFPS) {
-        snes.update();
+        EmulatorLoop.runForUpdates(snes, 1);
     }
 
     @Override
