@@ -401,12 +401,13 @@ public class PPU extends AMemory {
     }
 
     private int readCgData() {
-        int address = ppuRegisters.cgAddress();
+        int address = ppuRegisters.cgByteAddress();
         int value = cgram.read(address);
-        if ((address & 1) != 0) {
+        if (!ppuRegisters.isCgLowByte()) {
             value &= 0x7f;
+            ppuRegisters.incrementCgAddress();
         }
-        ppuRegisters.incrementCgAddress();
+        ppuRegisters.toggleCgLowByte();
         return value;
     }
 
@@ -478,9 +479,9 @@ public class PPU extends AMemory {
             ppuRegisters.setCgDataLow(value);
         } else {
             ppuRegisters.setCgDataHigh(value);
-            cgram.write(ppuRegisters.cgAddress(), ppuRegisters.cgDataLow());
-            ppuRegisters.incrementCgAddress();
-            cgram.write(ppuRegisters.cgAddress(), ppuRegisters.cgDataHigh());
+            int byteAddress = u16(ppuRegisters.cgAddress() * 2);
+            cgram.write(byteAddress, ppuRegisters.cgDataLow());
+            cgram.write(u16(byteAddress + 1), ppuRegisters.cgDataHigh());
             ppuRegisters.incrementCgAddress();
         }
         ppuRegisters.toggleCgLowByte();

@@ -208,9 +208,9 @@ class PpuRegisterWriteTest {
         snes.bus.write(0x2122, 0xf8);
         assertEquals(0x78, snes.ppu.ppuRegisters().cgDataHigh());
         assertTrue(snes.ppu.ppuRegisters().isCgLowByte());
-        assertEquals(0x12, snes.ppu.ppuRegisters().cgAddress());
-        assertEquals(0xff, snes.ppu.cgram.read(0x10));
-        assertEquals(0x78, snes.ppu.cgram.read(0x11));
+        assertEquals(0x11, snes.ppu.ppuRegisters().cgAddress());
+        assertEquals(0xff, snes.ppu.cgram.read(0x20));
+        assertEquals(0x78, snes.ppu.cgram.read(0x21));
     }
 
     @Test

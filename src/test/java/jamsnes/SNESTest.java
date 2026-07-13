@@ -126,7 +126,7 @@ class SNESTest {
         snes.bus.write(0x2122, 0x56);
         assertEquals(0x34, snes.ppu.cgram.read(0));
         assertEquals(0x56, snes.ppu.cgram.read(1));
-        assertEquals(2, snes.ppu.ppuRegisters().cgAddress());
+        assertEquals(1, snes.ppu.ppuRegisters().cgAddress());
         assertEquals(true, snes.ppu.ppuRegisters().isCgLowByte());
     }
 
@@ -501,8 +501,8 @@ class SNESTest {
 
         snes.update();
 
-        assertEquals(0x12, snes.ppu.cgram.read(0x20));
-        assertEquals(0x34, snes.ppu.cgram.read(0x21));
+        assertEquals(0x12, snes.ppu.cgram.read(0x40));
+        assertEquals(0x34, snes.ppu.cgram.read(0x41));
         assertEquals(287, snes.ppu.hCounter());
         assertEquals(0, snes.ppu.vCounter());
         assertEquals(0, snes.bus.read(0x420b));

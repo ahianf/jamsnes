@@ -90,8 +90,8 @@ class DmaTest {
 
         assertEquals(8, snes.cpu.initializeHDMA());
         assertEquals(16, snes.cpu.runHDMALine());
-        assertEquals(0x12, snes.ppu.cgram.read(0x20));
-        assertEquals(0x34, snes.ppu.cgram.read(0x21));
+        assertEquals(0x12, snes.ppu.cgram.read(0x40));
+        assertEquals(0x34, snes.ppu.cgram.read(0x41));
         assertEquals(0x01, dma.getLineCounter());
         assertTrue(dma.isHdmaEnabled());
 
@@ -121,10 +121,10 @@ class DmaTest {
         assertEquals(0x81, dma.getLineCounter());
         assertEquals(16 + 8, snes.cpu.runHDMALine());
 
-        assertEquals(0x12, snes.ppu.cgram.read(0x20));
-        assertEquals(0x34, snes.ppu.cgram.read(0x21));
-        assertEquals(0x56, snes.ppu.cgram.read(0x22));
-        assertEquals(0x78, snes.ppu.cgram.read(0x23));
+        assertEquals(0x12, snes.ppu.cgram.read(0x40));
+        assertEquals(0x34, snes.ppu.cgram.read(0x41));
+        assertEquals(0x56, snes.ppu.cgram.read(0x42));
+        assertEquals(0x78, snes.ppu.cgram.read(0x43));
         assertEquals(0x0206, dma.getTableAddress());
         assertFalse(dma.isHdmaEnabled());
     }
@@ -179,8 +179,8 @@ class DmaTest {
         assertEquals(24, snes.cpu.initializeHDMA());
         assertEquals(16 + 8, snes.cpu.runHDMALine());
 
-        assertEquals(0xab, snes.ppu.cgram.read(0x20));
-        assertEquals(0x4d, snes.ppu.cgram.read(0x21));
+        assertEquals(0xab, snes.ppu.cgram.read(0x40));
+        assertEquals(0x4d, snes.ppu.cgram.read(0x41));
         assertEquals(0x0402, dma.getCount());
         assertEquals(0x0204, dma.getTableAddress());
         assertFalse(dma.isHdmaEnabled());
@@ -208,8 +208,8 @@ class DmaTest {
         assertEquals(16, snes.cpu.initializeHDMA());
         assertEquals(40, snes.cpu.runHDMALine());
 
-        assertEquals(0x12, snes.ppu.cgram.read(0x20));
-        assertEquals(0x34, snes.ppu.cgram.read(0x21));
+        assertEquals(0x12, snes.ppu.cgram.read(0x40));
+        assertEquals(0x34, snes.ppu.cgram.read(0x41));
         assertEquals(0x8f, snes.ppu.registers()[0x00]);
         assertEquals(0x0204, first.getTableAddress());
         assertEquals(0x0303, second.getTableAddress());
@@ -290,8 +290,8 @@ class DmaTest {
     @Test
     void bBusToABusDmaTransfersBytesAndIncrementsAAddress() {
         SNES snes = init();
-        snes.ppu.cgram.write(0x20, 0x12);
-        snes.ppu.cgram.write(0x21, 0x34);
+        snes.ppu.cgram.write(0x40, 0x12);
+        snes.ppu.cgram.write(0x41, 0x34);
         snes.bus.write(0x2121, 0x20);
 
         snes.bus.write(0x4301, 0x3b);
@@ -334,8 +334,8 @@ class DmaTest {
 
         assertEquals(8 + 8 * 3, cycles);
         assertEquals(0x7e0040, dma.getAAddress());
-        assertEquals(0x12, snes.ppu.cgram.read(0x20));
-        assertEquals(0x12, snes.ppu.cgram.read(0x21));
+        assertEquals(0x12, snes.ppu.cgram.read(0x40));
+        assertEquals(0x12, snes.ppu.cgram.read(0x41));
     }
 
     @Test
@@ -359,8 +359,8 @@ class DmaTest {
 
         assertEquals(8 + 8 * 2, cycles);
         assertEquals(0x7e0050, dma.getAAddress());
-        assertEquals(0x33, snes.ppu.cgram.read(0x20));
-        assertEquals(0x22, snes.ppu.cgram.read(0x21));
+        assertEquals(0x33, snes.ppu.cgram.read(0x40));
+        assertEquals(0x22, snes.ppu.cgram.read(0x41));
     }
 
     @Test

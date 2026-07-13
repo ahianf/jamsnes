@@ -349,6 +349,10 @@ public class PPURegisters {
         return cgLowByte;
     }
 
+    int cgByteAddress() {
+        return u16(cgAddress * 2 + (cgLowByte ? 0 : 1));
+    }
+
     void setCgAddress(int value) {
         cgAddress = u8(value);
         cgLowByte = true;

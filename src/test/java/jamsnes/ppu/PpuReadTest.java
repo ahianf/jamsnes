@@ -62,28 +62,28 @@ class PpuReadTest {
     @Test
     void cgramDataReadReturnsCurrentAddressAndIncrements() {
         SNES snes = init();
-        snes.ppu.cgram.write(0x20, 0x12);
-        snes.ppu.cgram.write(0x21, 0x34);
+        snes.ppu.cgram.write(0x40, 0x12);
+        snes.ppu.cgram.write(0x41, 0x34);
 
         snes.bus.write(0x2121, 0x20);
 
         assertEquals(0x12, snes.bus.read(0x213b));
-        assertEquals(0x21, snes.ppu.ppuRegisters().cgAddress());
+        assertEquals(0x20, snes.ppu.ppuRegisters().cgAddress());
         assertEquals(0x34, snes.bus.read(0x213b));
-        assertEquals(0x22, snes.ppu.ppuRegisters().cgAddress());
+        assertEquals(0x21, snes.ppu.ppuRegisters().cgAddress());
     }
 
     @Test
     void cgramDataReadMasksHighColorBit() {
         SNES snes = init();
-        snes.ppu.cgram.write(0x20, 0xff);
-        snes.ppu.cgram.write(0x21, 0xff);
+        snes.ppu.cgram.write(0x40, 0xff);
+        snes.ppu.cgram.write(0x41, 0xff);
 
         snes.bus.write(0x2121, 0x20);
 
         assertEquals(0xff, snes.bus.read(0x213b));
         assertEquals(0x7f, snes.bus.read(0x213b));
-        assertEquals(0x22, snes.ppu.ppuRegisters().cgAddress());
+        assertEquals(0x21, snes.ppu.ppuRegisters().cgAddress());
     }
 
     @Test
