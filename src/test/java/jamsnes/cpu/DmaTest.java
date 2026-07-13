@@ -337,6 +337,51 @@ class DmaTest {
     }
 
     @Test
+    void wramToOamDmaCommitsDuringForcedBlank() {
+        SNES snes = init();
+        snes.wram.data()[0x40] = 0x12;
+        snes.wram.data()[0x41] = 0x34;
+
+        snes.bus.write(0x2100, 0x80);
+        snes.bus.write(0x2102, 0x00);
+        snes.bus.write(0x2103, 0x00);
+        setupDma(snes, DMA.ONE_TO_ONE, 0x04, 0x7e0040, 0x0002);
+        snes.bus.write(0x420b, 0x01);
+
+        DMA dma = snes.cpu.dmaChannels()[0];
+        int cycles = dma.run(1_000_000);
+
+        assertEquals(8 + 8 * 2, cycles);
+        assertEquals(0x12, snes.ppu.oamram.read(0x00));
+        assertEquals(0x34, snes.ppu.oamram.read(0x01));
+        assertEquals(0x02, snes.ppu.ppuRegisters().oamAddress());
+        assertEquals(0x7e0042, dma.getAAddress());
+        assertFalse(dma.isEnabled());
+    }
+
+    @Test
+    void wramToOamDmaIsSkippedDuringActiveDisplayButStillIncrementsOamAddress() {
+        SNES snes = init();
+        snes.wram.data()[0x40] = 0x12;
+        snes.wram.data()[0x41] = 0x34;
+
+        snes.bus.write(0x2102, 0x00);
+        snes.bus.write(0x2103, 0x00);
+        setupDma(snes, DMA.ONE_TO_ONE, 0x04, 0x7e0040, 0x0002);
+        snes.bus.write(0x420b, 0x01);
+
+        DMA dma = snes.cpu.dmaChannels()[0];
+        int cycles = dma.run(1_000_000);
+
+        assertEquals(8 + 8 * 2, cycles);
+        assertEquals(0x00, snes.ppu.oamram.read(0x00));
+        assertEquals(0x00, snes.ppu.oamram.read(0x01));
+        assertEquals(0x02, snes.ppu.ppuRegisters().oamAddress());
+        assertEquals(0x7e0042, dma.getAAddress());
+        assertFalse(dma.isEnabled());
+    }
+
+    @Test
     void bBusToABusDmaTransfersBytesAndIncrementsAAddress() {
         SNES snes = init();
         snes.ppu.cgram.write(0x40, 0x12);
@@ -457,6 +502,16 @@ class DmaTest {
 
     private static void setupHdma(SNES snes, int control, int port, int tableAddress) {
         setupHdmaChannel(snes, 0, control, port, tableAddress);
+    }
+
+    private static void setupDma(SNES snes, int control, int port, int aAddress, int count) {
+        snes.bus.write(0x4301, port);
+        snes.bus.write(0x4304, aAddress >>> 16);
+        snes.bus.write(0x4303, aAddress >>> 8);
+        snes.bus.write(0x4302, aAddress);
+        snes.bus.write(0x4306, count >>> 8);
+        snes.bus.write(0x4305, count);
+        snes.bus.write(0x4300, control);
     }
 
     private static void setupHdmaChannel(SNES snes, int channel, int control, int port, int tableAddress) {
