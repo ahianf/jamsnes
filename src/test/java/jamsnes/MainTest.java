@@ -96,7 +96,10 @@ class MainTest {
         try {
             System.setProperty("jamsnes.renderer", "lwjgl");
 
-            assertInstanceOf(LwjglRenderer.class, Main.defaultRenderer());
+            LwjglRenderer renderer = assertInstanceOf(LwjglRenderer.class, Main.defaultRenderer());
+            assertEquals(224, renderer.displayHeight());
+            assertEquals(256, renderer.displayWidth());
+            assertEquals(3, renderer.windowScale());
         } finally {
             if (previous == null) {
                 System.clearProperty("jamsnes.renderer");

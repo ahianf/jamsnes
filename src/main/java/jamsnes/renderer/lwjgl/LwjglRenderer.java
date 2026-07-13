@@ -56,6 +56,12 @@ import static org.lwjgl.glfw.GLFW.glfwWindowShouldClose;
 import static org.lwjgl.system.MemoryUtil.NULL;
 
 public class LwjglRenderer extends FrameBufferRenderer {
+    public static final int DEFAULT_DISPLAY_WIDTH = 256;
+    public static final int DEFAULT_DISPLAY_HEIGHT = 224;
+    public static final int DEFAULT_WINDOW_SCALE = 3;
+
+    private final int displayHeight;
+    private final int displayWidth;
     private final int windowScale;
     private final Map<Integer, JoypadButton> keyBindings;
     private final LwjglAudioDevice audioDevice = new LwjglAudioDevice();
@@ -64,14 +70,31 @@ public class LwjglRenderer extends FrameBufferRenderer {
     private ByteBuffer pixelBuffer;
 
     public LwjglRenderer(int height, int width, int maxFPS) {
-        this(height, width, maxFPS, 1, defaultKeyBindings());
+        this(height, width, maxFPS, DEFAULT_DISPLAY_HEIGHT, DEFAULT_DISPLAY_WIDTH, DEFAULT_WINDOW_SCALE,
+                defaultKeyBindings());
     }
 
     public LwjglRenderer(int height, int width, int maxFPS, int windowScale, Map<Integer, JoypadButton> keyBindings) {
+        this(height, width, maxFPS, height, width, windowScale, keyBindings);
+    }
+
+    public LwjglRenderer(
+            int height,
+            int width,
+            int maxFPS,
+            int displayHeight,
+            int displayWidth,
+            int windowScale,
+            Map<Integer, JoypadButton> keyBindings) {
         super(height, width, maxFPS);
+        if (displayHeight <= 0 || displayHeight > height || displayWidth <= 0 || displayWidth > width) {
+            throw new IllegalArgumentException("Display dimensions must be positive and within the frame buffer");
+        }
         if (windowScale <= 0) {
             throw new IllegalArgumentException("windowScale must be positive");
         }
+        this.displayHeight = displayHeight;
+        this.displayWidth = displayWidth;
         this.windowScale = windowScale;
         this.keyBindings = Map.copyOf(keyBindings);
     }
@@ -96,6 +119,18 @@ public class LwjglRenderer extends FrameBufferRenderer {
                 Map.entry(GLFW_KEY_J, JoypadButton.B),
                 Map.entry(GLFW_KEY_K, JoypadButton.A)
         );
+    }
+
+    public int displayHeight() {
+        return displayHeight;
+    }
+
+    public int displayWidth() {
+        return displayWidth;
+    }
+
+    public int windowScale() {
+        return windowScale;
     }
 
     @Override
@@ -146,7 +181,7 @@ public class LwjglRenderer extends FrameBufferRenderer {
         glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
-        window = glfwCreateWindow(width() * windowScale, height() * windowScale, windowTitle(), NULL, NULL);
+        window = glfwCreateWindow(displayWidth * windowScale, displayHeight * windowScale, windowTitle(), NULL, NULL);
         if (window == NULL) {
             throw new IllegalStateException("Could not create GLFW window");
         }
@@ -193,14 +228,16 @@ public class LwjglRenderer extends FrameBufferRenderer {
         glfwGetFramebufferSize(window, frameWidth, frameHeight);
         GL11.glViewport(0, 0, frameWidth[0], frameHeight[0]);
         GL11.glClear(GL11.GL_COLOR_BUFFER_BIT);
+        float maxU = (float) displayWidth / width();
+        float maxV = (float) displayHeight / height();
         GL11.glBegin(GL11.GL_QUADS);
         GL11.glTexCoord2f(0.0f, 0.0f);
         GL11.glVertex2f(-1.0f, 1.0f);
-        GL11.glTexCoord2f(1.0f, 0.0f);
+        GL11.glTexCoord2f(maxU, 0.0f);
         GL11.glVertex2f(1.0f, 1.0f);
-        GL11.glTexCoord2f(1.0f, 1.0f);
+        GL11.glTexCoord2f(maxU, maxV);
         GL11.glVertex2f(1.0f, -1.0f);
-        GL11.glTexCoord2f(0.0f, 1.0f);
+        GL11.glTexCoord2f(0.0f, maxV);
         GL11.glVertex2f(-1.0f, -1.0f);
         GL11.glEnd();
     }

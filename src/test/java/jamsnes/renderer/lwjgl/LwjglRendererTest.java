@@ -11,6 +11,17 @@ import static org.lwjgl.glfw.GLFW.GLFW_KEY_Z;
 
 class LwjglRendererTest {
     @Test
+    void defaultRendererKeepsFullFrameBufferButDisplaysVisibleSnesFrame() {
+        LwjglRenderer renderer = new LwjglRenderer(1024, 1024, 60);
+
+        assertEquals(1024, renderer.height());
+        assertEquals(1024, renderer.width());
+        assertEquals(224, renderer.displayHeight());
+        assertEquals(256, renderer.displayWidth());
+        assertEquals(3, renderer.windowScale());
+    }
+
+    @Test
     void exposesDefaultKeyBindingsForJoypadInput() {
         assertEquals(JoypadButton.B, LwjglRenderer.defaultKeyBindings().get(GLFW_KEY_Z));
         assertEquals(JoypadButton.START, LwjglRenderer.defaultKeyBindings().get(GLFW_KEY_ENTER));
@@ -20,6 +31,14 @@ class LwjglRendererTest {
     @Test
     void rejectsInvalidScale() {
         assertThrows(IllegalArgumentException.class, () -> new LwjglRenderer(224, 256, 60, 0,
+                LwjglRenderer.defaultKeyBindings()));
+    }
+
+    @Test
+    void rejectsDisplayDimensionsOutsideFrameBuffer() {
+        assertThrows(IllegalArgumentException.class, () -> new LwjglRenderer(224, 256, 60, 225, 256, 1,
+                LwjglRenderer.defaultKeyBindings()));
+        assertThrows(IllegalArgumentException.class, () -> new LwjglRenderer(224, 256, 60, 224, 257, 1,
                 LwjglRenderer.defaultKeyBindings()));
     }
 
