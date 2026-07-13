@@ -113,8 +113,10 @@ public class PPU extends AMemory {
         if (!isWritableRegister(address)) {
             throw new InvalidAddress("PPU Internal Registers write", address + start);
         }
+        boolean wasForcedBlank = ppuRegisters.inidispFblank();
         registers[address] = value;
         switch (address) {
+            case 0x00 -> reloadOamAddressAfterForcedBlankDeactivation(wasForcedBlank);
             case 0x02, 0x03 -> ppuRegisters.reloadOamAddress();
             case 0x04 -> writeOamData(value);
             case 0x05 -> updateBackgroundModes();
@@ -487,6 +489,21 @@ public class PPU extends AMemory {
             if (vCounter >= V_COUNTER_SCANLINES) {
                 vCounter = 0;
             }
+            if (vCounter == V_BLANK_START_SCANLINE) {
+                reloadOamAddressAtVBlankEntry();
+            }
+        }
+    }
+
+    private void reloadOamAddressAtVBlankEntry() {
+        if (!ppuRegisters.inidispFblank()) {
+            ppuRegisters.reloadOamAddress();
+        }
+    }
+
+    private void reloadOamAddressAfterForcedBlankDeactivation(boolean wasForcedBlank) {
+        if (wasForcedBlank && !ppuRegisters.inidispFblank() && vCounter == V_BLANK_START_SCANLINE) {
+            ppuRegisters.reloadOamAddress();
         }
     }
 

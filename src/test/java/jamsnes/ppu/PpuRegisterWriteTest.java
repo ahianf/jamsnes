@@ -114,6 +114,66 @@ class PpuRegisterWriteTest {
     }
 
     @Test
+    void vBlankEntryReloadsOamAddressWhenDisplayIsActive() {
+        SNES snes = init();
+        snes.bus.write(0x2100, 0x0f);
+        snes.bus.write(0x2102, 0x05);
+        snes.bus.write(0x2103, 0x00);
+        snes.bus.read(0x2138);
+
+        assertEquals(0x0b, snes.ppu.ppuRegisters().oamAddress());
+
+        snes.ppu.advanceCountersOnly(PPU.H_COUNTER_DOTS * PPU.V_BLANK_START_SCANLINE);
+
+        assertEquals(0x0a, snes.ppu.ppuRegisters().oamAddress());
+    }
+
+    @Test
+    void vBlankEntryDoesNotReloadOamAddressDuringForcedBlank() {
+        SNES snes = init();
+        snes.bus.write(0x2100, 0x80);
+        snes.bus.write(0x2102, 0x05);
+        snes.bus.write(0x2103, 0x00);
+        snes.bus.read(0x2138);
+
+        assertEquals(0x0b, snes.ppu.ppuRegisters().oamAddress());
+
+        snes.ppu.advanceCountersOnly(PPU.H_COUNTER_DOTS * PPU.V_BLANK_START_SCANLINE);
+
+        assertEquals(0x0b, snes.ppu.ppuRegisters().oamAddress());
+    }
+
+    @Test
+    void clearingForcedBlankOnFirstVBlankLineReloadsOamAddress() {
+        SNES snes = init();
+        snes.bus.write(0x2100, 0x80);
+        snes.bus.write(0x2102, 0x05);
+        snes.bus.write(0x2103, 0x00);
+        snes.bus.read(0x2138);
+        snes.ppu.advanceCountersOnly(PPU.H_COUNTER_DOTS * PPU.V_BLANK_START_SCANLINE);
+
+        assertEquals(0x0b, snes.ppu.ppuRegisters().oamAddress());
+
+        snes.bus.write(0x2100, 0x0f);
+
+        assertEquals(0x0a, snes.ppu.ppuRegisters().oamAddress());
+    }
+
+    @Test
+    void clearingForcedBlankAfterFirstVBlankLineDoesNotReloadOamAddress() {
+        SNES snes = init();
+        snes.bus.write(0x2100, 0x80);
+        snes.bus.write(0x2102, 0x05);
+        snes.bus.write(0x2103, 0x00);
+        snes.bus.read(0x2138);
+        snes.ppu.advanceCountersOnly(PPU.H_COUNTER_DOTS * (PPU.V_BLANK_START_SCANLINE + 1));
+
+        snes.bus.write(0x2100, 0x0f);
+
+        assertEquals(0x0b, snes.ppu.ppuRegisters().oamAddress());
+    }
+
+    @Test
     void decodesBgModeAndMosaic() {
         SNES snes = init();
 
