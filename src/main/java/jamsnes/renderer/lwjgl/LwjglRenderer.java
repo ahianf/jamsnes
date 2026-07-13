@@ -58,6 +58,7 @@ import static org.lwjgl.system.MemoryUtil.NULL;
 public class LwjglRenderer extends FrameBufferRenderer {
     private final int windowScale;
     private final Map<Integer, JoypadButton> keyBindings;
+    private final LwjglAudioDevice audioDevice = new LwjglAudioDevice();
     private long window;
     private int texture;
     private ByteBuffer pixelBuffer;
@@ -134,6 +135,12 @@ public class LwjglRenderer extends FrameBufferRenderer {
         glfwPollEvents();
     }
 
+    @Override
+    public void playAudio(short[] samples) {
+        super.playAudio(samples);
+        audioDevice.queueSamples(samples);
+    }
+
     private void createGlfwWindow(SNES snes) {
         glfwDefaultWindowHints();
         glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
@@ -204,6 +211,7 @@ public class LwjglRenderer extends FrameBufferRenderer {
             glfwDestroyWindow(window);
             window = NULL;
         }
+        audioDevice.close();
         glfwTerminate();
         GLFWErrorCallback callback = glfwSetErrorCallback(null);
         if (callback != null) {

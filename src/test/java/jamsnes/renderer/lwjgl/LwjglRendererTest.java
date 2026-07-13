@@ -22,4 +22,14 @@ class LwjglRendererTest {
         assertThrows(IllegalArgumentException.class, () -> new LwjglRenderer(224, 256, 60, 0,
                 LwjglRenderer.defaultKeyBindings()));
     }
+
+    @Test
+    void emptyAudioBatchOnlyUpdatesCounters() {
+        LwjglRenderer renderer = new LwjglRenderer(224, 256, 60);
+
+        renderer.playAudio(new short[0]);
+
+        assertEquals(1, renderer.audioCalls());
+        assertEquals(0, renderer.audioSamples());
+    }
 }
