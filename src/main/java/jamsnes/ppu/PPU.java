@@ -534,10 +534,12 @@ public class PPU extends AMemory {
 
     private void writeOamData(int value) {
         int address = ppuRegisters.oamAddress();
-        if (address < OBJ_LOW_TABLE_SIZE) {
-            writeOamLowTableData(address, value);
-        } else {
-            oamram.write(getOamDataAddress(), value);
+        if (canAccessVideoMemory()) {
+            if (address < OBJ_LOW_TABLE_SIZE) {
+                writeOamLowTableData(address, value);
+            } else {
+                oamram.write(getOamDataAddress(), value);
+            }
         }
         ppuRegisters.incrementOamAddress();
     }

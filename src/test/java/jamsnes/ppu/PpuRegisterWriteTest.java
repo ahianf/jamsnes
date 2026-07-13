@@ -55,6 +55,7 @@ class PpuRegisterWriteTest {
     void writesOamDataAndIncrementsAddress() {
         SNES snes = init();
 
+        snes.bus.write(0x2100, 0x80);
         snes.bus.write(0x2102, 0x05);
         snes.bus.write(0x2103, 0x80);
         snes.bus.write(0x2104, 0x42);
@@ -78,6 +79,7 @@ class PpuRegisterWriteTest {
     void oamLowTableWritesCommitEvenOddPairs() {
         SNES snes = init();
 
+        snes.bus.write(0x2100, 0x80);
         snes.bus.write(0x2102, 0x00);
         snes.bus.write(0x2103, 0x00);
         snes.bus.write(0x2104, 0x12);
@@ -96,6 +98,7 @@ class PpuRegisterWriteTest {
     void oamDataWriteMapsUpperAddressRangeToHighTable() {
         SNES snes = init();
 
+        snes.bus.write(0x2100, 0x80);
         snes.bus.write(0x2102, 0x00);
         snes.bus.write(0x2103, 0x01);
         snes.bus.write(0x2104, 0x55);
@@ -111,6 +114,31 @@ class PpuRegisterWriteTest {
         assertEquals(0x66, snes.ppu.oamram.read(0x21e));
         assertEquals(0, snes.ppu.oamram.read(0x13f));
         assertEquals(0x27f, snes.ppu.ppuRegisters().oamAddress());
+    }
+
+    @Test
+    void oamDataWriteIsSkippedDuringActiveDisplayButStillIncrements() {
+        SNES snes = init();
+
+        snes.bus.write(0x2102, 0x00);
+        snes.bus.write(0x2103, 0x01);
+        snes.bus.write(0x2104, 0x55);
+
+        assertEquals(0, snes.ppu.oamram.read(0x200));
+        assertEquals(0x201, snes.ppu.ppuRegisters().oamAddress());
+    }
+
+    @Test
+    void oamDataWriteCommitsDuringVBlankWithoutForcedBlank() {
+        SNES snes = init();
+
+        snes.ppu.advanceCountersOnly(PPU.H_COUNTER_DOTS * PPU.V_BLANK_START_SCANLINE);
+        snes.bus.write(0x2102, 0x00);
+        snes.bus.write(0x2103, 0x01);
+        snes.bus.write(0x2104, 0x55);
+
+        assertEquals(0x55, snes.ppu.oamram.read(0x200));
+        assertEquals(0x201, snes.ppu.ppuRegisters().oamAddress());
     }
 
     @Test
