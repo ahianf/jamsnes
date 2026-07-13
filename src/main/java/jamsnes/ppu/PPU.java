@@ -467,8 +467,6 @@ public class PPU extends AMemory {
     public void latchCounters() {
         latchedHCounter = hCounter;
         latchedVCounter = vCounter;
-        hCounterHighByte = false;
-        vCounterHighByte = false;
         counterLatchFlag = true;
     }
 

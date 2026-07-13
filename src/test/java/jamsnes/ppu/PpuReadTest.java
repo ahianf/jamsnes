@@ -152,6 +152,51 @@ class PpuReadTest {
     }
 
     @Test
+    void softwareLatchDoesNotResetCounterReadFlipFlops() {
+        SNES snes = init();
+
+        snes.ppu.advanceCountersOnly(0x03);
+        snes.bus.read(0x2137);
+        assertEquals(0x03, snes.bus.read(0x213c));
+
+        snes.ppu.advanceCountersOnly(0x100);
+        snes.bus.read(0x2137);
+
+        assertEquals(0x01, snes.bus.read(0x213c));
+        assertEquals(0x03, snes.bus.read(0x213c));
+    }
+
+    @Test
+    void wrioLatchDoesNotResetCounterReadFlipFlops() {
+        SNES snes = init();
+
+        snes.bus.write(0x4201, 0x80);
+        snes.ppu.advanceCountersOnly(0x03);
+        snes.bus.write(0x4201, 0x00);
+        assertEquals(0x03, snes.bus.read(0x213c));
+
+        snes.bus.write(0x4201, 0x80);
+        snes.ppu.advanceCountersOnly(0x100);
+        snes.bus.write(0x4201, 0x00);
+
+        assertEquals(0x01, snes.bus.read(0x213c));
+        assertEquals(0x03, snes.bus.read(0x213c));
+    }
+
+    @Test
+    void stat78ResetsCounterReadFlipFlopsAfterLatch() {
+        SNES snes = init();
+
+        snes.ppu.advanceCountersOnly(0x103);
+        snes.bus.read(0x2137);
+        assertEquals(0x03, snes.bus.read(0x213c));
+        assertEquals(0x43, snes.bus.read(0x213f));
+
+        assertEquals(0x03, snes.bus.read(0x213c));
+        assertEquals(0x01, snes.bus.read(0x213c));
+    }
+
+    @Test
     void ppuWriteOnlyRegisterBusReadsUseOpenBus() {
         SNES snes = init();
         snes.bus.setOpenBus(0x5a);
