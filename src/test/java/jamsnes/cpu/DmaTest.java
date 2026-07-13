@@ -59,6 +59,47 @@ class DmaTest {
     }
 
     @Test
+    void dmaUnusedRegisterMirrorsAt43xf() {
+        SNES snes = init();
+
+        snes.bus.write(0x430b, 0x34);
+
+        assertEquals(0x34, snes.bus.read(0x430b));
+        assertEquals(0x34, snes.bus.read(0x430f));
+
+        snes.bus.write(0x430f, 0xab);
+
+        assertEquals(0xab, snes.bus.read(0x430b));
+        assertEquals(0xab, snes.bus.read(0x430f));
+    }
+
+    @Test
+    void dmaUnusedMirrorIsPerChannelAndMirroredByBank() {
+        SNES snes = init();
+
+        snes.bus.write(0x431b, 0x12);
+        snes.bus.write(0x80431f, 0x56);
+
+        assertEquals(0x00, snes.bus.read(0x430b));
+        assertEquals(0x56, snes.bus.read(0x431b));
+        assertEquals(0x56, snes.bus.read(0x80431f));
+    }
+
+    @Test
+    void dmaUnusedRegisterHolesReadOpenBusAndIgnoreWrites() {
+        SNES snes = init();
+        snes.bus.setOpenBus(0x5a);
+
+        snes.bus.write(0x430c, 0x11);
+        snes.bus.write(0x430d, 0x22);
+        snes.bus.write(0x430e, 0x33);
+
+        assertEquals(0x5a, snes.bus.read(0x430c));
+        assertEquals(0x5a, snes.bus.read(0x430d));
+        assertEquals(0x5a, snes.bus.read(0x430e));
+    }
+
+    @Test
     void hdmaEnableRegisterControlsSeparateHdmaState() {
         SNES snes = init();
         DMA dma = snes.cpu.dmaChannels()[0];

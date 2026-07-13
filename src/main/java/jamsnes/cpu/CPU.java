@@ -1827,6 +1827,8 @@ public class CPU extends AMemory {
                 case 0x8 -> "A2A" + channel + "L";
                 case 0x9 -> "A2A" + channel + "H";
                 case 0xa -> "NTRL" + channel;
+                case 0xb -> "UNUSED" + channel;
+                case 0xf -> "MIRR" + channel;
                 default -> "???";
             };
         }

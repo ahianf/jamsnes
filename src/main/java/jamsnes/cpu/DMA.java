@@ -26,6 +26,7 @@ public class DMA {
     private int indirectBank;
     private int tableAddress;
     private int lineCounter;
+    private int unusedMirror;
     private IMemoryBus bus;
     private boolean enabled;
     private boolean hdmaEnabled;
@@ -64,6 +65,7 @@ public class DMA {
             case 0x8 -> tableAddress & 0xff;
             case 0x9 -> (tableAddress >>> 8) & 0xff;
             case 0xa -> lineCounter;
+            case 0xb, 0xf -> unusedMirror;
             default -> throw new InvalidAddress("DMA read", address);
         };
     }
@@ -82,6 +84,9 @@ public class DMA {
             case 0x8 -> tableAddress = u16((tableAddress & 0xff00) | value);
             case 0x9 -> tableAddress = u16((tableAddress & 0x00ff) | (value << 8));
             case 0xa -> lineCounter = value;
+            case 0xb, 0xf -> unusedMirror = value;
+            case 0xc, 0xd, 0xe -> {
+            }
             default -> throw new InvalidAddress("DMA write", address);
         }
     }

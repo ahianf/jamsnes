@@ -157,7 +157,9 @@ class CpuRegisterTest {
         assertEquals("A1T3H", snes.cpu.getValueName(0x133));
         assertEquals("DAS7L", snes.cpu.getValueName(0x175));
         assertEquals("NTRL7", snes.cpu.getValueName(0x17a));
-        assertEquals("???", snes.cpu.getValueName(0x17f));
+        assertEquals("UNUSED7", snes.cpu.getValueName(0x17b));
+        assertEquals("MIRR7", snes.cpu.getValueName(0x17f));
+        assertEquals("???", snes.cpu.getValueName(0x17e));
     }
 
     @Test
