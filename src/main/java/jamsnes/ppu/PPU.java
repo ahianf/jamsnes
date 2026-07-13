@@ -1029,35 +1029,47 @@ public class PPU extends AMemory {
     }
 
     private int addColor(int left, int right, boolean half) {
-        int red = channel(left, 24) + channel(right, 24);
-        int green = channel(left, 16) + channel(right, 16);
-        int blue = channel(left, 8) + channel(right, 8);
+        int red = channel5(left, 24) + channel5(right, 24);
+        int green = channel5(left, 16) + channel5(right, 16);
+        int blue = channel5(left, 8) + channel5(right, 8);
         if (half) {
             red >>>= 1;
             green >>>= 1;
             blue >>>= 1;
         }
-        return packColor(clamp8(red), clamp8(green), clamp8(blue), left & 0xff);
+        return packColor5(clamp5(red), clamp5(green), clamp5(blue), left & 0xff);
     }
 
     private int subtractColor(int left, int right, boolean half) {
-        int red = channel(left, 24) - channel(right, 24);
-        int green = channel(left, 16) - channel(right, 16);
-        int blue = channel(left, 8) - channel(right, 8);
+        int red = channel5(left, 24) - channel5(right, 24);
+        int green = channel5(left, 16) - channel5(right, 16);
+        int blue = channel5(left, 8) - channel5(right, 8);
         if (half) {
             red >>= 1;
             green >>= 1;
             blue >>= 1;
         }
-        return packColor(clamp8(red), clamp8(green), clamp8(blue), left & 0xff);
+        return packColor5(clamp5(red), clamp5(green), clamp5(blue), left & 0xff);
     }
 
     private int channel(int color, int shift) {
         return (color >>> shift) & 0xff;
     }
 
+    private int channel5(int color, int shift) {
+        return channel(color, shift) >>> 3;
+    }
+
+    private int clamp5(int value) {
+        return Math.max(0, Math.min(0x1f, value));
+    }
+
     private int clamp8(int value) {
         return Math.max(0, Math.min(0xff, value));
+    }
+
+    private int packColor5(int red, int green, int blue, int alpha) {
+        return packColor(PPUUtils.to8Bit(red), PPUUtils.to8Bit(green), PPUUtils.to8Bit(blue), alpha);
     }
 
     private int packColor(int red, int green, int blue, int alpha) {

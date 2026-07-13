@@ -431,6 +431,20 @@ class PpuRenderIntegrationTest {
     }
 
     @Test
+    void updateHalvesColorMathInFiveBitColorSpace() {
+        TestRenderer renderer = new TestRenderer();
+        SNES snes = init(renderer);
+        setupBg1FirstPixel(snes, 0x0004);
+        snes.bus.write(0x2100, 0x0f);
+        snes.bus.write(0x2131, 0x41);
+        snes.bus.write(0x2132, 0x25);
+
+        snes.ppu.update(1);
+
+        assertEquals(PPUUtils.cgramColorToRGBA(0x0004), renderer.firstPixel);
+    }
+
+    @Test
     void updateCanGloballyPreventColorMath() {
         TestRenderer renderer = new TestRenderer();
         SNES snes = init(renderer);
