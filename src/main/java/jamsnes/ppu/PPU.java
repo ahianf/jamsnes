@@ -19,6 +19,7 @@ public class PPU extends AMemory {
     private static final int SOURCE_NONE = -1;
     private static final int SOURCE_BACKDROP = 0;
     private static final int SOURCE_OBJ = 5;
+    private static final int SOURCE_OBJ_COLOR_MATH = 6;
     private static final int OBJ_COUNT = 128;
     private static final int OBJ_LOW_TABLE_SIZE = 0x200;
     private static final int OBJ_TILE_BPP = 4;
@@ -700,7 +701,7 @@ public class PPU extends AMemory {
                 }
                 destination[screenY][screenX] = color;
                 levelMap[screenY][screenX] = level;
-                sourceMap[screenY][screenX] = SOURCE_OBJ;
+                sourceMap[screenY][screenX] = palette >= 4 ? SOURCE_OBJ_COLOR_MATH : SOURCE_OBJ;
             }
         }
     }
@@ -956,7 +957,7 @@ public class PPU extends AMemory {
         if (source >= 1 && source <= 4) {
             return ppuRegisters.cgadsubEnableColorMathBg(source - 1);
         }
-        if (source == SOURCE_OBJ) {
+        if (source == SOURCE_OBJ_COLOR_MATH) {
             return ppuRegisters.cgadsubEnableColorMathObj();
         }
         return false;
