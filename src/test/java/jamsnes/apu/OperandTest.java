@@ -192,7 +192,7 @@ class OperandTest {
         snes.apu.counters()[2] = 0x34;
         snes.apu._internalWrite(0x00, 0x12);
 
-        assertEquals(0x1236, snes.apu._getAbsoluteDirectAddrByY());
+        assertEquals(0x1206, snes.apu._getAbsoluteDirectAddrByY());
 
         snes.apu.internalRegisters().pc = 0x40;
         snes.apu.internalRegisters().p = true;

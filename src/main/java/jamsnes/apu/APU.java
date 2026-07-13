@@ -142,7 +142,7 @@ public class APU extends AMemory {
     }
 
     private int readCounter(int index) {
-        int value = counters[index];
+        int value = counters[index] & 0x0f;
         counters[index] = 0;
         return value;
     }

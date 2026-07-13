@@ -40,7 +40,7 @@ class InternalMemoryMapTest {
         assertEquals(89, snes.apu._internalRead(0xffbf));
         assertEquals(0xaa, snes.apu._internalRead(0x00f4));
         assertEquals(0xbb, snes.apu._internalRead(0x00f8));
-        assertEquals(0xcc, snes.apu._internalRead(0x00fd));
+        assertEquals(0x0c, snes.apu._internalRead(0x00fd));
     }
 
     @Test
@@ -149,17 +149,17 @@ class InternalMemoryMapTest {
     }
 
     @Test
-    void counterReadsClearCounters() {
+    void counterReadsExposeLowNibbleAndClearCounters() {
         SNES snes = init();
         snes.apu.counters()[0] = 0x12;
         snes.apu.counters()[1] = 0x34;
         snes.apu.counters()[2] = 0x56;
 
-        assertEquals(0x12, snes.apu._internalRead(0x00fd));
+        assertEquals(0x02, snes.apu._internalRead(0x00fd));
         assertEquals(0x00, snes.apu._internalRead(0x00fd));
-        assertEquals(0x34, snes.apu._internalRead(0x00fe));
+        assertEquals(0x04, snes.apu._internalRead(0x00fe));
         assertEquals(0x00, snes.apu._internalRead(0x00fe));
-        assertEquals(0x56, snes.apu._internalRead(0x00ff));
+        assertEquals(0x06, snes.apu._internalRead(0x00ff));
         assertEquals(0x00, snes.apu._internalRead(0x00ff));
     }
 
@@ -244,7 +244,7 @@ class InternalMemoryMapTest {
         assertEquals(0x99, snes.apu._internalRead(0xffc0));
         assertEquals(0xaa, snes.apu._internalRead(0x00f4));
         assertEquals(0xbb, snes.apu._internalRead(0x00f8));
-        assertEquals(0xcc, snes.apu._internalRead(0x00fd));
+        assertEquals(0x0c, snes.apu._internalRead(0x00fd));
 
         snes.apu._internalWrite(0x00f2, 0x00);
         assertEquals(0x66, snes.apu._internalRead(0x00f3));
