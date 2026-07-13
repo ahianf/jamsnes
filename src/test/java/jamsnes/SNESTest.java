@@ -226,8 +226,8 @@ class SNESTest {
 
         snes.loadRom(writeGameRom().toString());
 
-        assertEquals(0x00, snes.bus.read(0x420b));
-        assertEquals(0x00, snes.bus.read(0x420c));
+        assertEquals(0x00, snes.cpu.internalRegisters()[0x0b]);
+        assertEquals(0x00, snes.cpu.internalRegisters()[0x0c]);
         assertEquals(false, snes.cpu.dmaChannels()[0].isEnabled());
         assertEquals(false, snes.cpu.dmaChannels()[0].isHdmaEnabled());
     }
@@ -555,8 +555,8 @@ class SNESTest {
         assertEquals(0x34, snes.ppu.cgram.read(0x41));
         assertEquals(287, snes.ppu.hCounter());
         assertEquals(0, snes.ppu.vCounter());
-        assertEquals(0, snes.bus.read(0x420b));
-        assertEquals(0x01, snes.bus.read(0x420c));
+        assertEquals(0, snes.cpu.internalRegisters()[0x0b]);
+        assertEquals(0x01, snes.cpu.internalRegisters()[0x0c]);
         assertEquals(0x40, snes.bus.read(0x4212));
     }
 

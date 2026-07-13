@@ -36,7 +36,7 @@ class DmaTest {
 
         snes.bus.write(0x420b, 0x01);
         assertTrue(dma.isEnabled());
-        assertEquals(0x01, snes.bus.read(0x420b));
+        assertEquals(0x01, snes.cpu.internalRegisters()[0x0b]);
     }
 
     @Test
@@ -65,7 +65,7 @@ class DmaTest {
 
         snes.bus.write(0x420c, 0x01);
 
-        assertEquals(0x01, snes.bus.read(0x420c));
+        assertEquals(0x01, snes.cpu.internalRegisters()[0x0c]);
         assertTrue(dma.isHdmaEnabled());
         assertFalse(dma.isEnabled());
 

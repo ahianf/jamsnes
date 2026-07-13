@@ -98,15 +98,6 @@ public class CPU extends AMemory {
 
     @Override
     public int read(int address) {
-        if (address == 0x0b) {
-            int value = 0;
-            for (int i = 0; i < dmaChannels.length; i++) {
-                if (dmaChannels[i].isEnabled()) {
-                    value |= 1 << i;
-                }
-            }
-            return value;
-        }
         if (address == 0x10) {
             return readNmiStatus();
         }
@@ -117,6 +108,9 @@ public class CPU extends AMemory {
             return dmaChannels[(address - 0x100) >>> 4].read(address & 0x0f);
         }
         if (!isInternalRegister(address)) {
+            throw new InvalidAddress("CPU Internal Registers read", address + start);
+        }
+        if (isWriteOnlyInternalRegister(address)) {
             throw new InvalidAddress("CPU Internal Registers read", address + start);
         }
         return internalRegisters[address];
@@ -169,6 +163,10 @@ public class CPU extends AMemory {
 
     private boolean isReadOnlyInternalRegister(int address) {
         return address >= 0x10 && address <= 0x1f;
+    }
+
+    private boolean isWriteOnlyInternalRegister(int address) {
+        return address >= 0x00 && address <= 0x0d;
     }
 
     private void runMultiplication() {

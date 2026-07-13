@@ -95,6 +95,30 @@ class CpuRegisterTest {
     }
 
     @Test
+    void writeOnlyCpuRegisterBusReadsUseOpenBus() {
+        SNES snes = init();
+        snes.bus.setOpenBus(0x5a);
+
+        snes.bus.write(0x4200, 0x81);
+        snes.bus.write(0x4201, 0x7f);
+        snes.bus.write(0x420b, 0x01);
+        snes.bus.write(0x420c, 0x01);
+        snes.bus.write(0x420d, 0x01);
+
+        assertEquals(0x81, snes.cpu.internalRegisters()[0x00]);
+        assertEquals(0x7f, snes.cpu.internalRegisters()[0x01]);
+        assertEquals(0x01, snes.cpu.internalRegisters()[0x0b]);
+        assertEquals(0x01, snes.cpu.internalRegisters()[0x0c]);
+        assertEquals(0x01, snes.cpu.internalRegisters()[0x0d]);
+        assertEquals(0x5a, snes.bus.read(0x4200));
+        assertEquals(0x5a, snes.bus.read(0x4201));
+        assertEquals(0x5a, snes.bus.read(0x420b));
+        assertEquals(0x5a, snes.bus.read(0x420c));
+        assertEquals(0x5a, snes.bus.read(0x420d));
+        assertEquals(0x5a, snes.bus.read(0x80420c));
+    }
+
+    @Test
     void returnsCpuRegisterValueNames() {
         SNES snes = init();
 
@@ -122,6 +146,8 @@ class CpuRegisterTest {
     void directUnimplementedCpuInternalRegistersThrow() {
         SNES snes = init();
 
+        assertThrows(InvalidAddress.class, () -> snes.cpu.read(0x00));
+        assertThrows(InvalidAddress.class, () -> snes.cpu.read(0x0d));
         assertThrows(InvalidAddress.class, () -> snes.cpu.read(0x0e));
         assertThrows(InvalidAddress.class, () -> snes.cpu.write(0x0f, 0x56));
     }

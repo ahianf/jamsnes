@@ -100,7 +100,8 @@ class MemoryBusTest {
         assertEquals(123, snes.bus.read(0x808005));
 
         snes.cpu.internalRegisters()[0x01] = 123;
-        assertEquals(123, snes.bus.read(0x004201));
+        snes.bus.setOpenBus(0x5a);
+        assertEquals(0x5a, snes.bus.read(0x004201));
 
         snes.joypad.setControllerState(0, 1);
         snes.bus.write(0x004016, 1);
