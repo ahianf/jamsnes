@@ -369,7 +369,7 @@ class PpuRegisterWriteTest {
         assertEquals(0x00, snes.bus.read(0x2134));
         assertEquals(0, snes.ppu.registers()[0x3e]);
         assertEquals(0x03, snes.bus.read(0x213c));
-        assertEquals(0x00, snes.bus.read(0x213c));
+        assertEquals(0x02, snes.bus.read(0x213c));
         assertEquals(0x01, snes.bus.read(0x213d));
     }
 

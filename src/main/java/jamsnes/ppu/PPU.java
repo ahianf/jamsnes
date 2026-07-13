@@ -74,6 +74,7 @@ public class PPU extends AMemory {
     private boolean hCounterHighByte;
     private boolean vCounterHighByte;
     private boolean counterLatchFlag;
+    private int ppu2OpenBus;
 
     public PPU(IRenderer renderer) {
         this.renderer = renderer;
@@ -231,6 +232,7 @@ public class PPU extends AMemory {
         hvSharedScrollPreviousValue = 0;
         hScrollPreviousValue = 0;
         oamLowTableLatch = 0;
+        ppu2OpenBus = 0;
         updateBackgroundModes();
         for (int i = 0; i < backgrounds.length; i++) {
             updateBackgroundTileMap(i);
@@ -421,21 +423,27 @@ public class PPU extends AMemory {
     }
 
     private int readLatchedHCounter() {
+        int value;
         if (hCounterHighByte) {
             hCounterHighByte = false;
-            return (latchedHCounter >>> 8) & 1;
+            value = (ppu2OpenBus & 0xfe) | ((latchedHCounter >>> 8) & 1);
+        } else {
+            hCounterHighByte = true;
+            value = latchedHCounter & 0xff;
         }
-        hCounterHighByte = true;
-        return latchedHCounter & 0xff;
+        return readPpu2(value);
     }
 
     private int readLatchedVCounter() {
+        int value;
         if (vCounterHighByte) {
             vCounterHighByte = false;
-            return (latchedVCounter >>> 8) & 1;
+            value = (ppu2OpenBus & 0xfe) | ((latchedVCounter >>> 8) & 1);
+        } else {
+            vCounterHighByte = true;
+            value = latchedVCounter & 0xff;
         }
-        vCounterHighByte = true;
-        return latchedVCounter & 0xff;
+        return readPpu2(value);
     }
 
     private int readStat77() {
@@ -443,11 +451,16 @@ public class PPU extends AMemory {
     }
 
     private int readStat78() {
-        int value = PPU2_VERSION | (counterLatchFlag ? 0x40 : 0);
+        int value = (ppu2OpenBus & 0x20) | PPU2_VERSION | (counterLatchFlag ? 0x40 : 0);
         counterLatchFlag = false;
         hCounterHighByte = false;
         vCounterHighByte = false;
-        return value;
+        return readPpu2(value);
+    }
+
+    private int readPpu2(int value) {
+        ppu2OpenBus = u8(value);
+        return ppu2OpenBus;
     }
 
     private void advanceCounters(int cycles) {

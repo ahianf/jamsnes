@@ -145,12 +145,35 @@ class PpuReadTest {
         assertEquals(0x5a, snes.bus.read(0x2137));
         assertEquals(0x5a, snes.bus.getOpenBus());
         assertEquals(0x03, snes.bus.read(0x213c));
-        assertEquals(0x01, snes.bus.read(0x213c));
+        assertEquals(0x03, snes.bus.read(0x213c));
         assertEquals(0x01, snes.bus.read(0x213d));
         assertEquals(0x00, snes.bus.read(0x213d));
         assertEquals(0x01, snes.bus.read(0x213e));
         assertEquals(0x43, snes.bus.read(0x213f));
         assertEquals(0x03, snes.bus.read(0x213f));
+    }
+
+    @Test
+    void latchedCounterHighByteIncludesPpu2OpenBusBits() {
+        SNES snes = init();
+
+        snes.ppu.advanceCountersOnly(0x122);
+        snes.bus.read(0x2137);
+
+        assertEquals(0x22, snes.bus.read(0x213c));
+        assertEquals(0x23, snes.bus.read(0x213c));
+    }
+
+    @Test
+    void stat78IncludesPpu2OpenBusBit5() {
+        SNES snes = init();
+
+        snes.ppu.advanceCountersOnly(0x20);
+        snes.bus.read(0x2137);
+        assertEquals(0x20, snes.bus.read(0x213c));
+
+        assertEquals(0x63, snes.bus.read(0x213f));
+        assertEquals(0x23, snes.bus.read(0x213f));
     }
 
     @Test
@@ -164,7 +187,7 @@ class PpuReadTest {
         snes.ppu.advanceCountersOnly(0x100);
         snes.bus.read(0x2137);
 
-        assertEquals(0x01, snes.bus.read(0x213c));
+        assertEquals(0x03, snes.bus.read(0x213c));
         assertEquals(0x03, snes.bus.read(0x213c));
     }
 
@@ -181,7 +204,7 @@ class PpuReadTest {
         snes.ppu.advanceCountersOnly(0x100);
         snes.bus.write(0x4201, 0x00);
 
-        assertEquals(0x01, snes.bus.read(0x213c));
+        assertEquals(0x03, snes.bus.read(0x213c));
         assertEquals(0x03, snes.bus.read(0x213c));
     }
 
@@ -195,7 +218,7 @@ class PpuReadTest {
         assertEquals(0x43, snes.bus.read(0x213f));
 
         assertEquals(0x03, snes.bus.read(0x213c));
-        assertEquals(0x01, snes.bus.read(0x213c));
+        assertEquals(0x03, snes.bus.read(0x213c));
     }
 
     @Test

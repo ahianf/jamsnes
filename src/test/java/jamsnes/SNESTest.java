@@ -106,7 +106,7 @@ class SNESTest {
 
         assertEquals(0x43, snes.bus.read(0x213f));
         assertEquals(0x03, snes.bus.read(0x213c));
-        assertEquals(0x01, snes.bus.read(0x213c));
+        assertEquals(0x03, snes.bus.read(0x213c));
         assertEquals(0x01, snes.bus.read(0x213d));
         assertEquals(0x00, snes.bus.read(0x213d));
     }
