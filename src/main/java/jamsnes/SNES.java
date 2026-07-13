@@ -7,6 +7,7 @@ import jamsnes.cpu.CPU;
 import jamsnes.input.Joypad;
 import jamsnes.memory.MemoryBus;
 import jamsnes.models.Component;
+import jamsnes.ram.MirroredRam;
 import jamsnes.ppu.PPU;
 import jamsnes.ram.Ram;
 import jamsnes.renderer.IRenderer;
@@ -39,7 +40,7 @@ public class SNES {
         this.bus = new MemoryBus();
         this.cartridge = new Cartridge();
         this.wram = new Ram(131_072, Component.WRAM, "WRam");
-        this.sram = new Ram(0, Component.SRAM, "SRam");
+        this.sram = new MirroredRam(0, Component.SRAM, "SRam");
         this.cpu = new CPU(bus, cartridge.header);
         this.joypad = new Joypad();
         this.ppu = new PPU(renderer);

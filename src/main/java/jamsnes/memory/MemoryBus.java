@@ -100,9 +100,11 @@ public class MemoryBus implements IMemoryBus {
             rectangleShadows.add(new RectangleShadow(console.cartridge, 0x40, 0x6f, 0x0000, 0x7fff).setBankOffset(0x40));
             rectangleShadows.add(new RectangleShadow(console.cartridge, 0xc0, 0xef, 0x0000, 0x7fff).setBankOffset(0x40));
 
-            console.sram.setMemoryRegion(0xf0, 0xff, 0x0000, 0x7fff);
-            memoryAccessors.add(console.sram);
-            rectangleShadows.add(new RectangleShadow(console.sram, 0x70, 0x7d, 0x0000, 0x7fff));
+            if (console.sram.getSize() > 0) {
+                console.sram.setMemoryRegion(0xf0, 0xff, 0x0000, 0x7fff);
+                memoryAccessors.add(console.sram);
+                rectangleShadows.add(new RectangleShadow(console.sram, 0x70, 0x7d, 0x0000, 0x7fff));
+            }
         } else if (console.cartridge.header.hasMappingMode(MappingMode.HIROM)) {
             console.cartridge.setMemoryRegion(0xc0, 0xff, 0x0000, 0xffff);
             memoryAccessors.add(console.cartridge);
@@ -112,8 +114,10 @@ public class MemoryBus implements IMemoryBus {
             rectangleShadows.add(new RectangleShadow(console.cartridge, 0x40, 0x7d, 0x0000, 0xffff));
             rectangleShadows.add(new RectangleShadow(console.cartridge, 0x80, 0xbf, 0x8000, 0xffff)
                     .setBankOffset(1));
-            rectangleShadows.add(new RectangleShadow(console.sram, 0x20, 0x3f, 0x6000, 0x7fff));
-            rectangleShadows.add(new RectangleShadow(console.sram, 0xa0, 0xbf, 0x6000, 0x7fff));
+            if (console.sram.getSize() > 0) {
+                rectangleShadows.add(new RectangleShadow(console.sram, 0x20, 0x3f, 0x6000, 0x7fff));
+                rectangleShadows.add(new RectangleShadow(console.sram, 0xa0, 0xbf, 0x6000, 0x7fff));
+            }
         }
 
         memoryAccessors.addAll(shadows);
