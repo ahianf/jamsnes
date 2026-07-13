@@ -5,6 +5,7 @@ import jamsnes.renderer.NoRenderer;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class JoypadTest {
@@ -58,6 +59,46 @@ class JoypadTest {
 
         snes.joypad.setControllerState(0, Joypad.BUTTON_B);
         assertEquals(1, snes.bus.read(0x4016));
+        assertEquals(1, snes.bus.read(0x4016));
+    }
+
+    @Test
+    void buttonsExposeSerialReadBitOrder() {
+        assertEquals(1 << 0, JoypadButton.B.mask());
+        assertEquals(1 << 1, JoypadButton.Y.mask());
+        assertEquals(1 << 2, JoypadButton.SELECT.mask());
+        assertEquals(1 << 3, JoypadButton.START.mask());
+        assertEquals(1 << 4, JoypadButton.UP.mask());
+        assertEquals(1 << 5, JoypadButton.DOWN.mask());
+        assertEquals(1 << 6, JoypadButton.LEFT.mask());
+        assertEquals(1 << 7, JoypadButton.RIGHT.mask());
+        assertEquals(1 << 8, JoypadButton.A.mask());
+        assertEquals(1 << 9, JoypadButton.X.mask());
+        assertEquals(1 << 10, JoypadButton.L.mask());
+        assertEquals(1 << 11, JoypadButton.R.mask());
+    }
+
+    @Test
+    void setButtonPressedUpdatesOnlyTheSelectedButton() {
+        SNES snes = init();
+        snes.joypad.setControllerState(0, Joypad.BUTTON_START);
+
+        snes.joypad.setButtonPressed(0, JoypadButton.B, true);
+        snes.joypad.setButtonPressed(0, JoypadButton.A, true);
+        snes.joypad.setButtonPressed(0, JoypadButton.B, false);
+
+        assertEquals(Joypad.BUTTON_START | Joypad.BUTTON_A, snes.joypad.controllerState(0));
+        assertTrue(snes.joypad.isButtonPressed(0, JoypadButton.A));
+        assertFalse(snes.joypad.isButtonPressed(0, JoypadButton.B));
+    }
+
+    @Test
+    void setButtonPressedRefreshesLatchedStateWhileStrobeIsHigh() {
+        SNES snes = init();
+        snes.bus.write(0x4016, 1);
+
+        snes.joypad.setButtonPressed(0, JoypadButton.B, true);
+
         assertEquals(1, snes.bus.read(0x4016));
     }
 

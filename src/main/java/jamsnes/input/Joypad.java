@@ -4,21 +4,23 @@ import jamsnes.exceptions.InvalidAddress;
 import jamsnes.memory.AMemory;
 import jamsnes.models.Component;
 
+import java.util.Objects;
+
 import static jamsnes.models.Unsigned.u16;
 
 public class Joypad extends AMemory {
-    public static final int BUTTON_B = 1 << 0;
-    public static final int BUTTON_Y = 1 << 1;
-    public static final int BUTTON_SELECT = 1 << 2;
-    public static final int BUTTON_START = 1 << 3;
-    public static final int BUTTON_UP = 1 << 4;
-    public static final int BUTTON_DOWN = 1 << 5;
-    public static final int BUTTON_LEFT = 1 << 6;
-    public static final int BUTTON_RIGHT = 1 << 7;
-    public static final int BUTTON_A = 1 << 8;
-    public static final int BUTTON_X = 1 << 9;
-    public static final int BUTTON_L = 1 << 10;
-    public static final int BUTTON_R = 1 << 11;
+    public static final int BUTTON_B = JoypadButton.B.mask();
+    public static final int BUTTON_Y = JoypadButton.Y.mask();
+    public static final int BUTTON_SELECT = JoypadButton.SELECT.mask();
+    public static final int BUTTON_START = JoypadButton.START.mask();
+    public static final int BUTTON_UP = JoypadButton.UP.mask();
+    public static final int BUTTON_DOWN = JoypadButton.DOWN.mask();
+    public static final int BUTTON_LEFT = JoypadButton.LEFT.mask();
+    public static final int BUTTON_RIGHT = JoypadButton.RIGHT.mask();
+    public static final int BUTTON_A = JoypadButton.A.mask();
+    public static final int BUTTON_X = JoypadButton.X.mask();
+    public static final int BUTTON_L = JoypadButton.L.mask();
+    public static final int BUTTON_R = JoypadButton.R.mask();
 
     private final int[] controllerState = new int[2];
     private final int[] shiftRegister = new int[2];
@@ -57,6 +59,25 @@ public class Joypad extends AMemory {
         if (strobe) {
             shiftRegister[controller] = controllerState[controller];
         }
+    }
+
+    public void setButtonPressed(int controller, JoypadButton button, boolean pressed) {
+        validateController(controller);
+        Objects.requireNonNull(button, "button");
+
+        int state = controllerState[controller];
+        if (pressed) {
+            state |= button.mask();
+        } else {
+            state &= ~button.mask();
+        }
+        setControllerState(controller, state);
+    }
+
+    public boolean isButtonPressed(int controller, JoypadButton button) {
+        validateController(controller);
+        Objects.requireNonNull(button, "button");
+        return (controllerState[controller] & button.mask()) != 0;
     }
 
     public int controllerState(int controller) {
