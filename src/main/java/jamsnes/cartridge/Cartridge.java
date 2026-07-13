@@ -79,7 +79,7 @@ public class Cartridge extends Ram {
         type = CartridgeType.GAME;
 
         int headerAddress = getHeaderAddress();
-        if (headerAddress + HEADER_SIZE > getSize()) {
+        if (headerAddress < 0 || headerAddress + HEADER_SIZE > getSize()) {
             return false;
         }
 
@@ -133,12 +133,12 @@ public class Cartridge extends Ram {
         int[] addresses = {0x7fc0, 0xffc0};
         int smc = getSize() % 1024;
         int bestScore = -1;
-        int bestAddress = 0;
+        int bestAddress = -1;
 
         for (int rawAddress : addresses) {
             int address = rawAddress + smc;
             int score = 0;
-            if (address + 0x32 >= getSize()) {
+            if (address + HEADER_SIZE > getSize()) {
                 continue;
             }
 
