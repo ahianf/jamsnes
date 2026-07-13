@@ -105,6 +105,9 @@ public class CPU extends AMemory {
         if (address == 0x11) {
             return readIrqStatus();
         }
+        if (address == 0x12) {
+            return readVideoStatus();
+        }
         if (address == 0x13) {
             return internalRegisters[0x01];
         }
@@ -213,6 +216,10 @@ public class CPU extends AMemory {
         int value = (internalRegisters[0x11] & 0x80) | (bus.getOpenBus() & 0x7f);
         clearIrqStatus();
         return value;
+    }
+
+    private int readVideoStatus() {
+        return (internalRegisters[0x12] & 0xc1) | (bus.getOpenBus() & 0x3e);
     }
 
     private void clearIrqStatus() {

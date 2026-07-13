@@ -97,6 +97,28 @@ class CpuRegisterTest {
     }
 
     @Test
+    void hvbjoyReadCarriesOpenBusUnusedBits() {
+        SNES snes = init();
+        snes.cpu.internalRegisters()[0x12] = 0xc1;
+        snes.bus.setOpenBus(0x3e);
+
+        assertEquals(0xff, snes.bus.read(0x4212));
+
+        snes.cpu.internalRegisters()[0x12] = 0x00;
+
+        assertEquals(0x3e, snes.bus.read(0x4212));
+    }
+
+    @Test
+    void hvbjoyMirroredReadCarriesOpenBusUnusedBits() {
+        SNES snes = init();
+        snes.cpu.internalRegisters()[0x12] = 0x81;
+        snes.bus.setOpenBus(0x2a);
+
+        assertEquals(0xab, snes.bus.read(0x804212));
+    }
+
+    @Test
     void disablingTimerIrqModeAcknowledgesTimeup() {
         SNES snes = init();
 
