@@ -372,7 +372,19 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.update(1);
 
-        assertEquals(0x770000ff, renderer.firstPixel);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x000e), renderer.firstPixel);
+    }
+
+    @Test
+    void updateAppliesDisplayBrightnessInFiveBitColorSpace() {
+        TestRenderer renderer = new TestRenderer();
+        SNES snes = init(renderer);
+        snes.bus.write(0x2100, 0x07);
+        writeColor(snes, 0, 0x0004);
+
+        snes.ppu.update(1);
+
+        assertEquals(PPUUtils.cgramColorToRGBA(0x0001), renderer.firstPixel);
     }
 
     @Test

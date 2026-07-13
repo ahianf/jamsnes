@@ -1097,10 +1097,10 @@ public class PPU extends AMemory {
             return 0x000000ff;
         }
         int brightness = ppuRegisters.inidispBrightness();
-        int red = (((rgba >>> 24) & 0xff) * brightness) / 15;
-        int green = (((rgba >>> 16) & 0xff) * brightness) / 15;
-        int blue = (((rgba >>> 8) & 0xff) * brightness) / 15;
-        return (red << 24) | (green << 16) | (blue << 8) | (rgba & 0xff);
+        int red = (channel5(rgba, 24) * brightness) / 15;
+        int green = (channel5(rgba, 16) * brightness) / 15;
+        int blue = (channel5(rgba, 8) * brightness) / 15;
+        return packColor5(red, green, blue, rgba & 0xff);
     }
 
     @Override
