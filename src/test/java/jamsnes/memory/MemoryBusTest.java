@@ -152,11 +152,16 @@ class MemoryBusTest {
         assertSame(snes.cartridge, snes.bus.getAccessor(0xc00000));
         assertSame(snes.cartridge, snes.bus.getAccessor(0xc10000));
         assertMirrors(snes.cartridge, snes.bus.getAccessor(0x008000));
+        assertMirrors(snes.cartridge, snes.bus.getAccessor(0x400000));
+        assertMirrors(snes.cartridge, snes.bus.getAccessor(0x410000));
+        assertMirrors(snes.cartridge, snes.bus.getAccessor(0x7dffff));
         assertMirrors(snes.cartridge, snes.bus.getAccessor(0x808000));
 
         assertEquals(0x11, snes.bus.read(0xc00000));
+        assertEquals(0x11, snes.bus.read(0x400000));
         assertEquals(0x22, snes.bus.read(0x008000));
         assertEquals(0x22, snes.bus.read(0x808000));
+        assertEquals(0x33, snes.bus.read(0x410000));
         assertEquals(0x33, snes.bus.read(0xc10000));
     }
 
@@ -184,6 +189,8 @@ class MemoryBusTest {
 
         assertEquals(0x56, snes.bus.read(0xc00000));
         assertEquals(0x78, snes.bus.read(0xc0ffff));
+        assertEquals(0x56, snes.bus.read(0x400000));
+        assertEquals(0x78, snes.bus.read(0x40ffff));
         assertEquals(0x56, snes.bus.read(0xc10000));
         assertEquals(0x78, snes.bus.read(0xc1ffff));
     }
