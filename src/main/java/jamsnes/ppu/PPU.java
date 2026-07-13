@@ -525,8 +525,10 @@ public class PPU extends AMemory {
         } else {
             ppuRegisters.setCgDataHigh(value);
             int byteAddress = u16(ppuRegisters.cgAddress() * 2);
-            cgram.write(byteAddress, ppuRegisters.cgDataLow());
-            cgram.write(u16(byteAddress + 1), ppuRegisters.cgDataHigh());
+            if (canAccessCgramMemory()) {
+                cgram.write(byteAddress, ppuRegisters.cgDataLow());
+                cgram.write(u16(byteAddress + 1), ppuRegisters.cgDataHigh());
+            }
             ppuRegisters.incrementCgAddress();
         }
         ppuRegisters.toggleCgLowByte();
@@ -542,6 +544,10 @@ public class PPU extends AMemory {
             }
         }
         ppuRegisters.incrementOamAddress();
+    }
+
+    private boolean canAccessCgramMemory() {
+        return canAccessVideoMemory() || isInHBlank();
     }
 
     private void writeOamLowTableData(int address, int value) {

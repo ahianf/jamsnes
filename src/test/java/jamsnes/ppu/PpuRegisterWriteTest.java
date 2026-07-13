@@ -310,6 +310,7 @@ class PpuRegisterWriteTest {
     void writesCgAddressAndData() {
         SNES snes = init();
 
+        snes.bus.write(0x2100, 0x80);
         snes.bus.write(0x2121, 0x10);
         assertEquals(0x10, snes.ppu.ppuRegisters().cgAddress());
         assertTrue(snes.ppu.ppuRegisters().isCgLowByte());
@@ -325,6 +326,36 @@ class PpuRegisterWriteTest {
         assertEquals(0x11, snes.ppu.ppuRegisters().cgAddress());
         assertEquals(0xff, snes.ppu.cgram.read(0x20));
         assertEquals(0x78, snes.ppu.cgram.read(0x21));
+    }
+
+    @Test
+    void cgDataWriteIsSkippedDuringActiveDisplayButStillAdvancesPhaseAndAddress() {
+        SNES snes = init();
+
+        snes.bus.write(0x2121, 0x10);
+        snes.bus.write(0x2122, 0xff);
+        snes.bus.write(0x2122, 0xf8);
+
+        assertEquals(0xff, snes.ppu.ppuRegisters().cgDataLow());
+        assertEquals(0x78, snes.ppu.ppuRegisters().cgDataHigh());
+        assertTrue(snes.ppu.ppuRegisters().isCgLowByte());
+        assertEquals(0x11, snes.ppu.ppuRegisters().cgAddress());
+        assertEquals(0x00, snes.ppu.cgram.read(0x20));
+        assertEquals(0x00, snes.ppu.cgram.read(0x21));
+    }
+
+    @Test
+    void cgDataWriteCommitsDuringVBlankWithoutForcedBlank() {
+        SNES snes = init();
+
+        snes.ppu.advanceCountersOnly(PPU.H_COUNTER_DOTS * PPU.V_BLANK_START_SCANLINE);
+        snes.bus.write(0x2121, 0x10);
+        snes.bus.write(0x2122, 0xff);
+        snes.bus.write(0x2122, 0xf8);
+
+        assertEquals(0xff, snes.ppu.cgram.read(0x20));
+        assertEquals(0x78, snes.ppu.cgram.read(0x21));
+        assertEquals(0x11, snes.ppu.ppuRegisters().cgAddress());
     }
 
     @Test

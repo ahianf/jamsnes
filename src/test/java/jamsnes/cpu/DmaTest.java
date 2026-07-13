@@ -1,6 +1,7 @@
 package jamsnes.cpu;
 
 import jamsnes.SNES;
+import jamsnes.ppu.PPU;
 import jamsnes.renderer.NoRenderer;
 import org.junit.jupiter.api.Test;
 
@@ -130,6 +131,7 @@ class DmaTest {
         snes.bus.write(0x420c, 0x01);
 
         assertEquals(8, snes.cpu.initializeHDMA());
+        enterHBlank(snes);
         assertEquals(16, snes.cpu.runHDMALine());
         assertEquals(0x12, snes.ppu.cgram.read(0x40));
         assertEquals(0x34, snes.ppu.cgram.read(0x41));
@@ -158,6 +160,7 @@ class DmaTest {
         snes.bus.write(0x420c, 0x01);
 
         assertEquals(8, snes.cpu.initializeHDMA());
+        enterHBlank(snes);
         assertEquals(16, snes.cpu.runHDMALine());
         assertEquals(0x81, dma.getLineCounter());
         assertEquals(16 + 8, snes.cpu.runHDMALine());
@@ -218,6 +221,7 @@ class DmaTest {
         snes.bus.write(0x420c, 0x01);
 
         assertEquals(24, snes.cpu.initializeHDMA());
+        enterHBlank(snes);
         assertEquals(16 + 8, snes.cpu.runHDMALine());
 
         assertEquals(0xab, snes.ppu.cgram.read(0x40));
@@ -247,6 +251,7 @@ class DmaTest {
         snes.bus.write(0x420c, 0x03);
 
         assertEquals(16, snes.cpu.initializeHDMA());
+        enterHBlank(snes);
         assertEquals(40, snes.cpu.runHDMALine());
 
         assertEquals(0x12, snes.ppu.cgram.read(0x40));
@@ -362,6 +367,7 @@ class DmaTest {
     void fixedAddressDmaDoesNotChangeAAddress() {
         SNES snes = init();
         snes.wram.data()[0x40] = 0x12;
+        snes.bus.write(0x2100, 0x80);
         snes.bus.write(0x2121, 0x20);
 
         snes.bus.write(0x4301, 0x22);
@@ -387,6 +393,7 @@ class DmaTest {
         SNES snes = init();
         snes.wram.data()[0x51] = 0x22;
         snes.wram.data()[0x52] = 0x33;
+        snes.bus.write(0x2100, 0x80);
         snes.bus.write(0x2121, 0x20);
 
         snes.bus.write(0x4301, 0x22);
@@ -442,6 +449,10 @@ class DmaTest {
         SNES snes = new SNES(new NoRenderer(0, 0, 0));
         snes.bus.mapComponents(snes);
         return snes;
+    }
+
+    private static void enterHBlank(SNES snes) {
+        snes.ppu.advanceCountersOnly(PPU.H_BLANK_START_DOT);
     }
 
     private static void setupHdma(SNES snes, int control, int port, int tableAddress) {
