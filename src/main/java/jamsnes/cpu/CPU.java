@@ -127,6 +127,9 @@ public class CPU extends AMemory {
             dmaChannels[(address - 0x100) >>> 4].write(address & 0x0f, data);
             return;
         }
+        if (isReadOnlyInternalRegister(address)) {
+            return;
+        }
         if (!isInternalRegister(address)) {
             throw new InvalidAddress("CPU Internal Registers write", address + start);
         }
@@ -143,6 +146,10 @@ public class CPU extends AMemory {
 
     private boolean isInternalRegister(int address) {
         return (address >= 0x00 && address <= 0x0d) || (address >= 0x10 && address <= 0x1f);
+    }
+
+    private boolean isReadOnlyInternalRegister(int address) {
+        return address >= 0x10 && address <= 0x1f;
     }
 
     private void runMultiplication() {

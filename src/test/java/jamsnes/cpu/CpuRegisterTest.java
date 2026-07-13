@@ -75,6 +75,26 @@ class CpuRegisterTest {
     }
 
     @Test
+    void readOnlyCpuRegisterWritesAreNoop() {
+        SNES snes = init();
+        snes.cpu.requestNMI();
+        snes.cpu.requestIRQ();
+        snes.bus.write(0x4202, 0x12);
+        snes.bus.write(0x4203, 0x34);
+        snes.cpu.internalRegisters()[0x18] = 0x56;
+
+        snes.bus.write(0x4210, 0x00);
+        snes.bus.write(0x4211, 0x00);
+        snes.bus.write(0x4216, 0xff);
+        snes.bus.write(0x4218, 0xab);
+
+        assertEquals(0x80, snes.bus.read(0x4210));
+        assertEquals(0x80, snes.bus.read(0x4211));
+        assertEquals(0xa8, snes.bus.read(0x4216));
+        assertEquals(0x56, snes.bus.read(0x4218));
+    }
+
+    @Test
     void returnsCpuRegisterValueNames() {
         SNES snes = init();
 
