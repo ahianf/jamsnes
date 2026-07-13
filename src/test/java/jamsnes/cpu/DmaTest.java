@@ -262,6 +262,7 @@ class DmaTest {
     void vramWriteIncrementsAfterLowByteByDefault() {
         SNES snes = init();
 
+        snes.bus.write(0x2100, 0x80);
         snes.bus.write(0x2117, 0x20);
         snes.bus.write(0x2116, 0x00);
         for (int i = 0; i < 8; i++) {
@@ -279,6 +280,7 @@ class DmaTest {
     void vramWriteCanIncrementAfterHighByte() {
         SNES snes = init();
 
+        snes.bus.write(0x2100, 0x80);
         snes.bus.write(0x2115, 0b1000_0000);
         snes.bus.write(0x2117, 0x20);
         snes.bus.write(0x2116, 0x00);
@@ -301,6 +303,7 @@ class DmaTest {
             snes.wram.data()[i] = source[i];
         }
 
+        snes.bus.write(0x2100, 0x80);
         snes.bus.write(0x2115, 0b1000_0000);
         snes.bus.write(0x2117, 0x00);
         snes.bus.write(0x2116, 0x00);

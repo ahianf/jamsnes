@@ -187,7 +187,7 @@ class SNESTest {
         snes.loadRom(writeGameRom().toString());
         snes.bus.write(0x2118, 0x42);
 
-        assertEquals(0x00, snes.ppu.registers()[0x00]);
+        assertEquals(0x80, snes.ppu.registers()[0x00]);
         assertEquals(0x00, snes.ppu.registers()[0x15]);
         assertEquals(0x42, snes.ppu.vram.read(0));
         assertEquals(1, snes.ppu.getVramAddressRegister());

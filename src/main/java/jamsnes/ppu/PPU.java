@@ -132,7 +132,7 @@ public class PPU extends AMemory {
                 updateVramReadBuffer();
             }
             case 0x18 -> {
-                if (!ppuRegisters.inidispFblank()) {
+                if (canAccessVideoMemory()) {
                     vram.write(getVramAddress(), value);
                 }
                 if (!isVramIncrementAfterHighByte()) {
@@ -140,7 +140,7 @@ public class PPU extends AMemory {
                 }
             }
             case 0x19 -> {
-                if (!ppuRegisters.inidispFblank()) {
+                if (canAccessVideoMemory()) {
                     vram.write(u16(getVramAddress() + 1), value);
                 }
                 if (isVramIncrementAfterHighByte()) {
@@ -226,6 +226,7 @@ public class PPU extends AMemory {
     public void resetRegisterState() {
         Arrays.fill(registers, 0);
         ppuRegisters.reset();
+        registers[0x00] = 0x80;
         vramAddress = 0;
         vmain = 0;
         vramIncrementAmount = 1;
@@ -380,6 +381,10 @@ public class PPU extends AMemory {
 
     private boolean isVramIncrementAfterHighByte() {
         return (vmain & 0b1000_0000) != 0;
+    }
+
+    private boolean canAccessVideoMemory() {
+        return ppuRegisters.inidispFblank() || isInVBlank();
     }
 
     private void incrementVramAddress() {

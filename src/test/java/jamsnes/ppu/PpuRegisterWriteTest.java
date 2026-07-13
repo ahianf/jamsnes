@@ -151,6 +151,7 @@ class PpuRegisterWriteTest {
     void decodesVmainVmaddAndVmdata() {
         SNES snes = init();
 
+        snes.bus.write(0x2100, 0x80);
         snes.bus.write(0x2115, 0b1111_1111);
         assertTrue(snes.ppu.ppuRegisters().vmainIncrementMode());
         assertEquals(0b11, snes.ppu.ppuRegisters().vmainAddressRemapping());
@@ -166,7 +167,7 @@ class PpuRegisterWriteTest {
     }
 
     @Test
-    void vramDataWriteIsSkippedDuringForcedBlankButStillIncrementsLowByteMode() {
+    void vramDataWriteCommitsDuringForcedBlankAndIncrementsLowByteMode() {
         SNES snes = init();
 
         snes.bus.write(0x2100, 0x80);
@@ -174,12 +175,12 @@ class PpuRegisterWriteTest {
         snes.bus.write(0x2117, 0x00);
         snes.bus.write(0x2118, 0x42);
 
-        assertEquals(0, snes.ppu.vram.read(0));
+        assertEquals(0x42, snes.ppu.vram.read(0));
         assertEquals(1, snes.ppu.getVramAddressRegister());
     }
 
     @Test
-    void vramDataWriteIsSkippedDuringForcedBlankButStillIncrementsHighByteMode() {
+    void vramDataWriteCommitsDuringForcedBlankAndIncrementsHighByteMode() {
         SNES snes = init();
 
         snes.bus.write(0x2100, 0x80);
@@ -188,7 +189,32 @@ class PpuRegisterWriteTest {
         snes.bus.write(0x2117, 0x00);
         snes.bus.write(0x2119, 0x42);
 
-        assertEquals(0, snes.ppu.vram.read(1));
+        assertEquals(0x42, snes.ppu.vram.read(1));
+        assertEquals(1, snes.ppu.getVramAddressRegister());
+    }
+
+    @Test
+    void vramDataWriteIsSkippedDuringActiveDisplayButStillIncrements() {
+        SNES snes = init();
+
+        snes.bus.write(0x2116, 0x00);
+        snes.bus.write(0x2117, 0x00);
+        snes.bus.write(0x2118, 0x42);
+
+        assertEquals(0x00, snes.ppu.vram.read(0));
+        assertEquals(1, snes.ppu.getVramAddressRegister());
+    }
+
+    @Test
+    void vramDataWriteCommitsDuringVBlankWithoutForcedBlank() {
+        SNES snes = init();
+
+        snes.ppu.advanceCountersOnly(PPU.H_COUNTER_DOTS * PPU.V_BLANK_START_SCANLINE);
+        snes.bus.write(0x2116, 0x00);
+        snes.bus.write(0x2117, 0x00);
+        snes.bus.write(0x2118, 0x42);
+
+        assertEquals(0x42, snes.ppu.vram.read(0));
         assertEquals(1, snes.ppu.getVramAddressRegister());
     }
 

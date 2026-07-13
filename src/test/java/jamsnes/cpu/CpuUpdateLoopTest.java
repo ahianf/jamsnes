@@ -143,6 +143,7 @@ class CpuUpdateLoopTest {
     void updateRunsDmaBeforeInstructions() {
         SNES snes = init();
         snes.wram.data()[0] = 0x34;
+        snes.bus.write(0x2100, 0x80);
         snes.bus.write(0x2115, 0b1000_0000);
         snes.bus.write(0x4301, 0x18);
         snes.bus.write(0x4304, 0x7e);
