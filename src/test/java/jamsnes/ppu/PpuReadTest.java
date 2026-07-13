@@ -152,10 +152,22 @@ class PpuReadTest {
     }
 
     @Test
-    void unsupportedPpuReadRegisterThrows() {
+    void ppuWriteOnlyRegisterBusReadsUseOpenBus() {
+        SNES snes = init();
+        snes.bus.setOpenBus(0x5a);
+
+        assertEquals(0x5a, snes.bus.read(0x2100));
+        assertEquals(0x5a, snes.bus.read(0x2133));
+        assertEquals(0x5a, snes.bus.read(0x802100));
+        assertEquals(0x5a, snes.bus.getOpenBus());
+    }
+
+    @Test
+    void unsupportedDirectPpuReadRegisterThrows() {
         SNES snes = init();
 
-        assertThrows(InvalidAddress.class, () -> snes.bus.read(0x2100));
+        assertThrows(InvalidAddress.class, () -> snes.ppu.read(0x00));
+        assertThrows(InvalidAddress.class, () -> snes.ppu.read(0x40));
     }
 
     @Test

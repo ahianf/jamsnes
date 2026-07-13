@@ -2,6 +2,7 @@ package jamsnes.memory;
 
 import jamsnes.SNES;
 import jamsnes.cartridge.MappingMode;
+import jamsnes.exceptions.InvalidAddress;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -33,7 +34,12 @@ public class MemoryBus implements IMemoryBus {
         if (handler == null) {
             return openBus;
         }
-        int data = handler.read(handler.getRelativeAddress(address));
+        int data;
+        try {
+            data = handler.read(handler.getRelativeAddress(address));
+        } catch (InvalidAddress exception) {
+            return openBus;
+        }
         openBus = data;
         return data;
     }
