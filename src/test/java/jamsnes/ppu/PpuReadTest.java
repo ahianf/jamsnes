@@ -139,9 +139,11 @@ class PpuReadTest {
         SNES snes = init();
 
         snes.ppu.update(600);
+        snes.bus.setOpenBus(0x5a);
         snes.ppu.registers()[0x37] = 0xab;
 
-        assertEquals(0xab, snes.bus.read(0x2137));
+        assertEquals(0x5a, snes.bus.read(0x2137));
+        assertEquals(0x5a, snes.bus.getOpenBus());
         assertEquals(0x03, snes.bus.read(0x213c));
         assertEquals(0x01, snes.bus.read(0x213c));
         assertEquals(0x01, snes.bus.read(0x213d));

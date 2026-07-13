@@ -417,7 +417,7 @@ public class PPU extends AMemory {
 
     private int readSoftwareLatch() {
         latchCounters();
-        return registers[0x37];
+        throw new InvalidAddress("PPU Internal Registers read ", 0x2137);
     }
 
     private int readLatchedHCounter() {
