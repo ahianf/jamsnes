@@ -105,7 +105,7 @@ public class PPU extends AMemory {
     @Override
     public void write(int address, int data) {
         int value = u8(data);
-        if (address == 0x3e) {
+        if (isReadOnlyRegister(address)) {
             return;
         }
         if (!isWritableRegister(address)) {
@@ -157,6 +157,10 @@ public class PPU extends AMemory {
 
     private boolean isWritableRegister(int address) {
         return address >= 0x00 && address <= 0x33;
+    }
+
+    private boolean isReadOnlyRegister(int address) {
+        return address >= 0x34 && address <= 0x3f;
     }
 
     public int[] registers() {

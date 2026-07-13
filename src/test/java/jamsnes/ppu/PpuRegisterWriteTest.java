@@ -356,20 +356,33 @@ class PpuRegisterWriteTest {
     }
 
     @Test
-    void stat77WriteIsNoop() {
+    void readOnlyPpuRegisterWritesAreNoop() {
         SNES snes = init();
+        writeMode7Register(snes, 0x211b, 0x0100);
+        snes.ppu.advanceCountersOnly(PPU.H_COUNTER_DOTS + 3);
+        snes.bus.read(0x2137);
 
+        snes.bus.write(0x2134, 0xff);
         snes.bus.write(0x213e, 0xff);
+        snes.bus.write(0x213f, 0xff);
 
+        assertEquals(0x00, snes.bus.read(0x2134));
         assertEquals(0, snes.ppu.registers()[0x3e]);
+        assertEquals(0x03, snes.bus.read(0x213c));
+        assertEquals(0x00, snes.bus.read(0x213c));
+        assertEquals(0x01, snes.bus.read(0x213d));
     }
 
     @Test
     void unsupportedPpuWriteRegisterThrows() {
         SNES snes = init();
 
-        assertThrows(InvalidAddress.class, () -> snes.bus.write(0x2134, 0xff));
-        assertThrows(InvalidAddress.class, () -> snes.bus.write(0x213f, 0xff));
+        assertThrows(InvalidAddress.class, () -> snes.ppu.write(0x40, 0xff));
+    }
+
+    private static void writeMode7Register(SNES snes, int address, int value) {
+        snes.bus.write(address, value >>> 8);
+        snes.bus.write(address, value);
     }
 
     private static SNES init() {
