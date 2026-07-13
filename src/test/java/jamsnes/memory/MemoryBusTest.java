@@ -32,8 +32,12 @@ class MemoryBusTest {
 
         assertSame(snes.apu, snes.bus.getAccessor(0x002140));
         assertSame(snes.apu, snes.bus.getAccessor(0x002143));
+        assertMirrors(snes.apu, snes.bus.getAccessor(0x002144));
+        assertMirrors(snes.apu, snes.bus.getAccessor(0x00217f));
         assertMirrors(snes.apu, snes.bus.getAccessor(0xab2143));
         assertMirrors(snes.apu, snes.bus.getAccessor(0x052143));
+        assertMirrors(snes.apu, snes.bus.getAccessor(0xab2144));
+        assertMirrors(snes.apu, snes.bus.getAccessor(0x05217f));
 
         assertSame(snes.cpu, snes.bus.getAccessor(0x004200));
         assertSame(snes.cpu, snes.bus.getAccessor(0x00421f));
@@ -86,6 +90,11 @@ class MemoryBusTest {
 
         snes.apu.ports()[0] = 123;
         assertEquals(123, snes.bus.read(0x002140));
+
+        snes.apu.ports()[3] = 45;
+        assertEquals(123, snes.bus.read(0x002144));
+        assertEquals(45, snes.bus.read(0x00217f));
+        assertEquals(45, snes.bus.read(0x80217f));
 
         snes.cartridge.data()[5] = 123;
         assertEquals(123, snes.bus.read(0x808005));
@@ -177,6 +186,12 @@ class MemoryBusTest {
         snes.bus.write(0x002143, 123);
         assertEquals(123, snes.apu.inputPorts()[3]);
         assertEquals(123, snes.apu._internalRead(0x00f7));
+        snes.bus.write(0x002144, 0x34);
+        snes.bus.write(0x00217f, 0x56);
+        snes.bus.write(0x80217e, 0x78);
+        assertEquals(0x34, snes.apu.inputPorts()[0]);
+        assertEquals(0x78, snes.apu.inputPorts()[2]);
+        assertEquals(0x56, snes.apu.inputPorts()[3]);
 
         snes.bus.write(0x002106, 123);
         assertEquals(123, snes.ppu.registers()[0x06]);
@@ -386,6 +401,10 @@ class MemoryBusTest {
     private static void assertMirrors(IMemory expected, IMemory actual) {
         if (actual instanceof MemoryShadow memoryShadow) {
             assertSame(expected, memoryShadow.getMirrored());
+            return;
+        }
+        if (actual instanceof RepeatingMemoryShadow repeatingMemoryShadow) {
+            assertSame(expected, repeatingMemoryShadow.getMirrored());
             return;
         }
         RectangleShadow rectangleShadow = assertInstanceOf(RectangleShadow.class, actual);

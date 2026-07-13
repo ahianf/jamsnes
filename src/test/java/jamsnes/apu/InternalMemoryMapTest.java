@@ -5,6 +5,7 @@ import jamsnes.cartridge.Cartridge;
 import jamsnes.exceptions.InvalidAddress;
 import jamsnes.memory.IMemory;
 import jamsnes.memory.MemoryShadow;
+import jamsnes.memory.RepeatingMemoryShadow;
 import jamsnes.renderer.NoRenderer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -123,6 +124,28 @@ class InternalMemoryMapTest {
         assertEquals(0xcd, snes.bus.read(0x2141));
         assertEquals(0x12, snes.apu._internalRead(0x00f4));
         assertEquals(0x34, snes.apu._internalRead(0x00f5));
+    }
+
+    @Test
+    void mirroredCpuApuPortsRepeatAcross2140To217f() {
+        SNES snes = init();
+        snes.bus.mapComponents(snes);
+
+        snes.bus.write(0x2144, 0x12);
+        snes.bus.write(0x217f, 0x34);
+        snes.bus.write(0x802146, 0x56);
+
+        assertEquals(0x12, snes.apu._internalRead(0x00f4));
+        assertEquals(0x56, snes.apu._internalRead(0x00f6));
+        assertEquals(0x34, snes.apu._internalRead(0x00f7));
+
+        snes.apu._internalWrite(0x00f4, 0xab);
+        snes.apu._internalWrite(0x00f6, 0xcd);
+        snes.apu._internalWrite(0x00f7, 0xef);
+
+        assertEquals(0xab, snes.bus.read(0x2144));
+        assertEquals(0xcd, snes.bus.read(0x802146));
+        assertEquals(0xef, snes.bus.read(0x217f));
     }
 
     @Test
@@ -303,6 +326,11 @@ class InternalMemoryMapTest {
         MemoryShadow shadow = assertInstanceOf(MemoryShadow.class, accessor);
 
         assertEquals("APUIO3", shadow.getValueName(0x03));
+
+        IMemory repeatedAccessor = snes.bus.getAccessor(0x80217f);
+        RepeatingMemoryShadow repeatedShadow = assertInstanceOf(RepeatingMemoryShadow.class, repeatedAccessor);
+
+        assertEquals("APUIO3", repeatedShadow.getValueName(0x3b));
     }
 
     private static SNES init() {

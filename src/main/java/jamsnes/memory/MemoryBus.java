@@ -14,6 +14,7 @@ import static jamsnes.models.Unsigned.u8;
 public class MemoryBus implements IMemoryBus {
     private final List<IMemory> memoryAccessors = new ArrayList<>();
     private final List<MemoryShadow> shadows = new ArrayList<>();
+    private final List<RepeatingMemoryShadow> repeatingShadows = new ArrayList<>();
     private final List<RectangleShadow> rectangleShadows = new ArrayList<>();
     private int openBus;
 
@@ -74,6 +75,7 @@ public class MemoryBus implements IMemoryBus {
     public void mapComponents(SNES console) {
         memoryAccessors.clear();
         shadows.clear();
+        repeatingShadows.clear();
         rectangleShadows.clear();
 
         console.wram.setMemoryRegion(0x7e, 0x7f, 0x0000, 0xffff);
@@ -87,6 +89,7 @@ public class MemoryBus implements IMemoryBus {
 
         console.apu.setMemoryRegion(0x2140, 0x2143);
         memoryAccessors.add(console.apu);
+        repeatingShadows.add(new RepeatingMemoryShadow(console.apu, 0x2144, 0x217f, 4));
 
         console.joypad.setMemoryRegion(0x4016, 0x4017);
         memoryAccessors.add(console.joypad);
@@ -131,6 +134,7 @@ public class MemoryBus implements IMemoryBus {
         }
 
         memoryAccessors.addAll(shadows);
+        memoryAccessors.addAll(repeatingShadows);
         memoryAccessors.addAll(rectangleShadows);
     }
 
@@ -140,6 +144,10 @@ public class MemoryBus implements IMemoryBus {
         shadows.add(new MemoryShadow(console.ppu, (normalizedBank << 16) + 0x2100, (normalizedBank << 16) + 0x213f));
         shadows.add(new MemoryShadow(console.wramPort, (normalizedBank << 16) + 0x2180, (normalizedBank << 16) + 0x2183));
         shadows.add(new MemoryShadow(console.apu, (normalizedBank << 16) + 0x2140, (normalizedBank << 16) + 0x2143));
+        repeatingShadows.add(new RepeatingMemoryShadow(console.apu,
+                (normalizedBank << 16) + 0x2144,
+                (normalizedBank << 16) + 0x217f,
+                4));
         shadows.add(new MemoryShadow(console.joypad, (normalizedBank << 16) + 0x4016, (normalizedBank << 16) + 0x4017));
         shadows.add(new MemoryShadow(console.cpu, (normalizedBank << 16) + 0x4200, (normalizedBank << 16) + 0x420d));
         shadows.add(new MemoryShadow(console.cpu, (normalizedBank << 16) + 0x4210, (normalizedBank << 16) + 0x421f));
