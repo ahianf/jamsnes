@@ -119,13 +119,11 @@ class CpuRegisterTest {
     }
 
     @Test
-    void unmappedCpuInternalRegisterReadsAndWritesThrow() {
+    void unimplementedCpuInternalRegisterReadsAndWritesThrow() {
         SNES snes = init();
 
         assertThrows(InvalidAddress.class, () -> snes.bus.read(0x420e));
         assertThrows(InvalidAddress.class, () -> snes.bus.write(0x420f, 0x12));
-        assertThrows(InvalidAddress.class, () -> snes.bus.read(0x4220));
-        assertThrows(InvalidAddress.class, () -> snes.bus.write(0x4400, 0x34));
     }
 
     @Test

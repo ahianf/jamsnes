@@ -37,9 +37,11 @@ class MemoryBusTest {
 
         assertSame(snes.cpu, snes.bus.getAccessor(0x004200));
         assertSame(snes.cpu, snes.bus.getAccessor(0x00421f));
-        assertSame(snes.cpu, snes.bus.getAccessor(0x004300));
-        assertSame(snes.cpu, snes.bus.getAccessor(0x00437f));
+        assertMirrors(snes.cpu, snes.bus.getAccessor(0x004300));
+        assertMirrors(snes.cpu, snes.bus.getAccessor(0x00437f));
         assertSame(snes.cpu, snes.bus.getAccessor(0x004212));
+        assertNull(snes.bus.getAccessor(0x004380));
+        assertNull(snes.bus.getAccessor(0x004400));
         assertMirrors(snes.cpu, snes.bus.getAccessor(0x804212));
         assertMirrors(snes.cpu, snes.bus.getAccessor(0x804300));
         assertMirrors(snes.cpu, snes.bus.getAccessor(0xbf437f));
@@ -95,6 +97,20 @@ class MemoryBusTest {
         snes.wram.data()[0x1010] = 123;
         assertEquals(123, snes.bus.read(0x7e1010));
         assertEquals(123, snes.bus.read(0x001010));
+    }
+
+    @Test
+    void unmappedCpuRegisterSpaceUsesOpenBus() {
+        SNES snes = init();
+        snes.bus.setOpenBus(0x5a);
+
+        assertEquals(0x5a, snes.bus.read(0x004380));
+        assertEquals(0x5a, snes.bus.read(0x004400));
+
+        snes.bus.write(0x004380, 0x12);
+        snes.bus.write(0x004400, 0x34);
+        assertEquals(0x5a, snes.bus.read(0x004380));
+        assertEquals(0x5a, snes.bus.read(0x004400));
     }
 
     @Test

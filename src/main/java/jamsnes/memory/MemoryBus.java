@@ -82,8 +82,9 @@ public class MemoryBus implements IMemoryBus {
         console.joypad.setMemoryRegion(0x4016, 0x4017);
         memoryAccessors.add(console.joypad);
 
-        console.cpu.setMemoryRegion(0x4200, 0x44ff);
+        console.cpu.setMemoryRegion(0x4200, 0x421f);
         memoryAccessors.add(console.cpu);
+        shadows.add(new MemoryShadow(console.cpu, 0x4300, 0x437f, 0x100));
 
         for (int i = 0x00; i < 0x40; i += 0x01) {
             mirrorComponents(console, i);
