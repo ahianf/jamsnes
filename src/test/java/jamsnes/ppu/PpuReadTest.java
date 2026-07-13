@@ -135,6 +135,28 @@ class PpuReadTest {
     }
 
     @Test
+    void stat77IncludesPpu1OpenBusBit4AndVersion() {
+        SNES snes = init();
+        writeMode7Register(snes, 0x211b, 0x0008);
+        writeMode7Register(snes, 0x211c, 0x0200);
+
+        assertEquals(0x10, snes.bus.read(0x2134));
+        assertEquals(0x11, snes.bus.read(0x213e));
+        assertEquals(0x11, snes.bus.read(0x213e));
+    }
+
+    @Test
+    void stat77ClearsOpenBusBit4WhenPriorPpu1ReadHasItClear() {
+        SNES snes = init();
+        writeMode7Register(snes, 0x211b, 0x0008);
+        writeMode7Register(snes, 0x211c, 0x0200);
+
+        assertEquals(0x10, snes.bus.read(0x2134));
+        assertEquals(0x00, snes.bus.read(0x2135));
+        assertEquals(0x01, snes.bus.read(0x213e));
+    }
+
+    @Test
     void counterAndStatusRegistersLatchAndReturnPpuVersionBits() {
         SNES snes = init();
 

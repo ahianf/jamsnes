@@ -74,6 +74,7 @@ public class PPU extends AMemory {
     private boolean hCounterHighByte;
     private boolean vCounterHighByte;
     private boolean counterLatchFlag;
+    private int ppu1OpenBus;
     private int ppu2OpenBus;
 
     public PPU(IRenderer renderer) {
@@ -232,6 +233,7 @@ public class PPU extends AMemory {
         hvSharedScrollPreviousValue = 0;
         hScrollPreviousValue = 0;
         oamLowTableLatch = 0;
+        ppu1OpenBus = 0;
         ppu2OpenBus = 0;
         updateBackgroundModes();
         for (int i = 0; i < backgrounds.length; i++) {
@@ -447,7 +449,7 @@ public class PPU extends AMemory {
     }
 
     private int readStat77() {
-        return PPU1_VERSION;
+        return readPpu1((ppu1OpenBus & 0x10) | PPU1_VERSION);
     }
 
     private int readStat78() {
@@ -461,6 +463,11 @@ public class PPU extends AMemory {
     private int readPpu2(int value) {
         ppu2OpenBus = u8(value);
         return ppu2OpenBus;
+    }
+
+    private int readPpu1(int value) {
+        ppu1OpenBus = u8(value);
+        return ppu1OpenBus;
     }
 
     private void advanceCounters(int cycles) {
@@ -856,7 +863,7 @@ public class PPU extends AMemory {
         int operandA = signed16(ppuRegisters.m7Matrix(0));
         int operandB = signed8(ppuRegisters.m7Matrix(1) >>> 8);
         int result = operandA * operandB;
-        return (result >>> (index * 8)) & 0xff;
+        return readPpu1((result >>> (index * 8)) & 0xff);
     }
 
     private int signed8(int value) {
