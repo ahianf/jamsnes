@@ -645,7 +645,9 @@ public class PPU extends AMemory {
     }
 
     private void renderObjectsToBuffer(int[][] destination, int[][] levelMap, int[][] sourceMap, boolean[] windowMask) {
-        for (int objectIndex = OBJ_COUNT - 1; objectIndex >= 0; objectIndex--) {
+        int firstObject = ppuRegisters.oamObjPriorityActivationBit() ? ppuRegisters.oamPriorityObjectNumber() : 0;
+        for (int offset = OBJ_COUNT - 1; offset >= 0; offset--) {
+            int objectIndex = (firstObject + offset) % OBJ_COUNT;
             renderObjectToBuffer(objectIndex, destination, levelMap, sourceMap, windowMask);
         }
     }

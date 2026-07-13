@@ -306,6 +306,30 @@ class PpuRenderIntegrationTest {
     }
 
     @Test
+    void lowerObjectIndexWinsEqualObjectPriorityByDefault() {
+        SNES snes = init(new TestRenderer());
+        setupOverlappingObjectPixels(snes);
+        snes.bus.write(0x212c, 0x10);
+
+        snes.ppu.renderMainAndSubScreen();
+
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][0]);
+    }
+
+    @Test
+    void oamPriorityRotationSelectsConfiguredObjectAsHighestPriority() {
+        SNES snes = init(new TestRenderer());
+        setupOverlappingObjectPixels(snes);
+        snes.bus.write(0x2102, 0x02);
+        snes.bus.write(0x2103, 0x80);
+        snes.bus.write(0x212c, 0x10);
+
+        snes.ppu.renderMainAndSubScreen();
+
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), snes.ppu.mainScreen()[0][0]);
+    }
+
+    @Test
     void largeObjectsWrapLowTileNibbleHorizontally() {
         SNES snes = init(new TestRenderer());
         writeColor(snes, 129, 0x001f);
@@ -525,6 +549,23 @@ class PpuRenderIntegrationTest {
         snes.ppu.oamram.write(0x002, 0x00);
         snes.ppu.oamram.write(0x003, 0x30);
         snes.ppu.vram.write(0x0000, 0x80);
+    }
+
+    private static void setupOverlappingObjectPixels(SNES snes) {
+        writeColor(snes, 129, 0x001f);
+        writeColor(snes, 145, 0x03e0);
+        writeObject(snes, 0, 0x00, 0x00, 0x00, 0x30);
+        writeObject(snes, 1, 0x00, 0x00, 0x01, 0x32);
+        snes.ppu.vram.write(0x0000, 0x80);
+        snes.ppu.vram.write(0x0020, 0x80);
+    }
+
+    private static void writeObject(SNES snes, int objectIndex, int x, int y, int tile, int attributes) {
+        int address = objectIndex * 4;
+        snes.ppu.oamram.write(address, x);
+        snes.ppu.oamram.write(address + 1, y);
+        snes.ppu.oamram.write(address + 2, tile);
+        snes.ppu.oamram.write(address + 3, attributes);
     }
 
     private static void writeMode7Register(SNES snes, int address, int value) {

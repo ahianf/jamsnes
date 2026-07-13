@@ -63,6 +63,10 @@ public class PPURegisters {
         return bit(raw[0x03], 7);
     }
 
+    public int oamPriorityObjectNumber() {
+        return (raw[0x02] >>> 1) & 0x7f;
+    }
+
     public int oamData() {
         return raw[0x04];
     }
