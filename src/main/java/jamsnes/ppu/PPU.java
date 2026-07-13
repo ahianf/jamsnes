@@ -397,7 +397,7 @@ public class PPU extends AMemory {
             updateVramReadBuffer();
             incrementVramAddress();
         }
-        return value;
+        return readPpu1(value);
     }
 
     private int readVramHigh() {
@@ -406,7 +406,7 @@ public class PPU extends AMemory {
             incrementVramAddress();
             updateVramReadBuffer();
         }
-        return value;
+        return readPpu1(value);
     }
 
     private void updateVramReadBuffer() {
@@ -421,7 +421,7 @@ public class PPU extends AMemory {
             ppuRegisters.incrementCgAddress();
         }
         ppuRegisters.toggleCgLowByte();
-        return value;
+        return readPpu2(value);
     }
 
     private int readSoftwareLatch() {
@@ -498,7 +498,7 @@ public class PPU extends AMemory {
     private int readOamData() {
         int value = oamram.read(getOamDataAddress());
         ppuRegisters.incrementOamAddress();
-        return value;
+        return readPpu1(value);
     }
 
     private void writeCgData(int value) {

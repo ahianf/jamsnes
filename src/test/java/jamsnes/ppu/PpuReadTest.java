@@ -157,6 +157,37 @@ class PpuReadTest {
     }
 
     @Test
+    void stat77UsesPpu1OpenBusFromVramAndOamReads() {
+        SNES snes = init();
+        snes.ppu.vram.write(0, 0x10);
+        snes.ppu.oamram.write(0, 0x00);
+        snes.bus.write(0x2116, 0x00);
+        snes.bus.write(0x2117, 0x00);
+
+        assertEquals(0x10, snes.bus.read(0x2139));
+        assertEquals(0x11, snes.bus.read(0x213e));
+
+        snes.bus.write(0x2102, 0x00);
+        snes.bus.write(0x2103, 0x00);
+        assertEquals(0x00, snes.bus.read(0x2138));
+        assertEquals(0x01, snes.bus.read(0x213e));
+    }
+
+    @Test
+    void stat78UsesPpu2OpenBusFromCgramReads() {
+        SNES snes = init();
+        snes.ppu.cgram.write(0, 0x20);
+        snes.ppu.cgram.write(1, 0x00);
+        snes.bus.write(0x2121, 0x00);
+
+        assertEquals(0x20, snes.bus.read(0x213b));
+        assertEquals(0x23, snes.bus.read(0x213f));
+
+        assertEquals(0x00, snes.bus.read(0x213b));
+        assertEquals(0x03, snes.bus.read(0x213f));
+    }
+
+    @Test
     void counterAndStatusRegistersLatchAndReturnPpuVersionBits() {
         SNES snes = init();
 
