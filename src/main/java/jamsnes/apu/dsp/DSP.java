@@ -125,7 +125,7 @@ public class DSP {
     }
 
     public int read(int address) {
-        int normalized = u8(address);
+        int normalized = u8(address) & 0x7f;
         int voice = normalized >>> 4;
         int register = normalized & 0x0f;
 
@@ -182,7 +182,7 @@ public class DSP {
     }
 
     public void write(int address, int data) {
-        int normalized = u8(address);
+        int normalized = u8(address) & 0x7f;
         int value = u8(data);
         int voice = normalized >>> 4;
         int register = normalized & 0x0f;
