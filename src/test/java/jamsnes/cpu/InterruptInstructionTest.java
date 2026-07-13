@@ -116,6 +116,11 @@ class InterruptInstructionTest {
         snes.cpu.requestNMI();
         snes.cpu.requestIRQ();
         snes.cpu.requestABORT();
+        snes.cpu.internalRegisters()[0x00] = 0x81;
+        snes.cpu.internalRegisters()[0x01] = 0x00;
+        snes.cpu.internalRegisters()[0x0b] = 0xff;
+        snes.cpu.internalRegisters()[0x0c] = 0xff;
+        snes.cpu.internalRegisters()[0x0d] = 0xff;
 
         snes.cpu.RESB();
 
@@ -132,6 +137,12 @@ class InterruptInstructionTest {
         assertFalse(snes.cpu.isAbortRequested);
         assertEquals(0, snes.cpu.internalRegisters()[0x10] & 0x80);
         assertEquals(0, snes.cpu.internalRegisters()[0x11] & 0x80);
+        assertEquals(0x00, snes.cpu.internalRegisters()[0x00]);
+        assertEquals(0xff, snes.cpu.internalRegisters()[0x01]);
+        assertEquals(0xff, snes.cpu.read(0x13));
+        assertEquals(0x00, snes.cpu.internalRegisters()[0x0b]);
+        assertEquals(0x00, snes.cpu.internalRegisters()[0x0c]);
+        assertEquals(0x00, snes.cpu.internalRegisters()[0x0d]);
     }
 
     @Test

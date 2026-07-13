@@ -77,6 +77,25 @@ class SNESTest {
     }
 
     @Test
+    void loadRomResetsCpuControlPorts() throws IOException {
+        SNES snes = new SNES(new TestRenderer());
+        snes.bus.mapComponents(snes);
+        snes.cpu.internalRegisters()[0x00] = 0x81;
+        snes.cpu.internalRegisters()[0x01] = 0x00;
+        snes.cpu.internalRegisters()[0x0b] = 0xff;
+        snes.cpu.internalRegisters()[0x0c] = 0xff;
+        snes.cpu.internalRegisters()[0x0d] = 0xff;
+
+        snes.loadRom(writeGameRom().toString());
+
+        assertEquals(0x00, snes.cpu.internalRegisters()[0x00]);
+        assertEquals(0xff, snes.bus.read(0x4213));
+        assertEquals(0x00, snes.cpu.internalRegisters()[0x0b]);
+        assertEquals(0x00, snes.cpu.internalRegisters()[0x0c]);
+        assertEquals(0x00, snes.cpu.internalRegisters()[0x0d]);
+    }
+
+    @Test
     void wrioHighToLowTransitionLatchesPpuCounters() {
         SNES snes = new SNES(new TestRenderer());
         snes.bus.mapComponents(snes);

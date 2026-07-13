@@ -1038,8 +1038,11 @@ public class CPU extends AMemory {
         isAbortRequested = false;
         internalRegisters[0x10] &= 0x7f;
         internalRegisters[0x11] &= 0x7f;
+        internalRegisters[0x00] = 0;
+        internalRegisters[0x01] = 0xff;
         internalRegisters[0x0b] = 0;
         internalRegisters[0x0c] = 0;
+        internalRegisters[0x0d] = 0;
         for (DMA dmaChannel : dmaChannels) {
             dmaChannel.resetRuntimeState();
         }
