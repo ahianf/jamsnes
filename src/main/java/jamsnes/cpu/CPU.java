@@ -22,6 +22,8 @@ public class CPU extends AMemory {
     private boolean emulationMode = true;
     private boolean stopped;
     private boolean waitingForInterrupt;
+    private Runnable ioPortLatchListener = () -> {
+    };
     public boolean isNMIRequested;
     public boolean isIRQRequested;
     public boolean isAbortRequested;
@@ -50,6 +52,11 @@ public class CPU extends AMemory {
 
     public IMemoryBus getBus() {
         return bus;
+    }
+
+    public void setIoPortLatchListener(Runnable ioPortLatchListener) {
+        this.ioPortLatchListener = ioPortLatchListener == null ? () -> {
+        } : ioPortLatchListener;
     }
 
     public Registers registers() {
@@ -135,6 +142,9 @@ public class CPU extends AMemory {
         }
         if (address == 0x00 && ((internalRegisters[address] ^ value) & 0x30) != 0) {
             timerEnableGeneration++;
+        }
+        if (address == 0x01 && (internalRegisters[address] & 0x80) != 0 && (value & 0x80) == 0) {
+            ioPortLatchListener.run();
         }
         internalRegisters[address] = value;
         if (address == 0x03) {

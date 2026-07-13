@@ -77,6 +77,40 @@ class SNESTest {
     }
 
     @Test
+    void wrioHighToLowTransitionLatchesPpuCounters() {
+        SNES snes = new SNES(new TestRenderer());
+        snes.bus.mapComponents(snes);
+
+        snes.bus.write(0x4201, 0x80);
+        snes.ppu.advanceCountersOnly(PPU.H_COUNTER_DOTS + 259);
+        snes.bus.write(0x4201, 0x00);
+
+        assertEquals(0x43, snes.bus.read(0x213f));
+        assertEquals(0x03, snes.bus.read(0x213c));
+        assertEquals(0x01, snes.bus.read(0x213c));
+        assertEquals(0x01, snes.bus.read(0x213d));
+        assertEquals(0x00, snes.bus.read(0x213d));
+    }
+
+    @Test
+    void wrioDoesNotLatchPpuCountersWithoutHighToLowTransition() {
+        SNES snes = new SNES(new TestRenderer());
+        snes.bus.mapComponents(snes);
+
+        snes.ppu.advanceCountersOnly(12);
+        snes.bus.write(0x4201, 0x00);
+        snes.bus.write(0x4201, 0x80);
+        snes.ppu.advanceCountersOnly(PPU.H_COUNTER_DOTS + 34);
+        snes.bus.write(0x4201, 0x80);
+
+        assertEquals(0x03, snes.bus.read(0x213f));
+        assertEquals(0x00, snes.bus.read(0x213c));
+        assertEquals(0x00, snes.bus.read(0x213c));
+        assertEquals(0x00, snes.bus.read(0x213d));
+        assertEquals(0x00, snes.bus.read(0x213d));
+    }
+
+    @Test
     void loadRomResetsPpuCountersToFrameStart() throws IOException {
         SNES snes = new SNES(new TestRenderer());
         snes.bus.mapComponents(snes);

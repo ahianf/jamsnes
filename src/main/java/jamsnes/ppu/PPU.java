@@ -464,7 +464,7 @@ public class PPU extends AMemory {
         }
     }
 
-    private void latchCounters() {
+    public void latchCounters() {
         latchedHCounter = hCounter;
         latchedVCounter = vCounter;
         hCounterHighByte = false;
