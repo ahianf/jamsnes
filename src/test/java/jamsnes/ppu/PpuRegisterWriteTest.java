@@ -44,34 +44,34 @@ class PpuRegisterWriteTest {
         SNES snes = init();
 
         snes.bus.write(0x2102, 0b1111_1111);
-        assertEquals(0b0_1111_1111, snes.ppu.ppuRegisters().oamAddress());
+        assertEquals(0x1fe, snes.ppu.ppuRegisters().oamAddress());
 
         snes.bus.write(0x2103, 0b1111_1111);
         assertTrue(snes.ppu.ppuRegisters().oamObjPriorityActivationBit());
-        assertEquals(0b1_1111_1111, snes.ppu.ppuRegisters().oamAddress());
+        assertEquals(0x3fe, snes.ppu.ppuRegisters().oamAddress());
     }
 
     @Test
     void writesOamDataAndIncrementsAddress() {
         SNES snes = init();
 
-        snes.bus.write(0x2102, 0x0b);
+        snes.bus.write(0x2102, 0x05);
         snes.bus.write(0x2103, 0x80);
         snes.bus.write(0x2104, 0x42);
 
         assertEquals(0x42, snes.ppu.ppuRegisters().oamData());
-        assertEquals(0x42, snes.ppu.oamram.read(0x0b));
-        assertEquals(0x0c, snes.ppu.ppuRegisters().oamAddress());
+        assertEquals(0, snes.ppu.oamram.read(0x0a));
+        assertEquals(0x0b, snes.ppu.ppuRegisters().oamAddress());
         assertTrue(snes.ppu.ppuRegisters().oamObjPriorityActivationBit());
 
         snes.bus.write(0x2104, 0x24);
-        assertEquals(0, snes.ppu.oamram.read(0x0c));
-        assertEquals(0x0d, snes.ppu.ppuRegisters().oamAddress());
+        assertEquals(0x42, snes.ppu.oamram.read(0x0a));
+        assertEquals(0x24, snes.ppu.oamram.read(0x0b));
+        assertEquals(0x0c, snes.ppu.ppuRegisters().oamAddress());
 
         snes.bus.write(0x2104, 0x66);
-        assertEquals(0x24, snes.ppu.oamram.read(0x0c));
-        assertEquals(0x66, snes.ppu.oamram.read(0x0d));
-        assertEquals(0x0e, snes.ppu.ppuRegisters().oamAddress());
+        assertEquals(0, snes.ppu.oamram.read(0x0c));
+        assertEquals(0x0d, snes.ppu.ppuRegisters().oamAddress());
     }
 
     @Test
@@ -102,15 +102,15 @@ class PpuRegisterWriteTest {
 
         assertEquals(0x55, snes.ppu.oamram.read(0x200));
         assertEquals(0, snes.ppu.oamram.read(0x100));
-        assertEquals(0x101, snes.ppu.ppuRegisters().oamAddress());
+        assertEquals(0x201, snes.ppu.ppuRegisters().oamAddress());
 
         snes.bus.write(0x2102, 0x3f);
         snes.bus.write(0x2103, 0x01);
         snes.bus.write(0x2104, 0x66);
 
-        assertEquals(0x66, snes.ppu.oamram.read(0x21f));
+        assertEquals(0x66, snes.ppu.oamram.read(0x21e));
         assertEquals(0, snes.ppu.oamram.read(0x13f));
-        assertEquals(0x140, snes.ppu.ppuRegisters().oamAddress());
+        assertEquals(0x27f, snes.ppu.ppuRegisters().oamAddress());
     }
 
     @Test

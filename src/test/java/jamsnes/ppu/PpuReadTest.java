@@ -89,27 +89,27 @@ class PpuReadTest {
     @Test
     void oamDataReadReturnsCurrentAddressAndIncrements() {
         SNES snes = init();
-        snes.bus.write(0x2102, 0x0b);
+        snes.bus.write(0x2102, 0x05);
         snes.bus.write(0x2103, 0x80);
-        snes.ppu.oamram.write(0x0b, 0x42);
-        snes.ppu.oamram.write(0x0c, 0x24);
+        snes.ppu.oamram.write(0x0a, 0x42);
+        snes.ppu.oamram.write(0x0b, 0x24);
 
         assertEquals(0x42, snes.bus.read(0x2138));
-        assertEquals(0x0c, snes.ppu.ppuRegisters().oamAddress());
+        assertEquals(0x0b, snes.ppu.ppuRegisters().oamAddress());
         assertEquals(0x24, snes.bus.read(0x2138));
-        assertEquals(0x0d, snes.ppu.ppuRegisters().oamAddress());
+        assertEquals(0x0c, snes.ppu.ppuRegisters().oamAddress());
     }
 
     @Test
     void oamDataReadMapsUpperAddressRangeToHighTable() {
         SNES snes = init();
-        snes.bus.write(0x2102, 0x21);
+        snes.bus.write(0x2102, 0x00);
         snes.bus.write(0x2103, 0x01);
-        snes.ppu.oamram.write(0x201, 0x77);
-        snes.ppu.oamram.write(0x121, 0x55);
+        snes.ppu.oamram.write(0x200, 0x77);
+        snes.ppu.oamram.write(0x100, 0x55);
 
         assertEquals(0x77, snes.bus.read(0x2138));
-        assertEquals(0x122, snes.ppu.ppuRegisters().oamAddress());
+        assertEquals(0x201, snes.ppu.ppuRegisters().oamAddress());
     }
 
     @Test

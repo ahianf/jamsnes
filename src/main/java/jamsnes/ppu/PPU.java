@@ -115,6 +115,7 @@ public class PPU extends AMemory {
         }
         registers[address] = value;
         switch (address) {
+            case 0x02, 0x03 -> ppuRegisters.reloadOamAddress();
             case 0x04 -> writeOamData(value);
             case 0x05 -> updateBackgroundModes();
             case 0x07, 0x08, 0x09, 0x0a -> updateBackgroundTileMap(address - 0x07);
@@ -516,7 +517,7 @@ public class PPU extends AMemory {
 
     private void writeOamData(int value) {
         int address = ppuRegisters.oamAddress();
-        if (address < OBJ_LOW_TABLE_SIZE / 2) {
+        if (address < OBJ_LOW_TABLE_SIZE) {
             writeOamLowTableData(address, value);
         } else {
             oamram.write(getOamDataAddress(), value);
@@ -535,7 +536,7 @@ public class PPU extends AMemory {
 
     private int getOamDataAddress() {
         int address = ppuRegisters.oamAddress();
-        if (address >= OBJ_LOW_TABLE_SIZE / 2) {
+        if (address >= OBJ_LOW_TABLE_SIZE) {
             return OBJ_LOW_TABLE_SIZE + (address & 0x1f);
         }
         return address;

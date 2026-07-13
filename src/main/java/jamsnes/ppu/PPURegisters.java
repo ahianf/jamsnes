@@ -15,6 +15,7 @@ public class PPURegisters {
     private int fixedColorBlue;
     private int cgAddress;
     private int cgData;
+    private int oamAddress;
     private boolean cgLowByte = true;
 
     public PPURegisters(int[] raw) {
@@ -30,6 +31,7 @@ public class PPURegisters {
         fixedColorBlue = 0;
         cgAddress = 0;
         cgData = 0;
+        oamAddress = 0;
         cgLowByte = true;
     }
 
@@ -54,7 +56,7 @@ public class PPURegisters {
     }
 
     public int oamAddress() {
-        return (raw[0x02] | (raw[0x03] << 8)) & 0x1ff;
+        return oamAddress;
     }
 
     public boolean oamObjPriorityActivationBit() {
@@ -396,9 +398,12 @@ public class PPURegisters {
     }
 
     void incrementOamAddress() {
-        int address = (oamAddress() + 1) & 0x1ff;
-        raw[0x02] = address & 0xff;
-        raw[0x03] = (raw[0x03] & 0xfe) | ((address >>> 8) & 1);
+        oamAddress = (oamAddress + 1) & 0x3ff;
+    }
+
+    void reloadOamAddress() {
+        int reload = ((raw[0x03] & 1) << 8) | raw[0x02];
+        oamAddress = (reload << 1) & 0x3fe;
     }
 
     void setBgOffset(int index, int value) {
