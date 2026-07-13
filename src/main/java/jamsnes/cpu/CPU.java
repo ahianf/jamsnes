@@ -104,6 +104,9 @@ public class CPU extends AMemory {
         if (address == 0x11) {
             return readIrqStatus();
         }
+        if (address == 0x13) {
+            return internalRegisters[0x01];
+        }
         if (address >= 0x100 && address < 0x180) {
             return dmaChannels[(address - 0x100) >>> 4].read(address & 0x0f);
         }

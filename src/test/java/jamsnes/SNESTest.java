@@ -93,6 +93,20 @@ class SNESTest {
     }
 
     @Test
+    void rdioReflectsWrioWithoutChangingPpuLatchState() {
+        SNES snes = new SNES(new TestRenderer());
+        snes.bus.mapComponents(snes);
+
+        snes.bus.write(0x4201, 0x80);
+        assertEquals(0x80, snes.bus.read(0x4213));
+        assertEquals(0x03, snes.bus.read(0x213f));
+
+        snes.bus.write(0x4201, 0x7f);
+        assertEquals(0x7f, snes.bus.read(0x4213));
+        assertEquals(0x43, snes.bus.read(0x213f));
+    }
+
+    @Test
     void wrioDoesNotLatchPpuCountersWithoutHighToLowTransition() {
         SNES snes = new SNES(new TestRenderer());
         snes.bus.mapComponents(snes);

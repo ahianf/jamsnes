@@ -36,6 +36,8 @@ class CpuRegisterTest {
         assertEquals(0x01, snes.bus.read(0x4215));
         assertEquals(0x02, snes.bus.read(0x4216));
         assertEquals(0x00, snes.bus.read(0x4217));
+        assertEquals(0x12, snes.bus.read(0x804214));
+        assertEquals(0x01, snes.bus.read(0x804215));
     }
 
     @Test
@@ -119,6 +121,22 @@ class CpuRegisterTest {
     }
 
     @Test
+    void rdioReadsCurrentWrioPortLevel() {
+        SNES snes = init();
+        snes.bus.setOpenBus(0x5a);
+
+        snes.bus.write(0x4201, 0xa5);
+
+        assertEquals(0x5a, snes.bus.read(0x4201));
+        assertEquals(0xa5, snes.bus.read(0x4213));
+
+        snes.bus.write(0x4201, 0x3c);
+
+        assertEquals(0x3c, snes.bus.read(0x804213));
+        assertEquals(0x3c, snes.cpu.read(0x13));
+    }
+
+    @Test
     void returnsCpuRegisterValueNames() {
         SNES snes = init();
 
@@ -159,7 +177,7 @@ class CpuRegisterTest {
         IMemory accessor = snes.bus.getAccessor(0x804214);
         MemoryShadow shadow = assertInstanceOf(MemoryShadow.class, accessor);
 
-        assertEquals("RDDIVL", shadow.getValueName(0x14));
+        assertEquals("RDDIVL", shadow.getValueName(0x04));
     }
 
     private static SNES init() {
