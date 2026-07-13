@@ -55,6 +55,11 @@ class MemoryBusTest {
         assertSame(snes.ppu, snes.bus.getAccessor(0x00213f));
         assertMirrors(snes.ppu, snes.bus.getAccessor(0x80213f));
 
+        assertSame(snes.wramPort, snes.bus.getAccessor(0x002180));
+        assertSame(snes.wramPort, snes.bus.getAccessor(0x002183));
+        assertMirrors(snes.wramPort, snes.bus.getAccessor(0x802180));
+        assertMirrors(snes.wramPort, snes.bus.getAccessor(0xbf2183));
+
         assertSame(snes.cartridge, snes.bus.getAccessor(0x808000));
         assertSame(snes.cartridge, snes.bus.getAccessor(0xffffff));
         assertMirrors(snes.cartridge, snes.bus.getAccessor(0x694200));
@@ -97,6 +102,45 @@ class MemoryBusTest {
         snes.wram.data()[0x1010] = 123;
         assertEquals(123, snes.bus.read(0x7e1010));
         assertEquals(123, snes.bus.read(0x001010));
+    }
+
+    @Test
+    void wramPortWritesAndReadsAtAddressRegisterWithAutoIncrement() {
+        SNES snes = init();
+
+        snes.bus.write(0x2181, 0xfe);
+        snes.bus.write(0x2182, 0xff);
+        snes.bus.write(0x2183, 0x01);
+        snes.bus.write(0x2180, 0x12);
+        snes.bus.write(0x802180, 0x34);
+        snes.bus.write(0x2180, 0x56);
+
+        assertEquals(0x12, snes.wram.data()[0x1fffe]);
+        assertEquals(0x34, snes.wram.data()[0x1ffff]);
+        assertEquals(0x56, snes.wram.data()[0x00000]);
+        assertEquals(0x00001, snes.wramPort.address());
+
+        snes.bus.write(0x2181, 0xfe);
+        snes.bus.write(0x2182, 0xff);
+        snes.bus.write(0x2183, 0x01);
+
+        assertEquals(0x12, snes.bus.read(0x2180));
+        assertEquals(0x34, snes.bus.read(0x802180));
+        assertEquals(0x56, snes.bus.read(0x2180));
+        assertEquals(0x00001, snes.wramPort.address());
+    }
+
+    @Test
+    void wramPortHighAddressRegisterUsesOnlyLowBit() {
+        SNES snes = init();
+
+        snes.bus.write(0x2181, 0x00);
+        snes.bus.write(0x2182, 0x00);
+        snes.bus.write(0x2183, 0xff);
+        snes.bus.write(0x2180, 0x9a);
+
+        assertEquals(0x9a, snes.wram.data()[0x10000]);
+        assertEquals(0, snes.wram.data()[0x00000]);
     }
 
     @Test

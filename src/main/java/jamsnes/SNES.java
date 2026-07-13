@@ -6,6 +6,7 @@ import jamsnes.cartridge.CartridgeType;
 import jamsnes.cpu.CPU;
 import jamsnes.input.Joypad;
 import jamsnes.memory.MemoryBus;
+import jamsnes.memory.WramPort;
 import jamsnes.models.Component;
 import jamsnes.ram.MirroredRam;
 import jamsnes.ppu.PPU;
@@ -22,6 +23,7 @@ public class SNES {
     public final MemoryBus bus;
     public final Cartridge cartridge;
     public final Ram wram;
+    public final WramPort wramPort;
     public final Ram sram;
     public final CPU cpu;
     public final Joypad joypad;
@@ -40,6 +42,7 @@ public class SNES {
         this.bus = new MemoryBus();
         this.cartridge = new Cartridge();
         this.wram = new Ram(131_072, Component.WRAM, "WRam");
+        this.wramPort = new WramPort(wram);
         this.sram = new MirroredRam(0, Component.SRAM, "SRam");
         this.cpu = new CPU(bus, cartridge.header);
         this.joypad = new Joypad();
@@ -56,6 +59,7 @@ public class SNES {
         cartridge.loadRom(path);
         sram.setSize(cartridge.header.sramSize);
         sram.clear();
+        wramPort.resetAddress();
         bus.mapComponents(this);
         cpu.RESB();
         apu.reset();

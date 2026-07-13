@@ -93,6 +93,22 @@ class SNESTest {
     }
 
     @Test
+    void loadRomResetsWramPortAddress() throws IOException {
+        SNES snes = new SNES(new TestRenderer());
+        snes.bus.mapComponents(snes);
+        snes.bus.write(0x2181, 0x34);
+        snes.bus.write(0x2182, 0x12);
+        snes.bus.write(0x2183, 0x01);
+
+        snes.loadRom(writeGameRom().toString());
+        snes.bus.write(0x2180, 0xab);
+
+        assertEquals(0xab, snes.wram.data()[0]);
+        assertEquals(0x01, snes.wramPort.address());
+        assertEquals(0x00, snes.wram.data()[0x11234]);
+    }
+
+    @Test
     void loadRomResetsPpuVideoRegisterState() throws IOException {
         SNES snes = new SNES(new TestRenderer());
         snes.bus.mapComponents(snes);
