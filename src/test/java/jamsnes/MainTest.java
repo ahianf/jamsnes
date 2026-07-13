@@ -16,6 +16,7 @@ import java.nio.file.Path;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class MainTest {
@@ -35,6 +36,7 @@ class MainTest {
 
         assertEquals(1, exitCode);
         assertTrue(err.toString(StandardCharsets.UTF_8).contains("Usage: jamsnes rom_path"));
+        assertTrue(err.toString(StandardCharsets.UTF_8).contains("Missing ROM path"));
     }
 
     @Test
@@ -45,6 +47,7 @@ class MainTest {
 
         assertEquals(0, exitCode);
         assertTrue(out.toString(StandardCharsets.UTF_8).contains("Usage: jamsnes rom_path"));
+        assertTrue(out.toString(StandardCharsets.UTF_8).contains("--renderer"));
     }
 
     @Test
@@ -91,6 +94,42 @@ class MainTest {
     }
 
     @Test
+    void parseArgsAcceptsRendererOptionsAroundRomPath() throws IOException {
+        Path rom = writeGameRom();
+
+        Main.LaunchOptions equalsOption = Main.parseArgs(new String[]{rom.toString(), "--renderer=lwjgl"});
+        Main.LaunchOptions separatedOption = Main.parseArgs(new String[]{"--renderer", "headless", rom.toString()});
+        Main.LaunchOptions shortcutOption = Main.parseArgs(new String[]{"--lwjgl", rom.toString()});
+
+        assertEquals(rom.toString(), equalsOption.romPath());
+        assertEquals("lwjgl", equalsOption.renderer());
+        assertEquals("headless", separatedOption.renderer());
+        assertEquals("lwjgl", shortcutOption.renderer());
+    }
+
+    @Test
+    void runReportsInvalidRendererOptionBeforeLoadingRom() throws IOException {
+        ByteArrayOutputStream err = new ByteArrayOutputStream();
+
+        int exitCode = Main.run(new String[]{writeGameRom().toString(), "--renderer=bogus"}, printStream(),
+                new PrintStream(err));
+
+        assertEquals(1, exitCode);
+        assertTrue(err.toString(StandardCharsets.UTF_8).contains("Unknown renderer: bogus"));
+    }
+
+    @Test
+    void runReportsUnknownOption() throws IOException {
+        ByteArrayOutputStream err = new ByteArrayOutputStream();
+
+        int exitCode = Main.run(new String[]{writeGameRom().toString(), "--debug"}, printStream(),
+                new PrintStream(err));
+
+        assertEquals(1, exitCode);
+        assertTrue(err.toString(StandardCharsets.UTF_8).contains("Unknown option: --debug"));
+    }
+
+    @Test
     void defaultRendererUsesLwjglWhenRequested() {
         String previous = System.getProperty("jamsnes.renderer");
         try {
@@ -107,6 +146,14 @@ class MainTest {
                 System.setProperty("jamsnes.renderer", previous);
             }
         }
+    }
+
+    @Test
+    void rendererForRejectsUnknownRenderer() {
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> Main.rendererFor("bogus"));
+
+        assertEquals("Unknown renderer: bogus", exception.getMessage());
     }
 
     private Path writeGameRom() throws IOException {
