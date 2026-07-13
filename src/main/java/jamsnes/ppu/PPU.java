@@ -184,6 +184,10 @@ public class PPU extends AMemory {
 
     public void update(int cycles) {
         advanceCounters(cycles);
+        renderFrame();
+    }
+
+    public void renderFrame() {
         renderMainAndSubScreen();
 
         for (int y = 0; y < screen.length; y++) {

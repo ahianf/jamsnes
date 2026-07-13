@@ -183,11 +183,27 @@ class SNESTest {
     }
 
     @Test
-    void updateRunsCpuPpuAndApuForGameCartridges() {
+    void updateRunsCpuPpuAndApuWithoutRenderingBeforeVBlank() {
         TestRenderer renderer = new TestRenderer();
         SNES snes = new SNES(renderer);
         snes.cpu.isDisabled = true;
         snes.apu.isDisabled = true;
+
+        snes.update();
+
+        assertEquals(0, renderer.drawScreenCalls);
+        assertEquals(0, renderer.putPixelCalls);
+        assertEquals(0xff, snes.ppu.hCounter());
+        assertEquals(0, snes.ppu.vCounter());
+    }
+
+    @Test
+    void updateDrawsFrameWhenEnteringVBlank() {
+        TestRenderer renderer = new TestRenderer();
+        SNES snes = new SNES(renderer);
+        snes.cpu.isDisabled = true;
+        snes.apu.isDisabled = true;
+        snes.ppu.advanceCountersOnly(PPU.H_COUNTER_DOTS * PPU.V_BLANK_START_SCANLINE - 0xff);
 
         snes.update();
 

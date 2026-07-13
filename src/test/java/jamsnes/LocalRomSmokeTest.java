@@ -16,7 +16,7 @@ class LocalRomSmokeTest {
     private static final String ROM_PROPERTY = "jamsnes.smoke.rom";
     private static final String UPDATES_PROPERTY = "jamsnes.smoke.updates";
     private static final String FRAME_CRC32_PROPERTY = "jamsnes.smoke.frameCrc32";
-    private static final int DEFAULT_UPDATES = 600;
+    private static final int DEFAULT_UPDATES = 8_000;
 
     @Test
     void localRomRunsForConfiguredUpdates() {

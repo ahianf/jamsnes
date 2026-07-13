@@ -96,7 +96,7 @@ public class SNES {
         int cycleCount = cpu.update(0x0c);
         boolean entersHBlank = entersHBlank(startHCounter, startVCounter, cycleCount);
         boolean startsNewFrame = startsNewFrame(startHCounter, startVCounter, cycleCount);
-        ppu.update(cycleCount);
+        ppu.advanceCountersOnly(cycleCount);
         if (startsNewFrame) {
             hdmaInitializedThisFrame = false;
         }
@@ -108,6 +108,9 @@ public class SNES {
             }
         }
         boolean enteredVBlank = requestFrameNmi();
+        if (enteredVBlank) {
+            ppu.renderFrame();
+        }
         updateAutoJoypadBusy(enteredVBlank, timerStartHCounter, timerStartVCounter,
                 hdmaInitCycles + cycleCount + hdmaCycles);
         updateVideoStatusRegisters();
