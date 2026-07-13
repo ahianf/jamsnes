@@ -146,8 +146,13 @@ public class CPU extends AMemory {
         if (!isInternalRegister(address)) {
             throw new InvalidAddress("CPU Internal Registers write", address + start);
         }
-        if (address == 0x00 && ((internalRegisters[address] ^ value) & 0x30) != 0) {
-            timerEnableGeneration++;
+        if (address == 0x00) {
+            if (((internalRegisters[address] ^ value) & 0x30) != 0) {
+                timerEnableGeneration++;
+            }
+            if ((value & 0x30) == 0) {
+                clearIrqStatus();
+            }
         }
         if (address == 0x01 && (internalRegisters[address] & 0x80) != 0 && (value & 0x80) == 0) {
             ioPortLatchListener.run();
@@ -205,9 +210,13 @@ public class CPU extends AMemory {
 
     private int readIrqStatus() {
         int value = internalRegisters[0x11];
-        internalRegisters[0x11] = value & 0x7f;
-        isIRQRequested = false;
+        clearIrqStatus();
         return value;
+    }
+
+    private void clearIrqStatus() {
+        internalRegisters[0x11] &= 0x7f;
+        isIRQRequested = false;
     }
 
     public int[] internalRegisters() {

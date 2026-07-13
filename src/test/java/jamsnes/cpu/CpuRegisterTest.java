@@ -77,6 +77,46 @@ class CpuRegisterTest {
     }
 
     @Test
+    void disablingTimerIrqModeAcknowledgesTimeup() {
+        SNES snes = init();
+
+        snes.bus.write(0x4200, 0x10);
+        snes.cpu.requestIRQ();
+
+        snes.bus.write(0x4200, 0x00);
+
+        assertEquals(0x00, snes.cpu.internalRegisters()[0x11] & 0x80);
+        assertFalse(snes.cpu.isIRQRequested);
+        assertEquals(0x00, snes.bus.read(0x4211));
+    }
+
+    @Test
+    void disablingMirroredTimerIrqModeAcknowledgesTimeup() {
+        SNES snes = init();
+
+        snes.bus.write(0x4200, 0x20);
+        snes.cpu.requestIRQ();
+
+        snes.bus.write(0x804200, 0x00);
+
+        assertEquals(0x00, snes.cpu.internalRegisters()[0x11] & 0x80);
+        assertFalse(snes.cpu.isIRQRequested);
+        assertEquals(0x00, snes.bus.read(0x804211));
+    }
+
+    @Test
+    void changingBetweenTimerIrqModesDoesNotAcknowledgeTimeup() {
+        SNES snes = init();
+
+        snes.bus.write(0x4200, 0x10);
+        snes.cpu.requestIRQ();
+
+        snes.bus.write(0x4200, 0x20);
+
+        assertEquals(0x80, snes.bus.read(0x4211));
+    }
+
+    @Test
     void readOnlyCpuRegisterWritesAreNoop() {
         SNES snes = init();
         snes.cpu.requestNMI();
