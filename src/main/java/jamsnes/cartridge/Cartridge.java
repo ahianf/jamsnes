@@ -131,7 +131,7 @@ public class Cartridge extends Ram {
 
     private int getHeaderAddress() {
         int[] addresses = {0x7fc0, 0xffc0};
-        int smc = getSize() % 1024;
+        int smc = copierHeaderOffset();
         int bestScore = -1;
         int bestAddress = -1;
 
@@ -179,6 +179,10 @@ public class Cartridge extends Ram {
             }
         }
         return bestAddress;
+    }
+
+    private int copierHeaderOffset() {
+        return getSize() % 1024 == 0x200 ? 0x200 : 0;
     }
 
     private int getResetOpcodeAddress(Header info, int smc) {
