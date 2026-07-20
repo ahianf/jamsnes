@@ -278,11 +278,15 @@ public class CPU extends AMemory {
 
     public int runDMA(int maxCycles) {
         int cycles = 0;
-        for (DMA dmaChannel : dmaChannels) {
+        for (int i = 0; i < dmaChannels.length; i++) {
+            DMA dmaChannel = dmaChannels[i];
             if (!dmaChannel.isEnabled()) {
                 continue;
             }
             cycles += dmaChannel.run(maxCycles - cycles);
+            if (!dmaChannel.isEnabled()) {
+                internalRegisters[0x0b] &= ~(1 << i);
+            }
         }
         return cycles;
     }
