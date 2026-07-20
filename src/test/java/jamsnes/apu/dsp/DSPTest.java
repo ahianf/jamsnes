@@ -98,6 +98,24 @@ class DSPTest {
     }
 
     @Test
+    void apuBackedDspDoesNotReplayBufferedAudioWithoutNewSamples() {
+        TestRenderer renderer = new TestRenderer();
+        SNES snes = new SNES(renderer);
+        snes.apu.dsp().setMasterOutput(0, 0x1234);
+        snes.apu.dsp().write(0x0c, 0x7f);
+
+        for (int i = 0; i < 28; i++) {
+            snes.apu.dsp().update();
+        }
+        for (int i = 0; i < 4; i++) {
+            snes.apu.dsp().update();
+        }
+
+        assertEquals(1, renderer.playAudioCalls);
+        assertEquals(0, snes.apu.dsp().getSamplesCount());
+    }
+
+    @Test
     void releaseEnvelopeFallsToZero() {
         DSP dsp = new DSP();
         dsp.setVoiceEnvelopeState(0, 0x04, 0, DSP.EnvelopeMode.RELEASE);

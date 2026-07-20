@@ -423,6 +423,7 @@ public class DSP {
         int samples = getSamplesCount();
         if (renderer != null && samples > 0) {
             renderer.playAudio(Arrays.copyOf(soundBuffer, samples));
+            bufferOffset = 0;
         }
     }
 
