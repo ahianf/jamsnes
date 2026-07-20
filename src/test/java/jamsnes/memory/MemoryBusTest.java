@@ -159,6 +159,21 @@ class MemoryBusTest {
     }
 
     @Test
+    void wramPortAddressRegisterReadsUseOpenBus() {
+        SNES snes = init();
+        snes.bus.setOpenBus(0x5a);
+
+        snes.bus.write(0x2181, 0x12);
+        snes.bus.write(0x2182, 0x34);
+        snes.bus.write(0x2183, 0x01);
+
+        assertEquals(0x5a, snes.bus.read(0x2181));
+        assertEquals(0x5a, snes.bus.read(0x802182));
+        assertEquals(0x5a, snes.bus.read(0x2183));
+        assertEquals(0x13412, snes.wramPort.address());
+    }
+
+    @Test
     void unmappedCpuRegisterSpaceUsesOpenBus() {
         SNES snes = init();
         snes.bus.setOpenBus(0x5a);

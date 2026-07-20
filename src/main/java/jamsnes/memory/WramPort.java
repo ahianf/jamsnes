@@ -1,5 +1,6 @@
 package jamsnes.memory;
 
+import jamsnes.exceptions.InvalidAddress;
 import jamsnes.models.Component;
 import jamsnes.ram.Ram;
 
@@ -22,7 +23,7 @@ public class WramPort extends AMemory {
     @Override
     public int read(int register) {
         if (register != WMDATA) {
-            return 0;
+            throw new InvalidAddress("WRAM port read", register);
         }
         int value = wram.read(address);
         incrementAddress();
