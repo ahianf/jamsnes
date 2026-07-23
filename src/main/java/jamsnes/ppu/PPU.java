@@ -340,7 +340,8 @@ public class PPU extends AMemory {
 
     boolean usesOffsetPerTile(int backgroundNumber) {
         int mode = ppuRegisters.bgMode();
-        return (mode == 2 || mode == 4) && backgroundNumber >= 1 && backgroundNumber <= 2;
+        return ((mode == 2 || mode == 4) && backgroundNumber >= 1 && backgroundNumber <= 2)
+                || (mode == 6 && backgroundNumber == 1);
     }
 
     int offsetPerTileHorizontalCoordinate(int backgroundNumber, int screenX, int horizontalScroll) {
@@ -385,6 +386,9 @@ public class PPU extends AMemory {
         Vector2<Integer> bg3Scroll = getBgScroll(3);
         int normalCoordinate = screenX + horizontalScroll;
         int mapX = (normalCoordinate & 0x07) | (((screenX - 8) & ~0x07) + (bg3Scroll.x & ~0x07));
+        if (ppuRegisters.bgMode() == 6) {
+            mapX *= 2;
+        }
         int mapY = (bg3Scroll.y & ~0x07)
                 + (vertical && ppuRegisters.bgMode() != 4 ? 8 : 0);
         return readBackgroundTileMapEntry(3, mapX, mapY);
