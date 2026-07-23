@@ -265,7 +265,10 @@ public class CPU extends AMemory {
                 continue;
             }
 
-            checkInterrupts();
+            cycles += checkInterrupts();
+            if (cycles >= maxCycles) {
+                continue;
+            }
 
             if (!waitingForInterrupt) {
                 cycles += executeInstruction();
@@ -1621,26 +1624,32 @@ public class CPU extends AMemory {
         return emulationMode && (oldPc & 0xff00) != (target & 0xff00) ? 1 : 0;
     }
 
-    private void checkInterrupts() {
+    private int checkInterrupts() {
         if (!isNMIRequested && !isIRQRequested && !isAbortRequested) {
-            return;
+            return 0;
         }
         waitingForInterrupt = false;
 
         if (isAbortRequested) {
             isAbortRequested = false;
             runInterrupt(cartridgeHeader.nativeInterrupts.abort, cartridgeHeader.emulationInterrupts.abort);
-            return;
+            return interruptEntryCycles();
         }
         if (isNMIRequested) {
             isNMIRequested = false;
             runInterrupt(cartridgeHeader.nativeInterrupts.nmi, cartridgeHeader.emulationInterrupts.nmi);
-            return;
+            return interruptEntryCycles();
         }
         if (isIRQRequested && !registers.p.i) {
             isIRQRequested = false;
             runInterrupt(cartridgeHeader.nativeInterrupts.irq, cartridgeHeader.emulationInterrupts.irq);
+            return interruptEntryCycles();
         }
+        return 0;
+    }
+
+    private int interruptEntryCycles() {
+        return emulationMode ? 7 : 8;
     }
 
     private void runInterrupt(int nativeHandler, int emulationHandler) {

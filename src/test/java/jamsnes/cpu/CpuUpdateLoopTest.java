@@ -54,8 +54,8 @@ class CpuUpdateLoopTest {
         snes.cpu.isNMIRequested = true;
         snes.wram.data()[0x0300] = 0xea;
 
-        assertEquals(2, snes.cpu.update(2));
-        assertEquals(0x0301, snes.cpu.registers().pc);
+        assertEquals(7, snes.cpu.update(7));
+        assertEquals(0x0300, snes.cpu.registers().pc);
         assertEquals(0, snes.cpu.registers().pbr);
         assertEquals(snes.cpu.registers().p.flags(), snes.cpu._pop());
         assertEquals(0x0200, snes.cpu._pop16());
@@ -79,8 +79,8 @@ class CpuUpdateLoopTest {
 
         snes.cpu.requestABORT();
 
-        assertEquals(2, snes.cpu.update(2));
-        assertEquals(0x0301, snes.cpu.registers().pc);
+        assertEquals(7, snes.cpu.update(7));
+        assertEquals(0x0300, snes.cpu.registers().pc);
         assertEquals(0, snes.cpu.registers().pbr);
         assertEquals(pushedStatus, snes.cpu._pop());
         assertEquals(0x0200, snes.cpu._pop16());
@@ -113,8 +113,8 @@ class CpuUpdateLoopTest {
         snes.wram.data()[0x0300] = 0xea;
         int pushedStatus = snes.cpu.registers().p.flags();
 
-        assertEquals(2, snes.cpu.update(2));
-        assertEquals(0x0301, snes.cpu.registers().pc);
+        assertEquals(7, snes.cpu.update(7));
+        assertEquals(0x0300, snes.cpu.registers().pc);
         assertEquals(0, snes.cpu.registers().pbr);
         assertEquals(pushedStatus, snes.cpu._pop());
         assertEquals(0x0200, snes.cpu._pop16());
@@ -133,13 +133,25 @@ class CpuUpdateLoopTest {
 
         snes.cpu.requestABORT();
 
-        assertEquals(2, snes.cpu.update(2));
-        assertEquals(0x0301, snes.cpu.registers().pc);
+        assertEquals(8, snes.cpu.update(8));
+        assertEquals(0x0300, snes.cpu.registers().pc);
         assertEquals(0, snes.cpu.registers().pbr);
         assertEquals(pushedStatus, snes.cpu._pop());
         assertEquals(0x0200, snes.cpu._pop16());
         assertEquals(0x12, snes.cpu._pop());
         assertFalse(snes.cpu.isAbortRequested);
+    }
+
+    @Test
+    void updateExecutesHandlerInstructionWhenBudgetRemainsAfterInterruptEntry() {
+        SNES snes = init();
+        snes.cpu.registers().setPc(0x0200);
+        snes.cartridge.header.emulationInterrupts.nmi = 0x0300;
+        snes.cpu.requestNMI();
+        writeProgram(snes, 0x0300, 0xea);
+
+        assertEquals(9, snes.cpu.update(9));
+        assertEquals(0x0301, snes.cpu.registers().pc);
     }
 
     @Test

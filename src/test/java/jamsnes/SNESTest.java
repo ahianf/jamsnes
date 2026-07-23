@@ -300,6 +300,26 @@ class SNESTest {
     }
 
     @Test
+    void updateAdvancesPpuByInterruptEntryAndHandlerCycles() {
+        SNES snes = new SNES(new TestRenderer());
+        snes.cartridge.setSize(0x10000);
+        snes.cartridge.header.addMappingMode(MappingMode.LOROM);
+        snes.sram.setSize(0x10000);
+        snes.bus.mapComponents(snes);
+        snes.apu.isDisabled = true;
+        snes.cartridge.header.emulationInterrupts.nmi = 0x0300;
+        snes.wram.data()[0x0300] = 0xea;
+        snes.wram.data()[0x0301] = 0xea;
+        snes.wram.data()[0x0302] = 0xea;
+        snes.cpu.requestNMI();
+
+        snes.update();
+
+        assertEquals(13, snes.ppu.hCounter());
+        assertEquals(0x0303, snes.cpu.registers().pc);
+    }
+
+    @Test
     void updateDrawsFrameWhenEnteringVBlank() {
         TestRenderer renderer = new TestRenderer();
         SNES snes = new SNES(renderer);
