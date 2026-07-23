@@ -1,6 +1,7 @@
 package jamsnes.ppu;
 
 import jamsnes.SNES;
+import jamsnes.models.Vector2;
 import jamsnes.renderer.IRenderer;
 import org.junit.jupiter.api.Test;
 
@@ -263,6 +264,26 @@ class PpuRenderIntegrationTest {
         snes.ppu.renderMainAndSubScreen();
 
         assertEquals(0, snes.ppu.mainScreen()[0][0]);
+    }
+
+    @Test
+    void modeFiveDownsamplesFullHighResolutionCharacterRow() {
+        SNES snes = init(new TestRenderer());
+        writeColor(snes, 1, 0x001f);
+        writeColor(snes, 2, 0x03e0);
+        snes.bus.write(0x2105, 0x05);
+        snes.bus.write(0x210b, 0x01);
+        snes.bus.write(0x212c, 0x01);
+        snes.ppu.vram.write(0x0000, 0x00);
+        snes.ppu.vram.write(0x0001, 0x00);
+        snes.ppu.vram.write(0x2000, 0x80);
+        snes.ppu.vram.write(0x2021, 0x80);
+
+        snes.ppu.renderMainAndSubScreen();
+
+        assertEquals(new Vector2<>(512, 256), snes.ppu.background(0).backgroundSize);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), snes.ppu.mainScreen()[0][4]);
     }
 
     @Test

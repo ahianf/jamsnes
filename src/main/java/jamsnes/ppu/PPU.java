@@ -307,7 +307,11 @@ public class PPU extends AMemory {
     }
 
     public Vector2<Integer> getCharacterSize(int backgroundNumber) {
-        if ((registers[0x05] & (1 << (3 + backgroundNumber))) != 0) {
+        boolean largeCharacters = (registers[0x05] & (1 << (3 + backgroundNumber))) != 0;
+        if (ppuRegisters.bgMode() == 5 || ppuRegisters.bgMode() == 6) {
+            return new Vector2<>(16, largeCharacters ? 16 : 8);
+        }
+        if (largeCharacters) {
             return new Vector2<>(16, 16);
         }
         return new Vector2<>(8, 8);
@@ -605,6 +609,7 @@ public class PPU extends AMemory {
         int backgroundBit = 1 << (background.getBackgroundNumber() - 1);
         int backgroundIndex = background.getBackgroundNumber() - 1;
         Vector2<Integer> scroll = getBgScroll(background.getBackgroundNumber());
+        int horizontalScale = ppuRegisters.bgMode() == 5 || ppuRegisters.bgMode() == 6 ? 2 : 1;
         int mosaicSize = ppuRegisters.mosaicAffectsBackground(backgroundIndex)
                 ? ppuRegisters.mosaicPixelSize() + 1
                 : 1;
@@ -612,13 +617,13 @@ public class PPU extends AMemory {
             Background.mergeBackgroundBuffer(
                     mainScreen, mainScreenLevelMap, mainScreenSourceMap, background.getBackgroundNumber(),
                     background, levelLow, levelHigh, scroll.x, scroll.y, mosaicSize,
-                    layerWindowMask(backgroundIndex, 0));
+                    layerWindowMask(backgroundIndex, 0), horizontalScale);
         }
         if ((registers[0x2d] & backgroundBit) != 0) {
             Background.mergeBackgroundBuffer(
                     subScreen, subScreenLevelMap, subScreenSourceMap, background.getBackgroundNumber(),
                     background, levelLow, levelHigh, scroll.x, scroll.y, mosaicSize,
-                    layerWindowMask(backgroundIndex, 1));
+                    layerWindowMask(backgroundIndex, 1), horizontalScale);
         }
     }
 

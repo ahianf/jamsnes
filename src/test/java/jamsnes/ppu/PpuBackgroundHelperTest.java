@@ -34,12 +34,25 @@ class PpuBackgroundHelperTest {
     void returnsCharacterSizeFromBgModeBits() {
         SNES snes = init();
 
-        snes.bus.write(0x2105, 0b1010_0101);
+        snes.bus.write(0x2105, 0b1010_0011);
 
         assertEquals(new Vector2<>(8, 8), snes.ppu.getCharacterSize(1));
         assertEquals(new Vector2<>(16, 16), snes.ppu.getCharacterSize(2));
         assertEquals(new Vector2<>(8, 8), snes.ppu.getCharacterSize(3));
         assertEquals(new Vector2<>(16, 16), snes.ppu.getCharacterSize(4));
+    }
+
+    @Test
+    void highResolutionModesUseSixteenPixelWideCharacters() {
+        SNES snes = init();
+
+        snes.bus.write(0x2105, 0x05);
+        assertEquals(new Vector2<>(16, 8), snes.ppu.getCharacterSize(1));
+        assertEquals(new Vector2<>(16, 8), snes.ppu.getCharacterSize(2));
+
+        snes.bus.write(0x2105, 0x16);
+        assertEquals(new Vector2<>(16, 16), snes.ppu.getCharacterSize(1));
+        assertEquals(new Vector2<>(16, 8), snes.ppu.getCharacterSize(2));
     }
 
     @Test
