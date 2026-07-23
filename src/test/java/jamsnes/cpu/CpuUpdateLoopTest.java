@@ -32,13 +32,16 @@ class CpuUpdateLoopTest {
     }
 
     @Test
-    void waitingCpuReturnsSentinelWhenNoInterruptIsPending() {
+    void waitingCpuConsumesRequestedBudgetWhenNoInterruptIsPending() {
         SNES snes = init();
         snes.cpu.registers().setPc(0x0200);
         snes.wram.data()[0x0200] = 0xcb;
 
-        assertEquals(0xff, snes.cpu.update(10));
+        assertEquals(10, snes.cpu.update(10));
         assertTrue(snes.cpu.isWaitingForInterrupt());
+        assertEquals(0x0201, snes.cpu.registers().pc);
+
+        assertEquals(6, snes.cpu.update(6));
         assertEquals(0x0201, snes.cpu.registers().pc);
     }
 

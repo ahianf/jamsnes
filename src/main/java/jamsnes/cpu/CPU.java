@@ -270,7 +270,7 @@ public class CPU extends AMemory {
             if (!waitingForInterrupt) {
                 cycles += executeInstruction();
             } else {
-                return 0xff;
+                return maxCycles;
             }
         }
         return cycles;

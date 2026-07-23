@@ -281,6 +281,25 @@ class SNESTest {
     }
 
     @Test
+    void updateAdvancesRequestedCyclesWhileCpuWaitsForInterrupt() {
+        SNES snes = new SNES(new TestRenderer());
+        snes.cartridge.setSize(0x10000);
+        snes.cartridge.header.addMappingMode(MappingMode.LOROM);
+        snes.sram.setSize(0x10000);
+        snes.bus.mapComponents(snes);
+        snes.apu.isDisabled = true;
+        snes.cpu.registers().setPc(0x0200);
+        snes.wram.data()[0x0200] = 0xcb;
+
+        snes.update();
+        snes.update();
+
+        assertEquals(24, snes.ppu.hCounter());
+        assertEquals(0, snes.ppu.vCounter());
+        assertEquals(0x0201, snes.cpu.registers().pc);
+    }
+
+    @Test
     void updateDrawsFrameWhenEnteringVBlank() {
         TestRenderer renderer = new TestRenderer();
         SNES snes = new SNES(renderer);
