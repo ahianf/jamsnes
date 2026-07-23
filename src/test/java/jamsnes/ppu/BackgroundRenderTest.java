@@ -95,6 +95,58 @@ class BackgroundRenderTest {
         assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), background.buffer[0][256]);
     }
 
+    @Test
+    void rendersVerticalTileMapFromSecondPage() {
+        SNES snes = init();
+        Background background = new Background(snes.ppu, 1);
+        background.setTileMapStartAddress(0);
+        background.setTilesetAddress(0x2000);
+        background.setBpp(2);
+        background.setTileMapMirroring(new Vector2<>(false, true));
+        writeColor(snes, 1, 0x001f);
+        writeColor(snes, 2, 0x03e0);
+        snes.ppu.vram.write(0x0000, 0x00);
+        snes.ppu.vram.write(0x0800, 0x01);
+        snes.ppu.vram.write(0x2000, 0x80);
+        snes.ppu.vram.write(0x2011, 0x80);
+
+        background.renderBackground();
+
+        assertEquals(new Vector2<>(256, 512), background.backgroundSize);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), background.buffer[0][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), background.buffer[256][0]);
+    }
+
+    @Test
+    void rendersFourTileMapPagesInRowMajorOrder() {
+        SNES snes = init();
+        Background background = new Background(snes.ppu, 1);
+        background.setTileMapStartAddress(0);
+        background.setTilesetAddress(0x2000);
+        background.setBpp(2);
+        background.setTileMapMirroring(new Vector2<>(true, true));
+        writeColor(snes, 1, 0x001f);
+        writeColor(snes, 2, 0x03e0);
+        writeColor(snes, 3, 0x7c00);
+        snes.ppu.vram.write(0x0000, 0x00);
+        snes.ppu.vram.write(0x0800, 0x01);
+        snes.ppu.vram.write(0x1000, 0x02);
+        snes.ppu.vram.write(0x1800, 0x03);
+        snes.ppu.vram.write(0x2000, 0x80);
+        snes.ppu.vram.write(0x2011, 0x80);
+        snes.ppu.vram.write(0x2020, 0x80);
+        snes.ppu.vram.write(0x2021, 0x80);
+        snes.ppu.vram.write(0x2030, 0x80);
+
+        background.renderBackground();
+
+        assertEquals(new Vector2<>(512, 512), background.backgroundSize);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), background.buffer[0][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), background.buffer[0][256]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x7c00), background.buffer[256][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), background.buffer[256][256]);
+    }
+
     private static void writeColor(SNES snes, int colorIndex, int color) {
         int address = colorIndex * 2;
         snes.ppu.cgram.write(address, color);

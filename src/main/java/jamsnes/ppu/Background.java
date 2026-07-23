@@ -44,28 +44,20 @@ public class Background {
 
     public void renderBackground() {
         clearBuffers();
-        int vramAddress = tileMapStartAddress;
-        int offsetX = 0;
-        int offsetY = 0;
         backgroundSize = new Vector2<>(
                 ((tileMapMirroring.x ? 1 : 0) + 1) * characterNbPixels.x * NB_CHARACTER_WIDTH,
                 ((tileMapMirroring.y ? 1 : 0) + 1) * characterNbPixels.y * NB_CHARACTER_HEIGHT);
 
-        drawBasicTileMap(vramAddress, offsetX, offsetY);
-        for (int i = 1; i < 4; i++) {
-            vramAddress += TILE_MAP_BYTE_SIZE;
-            offsetX++;
-            if (i == 2) {
-                offsetX = 0;
-                offsetY++;
+        int mapColumns = tileMapMirroring.x ? 2 : 1;
+        int mapRows = tileMapMirroring.y ? 2 : 1;
+        for (int mapY = 0; mapY < mapRows; mapY++) {
+            for (int mapX = 0; mapX < mapColumns; mapX++) {
+                int page = mapY * mapColumns + mapX;
+                drawBasicTileMap(
+                        u16(tileMapStartAddress + page * TILE_MAP_BYTE_SIZE),
+                        mapX,
+                        mapY);
             }
-            if (i > 1 && !tileMapMirroring.y) {
-                break;
-            }
-            if ((i == 1 || i == 3) && !tileMapMirroring.x) {
-                continue;
-            }
-            drawBasicTileMap(vramAddress, offsetX, offsetY);
         }
     }
 
