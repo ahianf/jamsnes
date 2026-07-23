@@ -53,11 +53,12 @@ class CpuUpdateLoopTest {
         snes.cartridge.header.emulationInterrupts.nmi = 0x0300;
         snes.cpu.isNMIRequested = true;
         snes.wram.data()[0x0300] = 0xea;
+        int pushedStatus = snes.cpu.registers().p.flags() & ~0x10;
 
         assertEquals(7, snes.cpu.update(7));
         assertEquals(0x0300, snes.cpu.registers().pc);
         assertEquals(0, snes.cpu.registers().pbr);
-        assertEquals(snes.cpu.registers().p.flags(), snes.cpu._pop());
+        assertEquals(pushedStatus, snes.cpu._pop());
         assertEquals(0x0200, snes.cpu._pop16());
         assertFalse(snes.cpu.isNMIRequested);
 
@@ -75,7 +76,7 @@ class CpuUpdateLoopTest {
         snes.cpu.registers().s = 0x01ff;
         snes.cartridge.header.emulationInterrupts.abort = 0x0300;
         snes.wram.data()[0x0300] = 0xea;
-        int pushedStatus = snes.cpu.registers().p.flags();
+        int pushedStatus = snes.cpu.registers().p.flags() & ~0x10;
 
         snes.cpu.requestABORT();
 
@@ -111,7 +112,7 @@ class CpuUpdateLoopTest {
         snes.cartridge.header.emulationInterrupts.irq = 0x0300;
         snes.cpu.requestIRQ();
         snes.wram.data()[0x0300] = 0xea;
-        int pushedStatus = snes.cpu.registers().p.flags();
+        int pushedStatus = snes.cpu.registers().p.flags() & ~0x10;
 
         assertEquals(7, snes.cpu.update(7));
         assertEquals(0x0300, snes.cpu.registers().pc);

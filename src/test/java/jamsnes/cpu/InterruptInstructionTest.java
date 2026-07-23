@@ -64,7 +64,7 @@ class InterruptInstructionTest {
         assertFalse(snes.cpu.registers().p.d);
         assertTrue(snes.cpu.registers().p.i);
         assertFalse(snes.cpu.registers().p.x_b);
-        assertEquals(0x0f, snes.cpu._pop());
+        assertEquals(0x3f, snes.cpu._pop());
         assertEquals(0x156, snes.cpu._pop16());
     }
 

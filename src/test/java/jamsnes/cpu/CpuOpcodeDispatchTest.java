@@ -175,7 +175,7 @@ class CpuOpcodeDispatchTest {
 
         assertEquals(7, snes.cpu.executeInstruction());
         assertEquals(0x5678, snes.cpu.registers().pc);
-        assertEquals(0x0f, snes.cpu._pop());
+        assertEquals(0x3f, snes.cpu._pop());
         assertEquals(0x0212, snes.cpu._pop16());
     }
 

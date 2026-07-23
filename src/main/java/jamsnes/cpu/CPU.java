@@ -1074,12 +1074,12 @@ public class CPU extends AMemory {
     }
 
     public int BRK(int valueAddr) {
-        runInterrupt(cartridgeHeader.nativeInterrupts.brk, cartridgeHeader.emulationInterrupts.brk);
+        runInterrupt(cartridgeHeader.nativeInterrupts.brk, cartridgeHeader.emulationInterrupts.brk, true);
         return emulationMode ? 0 : 1;
     }
 
     public int COP(int valueAddr) {
-        runInterrupt(cartridgeHeader.nativeInterrupts.cop, cartridgeHeader.emulationInterrupts.cop);
+        runInterrupt(cartridgeHeader.nativeInterrupts.cop, cartridgeHeader.emulationInterrupts.cop, true);
         return emulationMode ? 0 : 1;
     }
 
@@ -1632,17 +1632,17 @@ public class CPU extends AMemory {
 
         if (isAbortRequested) {
             isAbortRequested = false;
-            runInterrupt(cartridgeHeader.nativeInterrupts.abort, cartridgeHeader.emulationInterrupts.abort);
+            runInterrupt(cartridgeHeader.nativeInterrupts.abort, cartridgeHeader.emulationInterrupts.abort, false);
             return interruptEntryCycles();
         }
         if (isNMIRequested) {
             isNMIRequested = false;
-            runInterrupt(cartridgeHeader.nativeInterrupts.nmi, cartridgeHeader.emulationInterrupts.nmi);
+            runInterrupt(cartridgeHeader.nativeInterrupts.nmi, cartridgeHeader.emulationInterrupts.nmi, false);
             return interruptEntryCycles();
         }
         if (isIRQRequested && !registers.p.i) {
             isIRQRequested = false;
-            runInterrupt(cartridgeHeader.nativeInterrupts.irq, cartridgeHeader.emulationInterrupts.irq);
+            runInterrupt(cartridgeHeader.nativeInterrupts.irq, cartridgeHeader.emulationInterrupts.irq, false);
             return interruptEntryCycles();
         }
         return 0;
@@ -1652,10 +1652,15 @@ public class CPU extends AMemory {
         return emulationMode ? 7 : 8;
     }
 
-    private void runInterrupt(int nativeHandler, int emulationHandler) {
+    private void runInterrupt(int nativeHandler, int emulationHandler, boolean softwareInterrupt) {
+        int status = registers.p.flags();
         if (emulationMode) {
+            status = (status | 0x20) & ~0x10;
+            if (softwareInterrupt) {
+                status |= 0x10;
+            }
             _push16(registers.pc);
-            _push8(registers.p.flags());
+            _push8(status);
             registers.p.i = true;
             registers.p.d = false;
             registers.setPbr(0);
@@ -1663,7 +1668,7 @@ public class CPU extends AMemory {
         } else {
             _push8(registers.pbr);
             _push16(registers.pc);
-            _push8(registers.p.flags());
+            _push8(status);
             registers.p.i = true;
             registers.p.d = false;
             registers.setPbr(0);
