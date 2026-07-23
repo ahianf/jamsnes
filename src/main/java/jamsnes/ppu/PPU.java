@@ -892,6 +892,9 @@ public class PPU extends AMemory {
         if (colorIndex == 0) {
             return Mode7Pixel.TRANSPARENT;
         }
+        if (!extBg && ppuRegisters.cgwselDirectColorMode()) {
+            return new Mode7Pixel(PPUUtils.directColorToRGBA(0, colorIndex), priority);
+        }
         int colorAddress = colorIndex * 2;
         int color = cgram.read(colorAddress) | (cgram.read(colorAddress + 1) << 8);
         return new Mode7Pixel(PPUUtils.cgramColorToRGBA(color), priority);
