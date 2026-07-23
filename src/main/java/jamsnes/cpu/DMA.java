@@ -30,6 +30,7 @@ public class DMA {
     private IMemoryBus bus;
     private boolean enabled;
     private boolean hdmaEnabled;
+    private boolean hdmaActive;
     private boolean hdmaDoTransfer;
     private int hdmaLineRemaining;
 
@@ -44,6 +45,7 @@ public class DMA {
     public void resetRuntimeState() {
         enabled = false;
         hdmaEnabled = false;
+        hdmaActive = false;
         hdmaDoTransfer = false;
         hdmaLineRemaining = 0;
     }
@@ -109,14 +111,16 @@ public class DMA {
 
     public int initializeHDMA() {
         if (!hdmaEnabled) {
+            hdmaActive = false;
             return 0;
         }
+        hdmaActive = true;
         tableAddress = getAddressPage();
         return loadNextHdmaLine();
     }
 
     public int runHDMALine() {
-        if (!hdmaEnabled) {
+        if (!hdmaEnabled || !hdmaActive) {
             return 0;
         }
         int cycles = 0;
@@ -138,7 +142,7 @@ public class DMA {
         lineCounter = bus.read(tableBank | tableAddress);
         tableAddress = u16(tableAddress + 1);
         if (lineCounter == 0) {
-            hdmaEnabled = false;
+            hdmaActive = false;
             hdmaDoTransfer = false;
             hdmaLineRemaining = 0;
             return 8;
@@ -296,9 +300,14 @@ public class DMA {
         return hdmaEnabled;
     }
 
+    public boolean isHdmaActive() {
+        return hdmaActive;
+    }
+
     public void setHdmaEnabled(boolean hdmaEnabled) {
         this.hdmaEnabled = hdmaEnabled;
         if (!hdmaEnabled) {
+            hdmaActive = false;
             hdmaDoTransfer = false;
             hdmaLineRemaining = 0;
         }
