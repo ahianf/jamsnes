@@ -32,6 +32,7 @@ public class DMA {
     private boolean hdmaEnabled;
     private boolean hdmaActive;
     private boolean hdmaDoTransfer;
+    private boolean hdmaRepeat;
     private int hdmaLineRemaining;
 
     public DMA(IMemoryBus bus) {
@@ -47,6 +48,7 @@ public class DMA {
         hdmaEnabled = false;
         hdmaActive = false;
         hdmaDoTransfer = false;
+        hdmaRepeat = false;
         hdmaLineRemaining = 0;
     }
 
@@ -131,8 +133,8 @@ public class DMA {
         if (hdmaLineRemaining <= 0) {
             cycles += loadNextHdmaLine();
         } else {
-            lineCounter = (lineCounter & 0x80) | (hdmaLineRemaining & 0x7f);
-            hdmaDoTransfer = isHdmaRepeat();
+            lineCounter = (hdmaRepeat ? 0x80 : 0) | (hdmaLineRemaining & 0x7f);
+            hdmaDoTransfer = hdmaRepeat;
         }
         return cycles;
     }
@@ -144,11 +146,13 @@ public class DMA {
         if (lineCounter == 0) {
             hdmaActive = false;
             hdmaDoTransfer = false;
+            hdmaRepeat = false;
             hdmaLineRemaining = 0;
             return 8;
         }
 
         int cycles = 8;
+        hdmaRepeat = lineCounter > 0x80;
         hdmaLineRemaining = lineCounter & 0x7f;
         if (hdmaLineRemaining == 0) {
             hdmaLineRemaining = 128;
@@ -232,10 +236,6 @@ public class DMA {
         return (controlRegister & 0b0100_0000) != 0;
     }
 
-    private boolean isHdmaRepeat() {
-        return (lineCounter & 0x80) != 0;
-    }
-
     private int getAddressPage() {
         return aAddress & 0xffff;
     }
@@ -309,6 +309,7 @@ public class DMA {
         if (!hdmaEnabled) {
             hdmaActive = false;
             hdmaDoTransfer = false;
+            hdmaRepeat = false;
             hdmaLineRemaining = 0;
         }
     }
