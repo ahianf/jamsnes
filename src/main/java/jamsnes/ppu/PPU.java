@@ -338,24 +338,26 @@ public class PPU extends AMemory {
         return new Vector2<>(ppuRegisters.bgOffset(index), ppuRegisters.bgOffset(index + 1));
     }
 
-    boolean usesMode2OffsetPerTile(int backgroundNumber) {
-        return ppuRegisters.bgMode() == 2 && backgroundNumber >= 1 && backgroundNumber <= 2;
+    boolean usesOffsetPerTile(int backgroundNumber) {
+        int mode = ppuRegisters.bgMode();
+        return (mode == 2 || mode == 4) && backgroundNumber >= 1 && backgroundNumber <= 2;
     }
 
-    int mode2OffsetPerTileHorizontalCoordinate(int backgroundNumber, int screenX, int horizontalScroll) {
+    int offsetPerTileHorizontalCoordinate(int backgroundNumber, int screenX, int horizontalScroll) {
         int normalCoordinate = screenX + horizontalScroll;
         if (isFirstVisibleOffsetColumn(screenX, horizontalScroll)) {
             return normalCoordinate;
         }
 
         int value = readOffsetPerTileEntry(backgroundNumber, screenX, horizontalScroll, false);
-        if (!offsetPerTileEnabledForBackground(value, backgroundNumber)) {
+        if (!offsetPerTileEnabledForBackground(value, backgroundNumber)
+                || (ppuRegisters.bgMode() == 4 && (value & 0x8000) != 0)) {
             return normalCoordinate;
         }
         return (normalCoordinate & 0x07) | ((screenX & ~0x07) + (value & 0x03f8));
     }
 
-    int mode2OffsetPerTileVerticalScroll(
+    int offsetPerTileVerticalScroll(
             int backgroundNumber,
             int screenX,
             int horizontalScroll,
@@ -365,7 +367,8 @@ public class PPU extends AMemory {
         }
 
         int value = readOffsetPerTileEntry(backgroundNumber, screenX, horizontalScroll, true);
-        return offsetPerTileEnabledForBackground(value, backgroundNumber)
+        boolean verticalEntry = ppuRegisters.bgMode() != 4 || (value & 0x8000) != 0;
+        return verticalEntry && offsetPerTileEnabledForBackground(value, backgroundNumber)
                 ? value & 0x03ff
                 : verticalScroll;
     }
@@ -382,7 +385,8 @@ public class PPU extends AMemory {
         Vector2<Integer> bg3Scroll = getBgScroll(3);
         int normalCoordinate = screenX + horizontalScroll;
         int mapX = (normalCoordinate & 0x07) | (((screenX - 8) & ~0x07) + (bg3Scroll.x & ~0x07));
-        int mapY = (bg3Scroll.y & ~0x07) + (vertical ? 8 : 0);
+        int mapY = (bg3Scroll.y & ~0x07)
+                + (vertical && ppuRegisters.bgMode() != 4 ? 8 : 0);
         return readBackgroundTileMapEntry(3, mapX, mapY);
     }
 

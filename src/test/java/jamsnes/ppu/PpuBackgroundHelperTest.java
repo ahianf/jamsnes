@@ -100,14 +100,14 @@ class PpuBackgroundHelperTest {
         snes.ppu.vram.write(0x0800, 0x08);
         snes.ppu.vram.write(0x0801, 0x20);
 
-        assertEquals(3, snes.ppu.mode2OffsetPerTileHorizontalCoordinate(1, 0, 3));
-        assertEquals(19, snes.ppu.mode2OffsetPerTileHorizontalCoordinate(1, 8, 3));
-        assertEquals(11, snes.ppu.mode2OffsetPerTileHorizontalCoordinate(2, 8, 3));
+        assertEquals(3, snes.ppu.offsetPerTileHorizontalCoordinate(1, 0, 3));
+        assertEquals(19, snes.ppu.offsetPerTileHorizontalCoordinate(1, 8, 3));
+        assertEquals(11, snes.ppu.offsetPerTileHorizontalCoordinate(2, 8, 3));
 
         snes.ppu.vram.write(0x0801, 0x40);
 
-        assertEquals(11, snes.ppu.mode2OffsetPerTileHorizontalCoordinate(1, 8, 3));
-        assertEquals(19, snes.ppu.mode2OffsetPerTileHorizontalCoordinate(2, 8, 3));
+        assertEquals(11, snes.ppu.offsetPerTileHorizontalCoordinate(1, 8, 3));
+        assertEquals(19, snes.ppu.offsetPerTileHorizontalCoordinate(2, 8, 3));
     }
 
     private static SNES init() {

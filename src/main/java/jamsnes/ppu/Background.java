@@ -180,7 +180,7 @@ public class Background {
                 ? Math.min(backgroundSrc.backgroundSize.x, backgroundSrc.buffer[0].length)
                 : backgroundSrc.buffer[0].length;
         int pixelSize = Math.max(1, mosaicSize);
-        boolean offsetPerTile = backgroundSrc.ppu.usesMode2OffsetPerTile(backgroundSrc.backgroundNumber);
+        boolean offsetPerTile = backgroundSrc.ppu.usesOffsetPerTile(backgroundSrc.backgroundNumber);
         int[] offsetSourceX = null;
         int[] offsetScrollY = null;
         if (offsetPerTile && bufferDest.length > 0) {
@@ -189,9 +189,9 @@ public class Background {
             offsetScrollY = new int[width];
             for (int x = 0; x < width; x++) {
                 int mosaicX = (x / pixelSize) * pixelSize;
-                offsetSourceX[x] = backgroundSrc.ppu.mode2OffsetPerTileHorizontalCoordinate(
+                offsetSourceX[x] = backgroundSrc.ppu.offsetPerTileHorizontalCoordinate(
                         backgroundSrc.backgroundNumber, mosaicX, scrollX);
-                offsetScrollY[x] = backgroundSrc.ppu.mode2OffsetPerTileVerticalScroll(
+                offsetScrollY[x] = backgroundSrc.ppu.offsetPerTileVerticalScroll(
                         backgroundSrc.backgroundNumber, mosaicX, scrollX, scrollY);
             }
         }
