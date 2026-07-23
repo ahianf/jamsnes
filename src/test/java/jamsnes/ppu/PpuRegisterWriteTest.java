@@ -202,6 +202,33 @@ class PpuRegisterWriteTest {
     }
 
     @Test
+    void overscanDelaysVBlankMemoryAccessAndOamReload() {
+        SNES snes = init();
+        snes.bus.write(0x2100, 0x0f);
+        snes.bus.write(0x2102, 0x05);
+        snes.bus.write(0x2103, 0x00);
+        snes.bus.read(0x2138);
+        snes.bus.write(0x2133, 0x04);
+
+        snes.ppu.advanceCountersOnly(PPU.H_COUNTER_DOTS * PPU.V_BLANK_START_SCANLINE);
+        snes.bus.write(0x2104, 0x55);
+
+        assertFalse(snes.ppu.isInVBlank());
+        assertEquals(0x0c, snes.ppu.ppuRegisters().oamAddress());
+        assertEquals(0, snes.ppu.oamram.read(0x0b));
+
+        snes.ppu.advanceCountersOnly(
+                PPU.H_COUNTER_DOTS * (PPU.OVERSCAN_V_BLANK_START_SCANLINE - PPU.V_BLANK_START_SCANLINE));
+        snes.bus.write(0x2104, 0x66);
+        snes.bus.write(0x2104, 0x77);
+
+        assertTrue(snes.ppu.isInVBlank());
+        assertEquals(0x66, snes.ppu.oamram.read(0x0a));
+        assertEquals(0x77, snes.ppu.oamram.read(0x0b));
+        assertEquals(0x0c, snes.ppu.ppuRegisters().oamAddress());
+    }
+
+    @Test
     void decodesBgModeAndMosaic() {
         SNES snes = init();
 

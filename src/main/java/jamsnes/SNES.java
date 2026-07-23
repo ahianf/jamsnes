@@ -136,7 +136,7 @@ public class SNES {
     }
 
     private boolean entersHBlank(int hCounter, int vCounter, int cycles) {
-        if (cycles <= 0 || vCounter >= PPU.V_BLANK_START_SCANLINE || hCounter >= PPU.H_BLANK_START_DOT) {
+        if (cycles <= 0 || vCounter >= ppu.vBlankStartScanline() || hCounter >= PPU.H_BLANK_START_DOT) {
             return false;
         }
         return hCounter + cycles >= PPU.H_BLANK_START_DOT;
@@ -214,7 +214,7 @@ public class SNES {
         }
 
         int frameDots = PPU.H_COUNTER_DOTS * PPU.V_COUNTER_SCANLINES;
-        int vBlankStartDot = PPU.H_COUNTER_DOTS * PPU.V_BLANK_START_SCANLINE;
+        int vBlankStartDot = PPU.H_COUNTER_DOTS * ppu.vBlankStartScanline();
         int startDot = startVCounter * PPU.H_COUNTER_DOTS + startHCounter;
         int endDot = startDot + cycles;
         if (startDot < vBlankStartDot && endDot >= vBlankStartDot) {

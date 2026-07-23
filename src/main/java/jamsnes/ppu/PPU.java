@@ -44,6 +44,7 @@ public class PPU extends AMemory {
     public static final int H_BLANK_START_DOT = 256;
     public static final int V_COUNTER_SCANLINES = 262;
     public static final int V_BLANK_START_SCANLINE = 225;
+    public static final int OVERSCAN_V_BLANK_START_SCANLINE = 240;
     private static final int PPU1_VERSION = 1;
     private static final int PPU2_VERSION = 3;
 
@@ -429,7 +430,13 @@ public class PPU extends AMemory {
     }
 
     public boolean isInVBlank() {
-        return vCounter >= V_BLANK_START_SCANLINE;
+        return vCounter >= vBlankStartScanline();
+    }
+
+    public int vBlankStartScanline() {
+        return ppuRegisters.setiniOverscanMode()
+                ? OVERSCAN_V_BLANK_START_SCANLINE
+                : V_BLANK_START_SCANLINE;
     }
 
     public int cgramRead(int address) {
@@ -571,7 +578,7 @@ public class PPU extends AMemory {
             if (vCounter >= V_COUNTER_SCANLINES) {
                 vCounter = 0;
             }
-            if (vCounter == V_BLANK_START_SCANLINE) {
+            if (vCounter == vBlankStartScanline()) {
                 reloadOamAddressAtVBlankEntry();
             }
         }
@@ -584,7 +591,7 @@ public class PPU extends AMemory {
     }
 
     private void reloadOamAddressAfterForcedBlankDeactivation(boolean wasForcedBlank) {
-        if (wasForcedBlank && !ppuRegisters.inidispFblank() && vCounter == V_BLANK_START_SCANLINE) {
+        if (wasForcedBlank && !ppuRegisters.inidispFblank() && vCounter == vBlankStartScanline()) {
             ppuRegisters.reloadOamAddress();
         }
     }

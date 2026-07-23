@@ -295,6 +295,32 @@ class SNESTest {
     }
 
     @Test
+    void overscanDelaysFrameAndNmiUntilScanline240() {
+        TestRenderer renderer = new TestRenderer();
+        SNES snes = new SNES(renderer);
+        snes.bus.mapComponents(snes);
+        snes.cpu.isDisabled = true;
+        snes.apu.isDisabled = true;
+        snes.bus.write(0x2133, 0x04);
+        snes.bus.write(0x4200, 0x80);
+        snes.ppu.advanceCountersOnly(PPU.H_COUNTER_DOTS * PPU.V_BLANK_START_SCANLINE - 0xff);
+
+        snes.update();
+
+        assertEquals(0, renderer.drawScreenCalls);
+        assertEquals(0x02, snes.bus.read(0x4210));
+        assertEquals(0x00, snes.bus.read(0x4212) & 0x80);
+
+        snes.ppu.advanceCountersOnly(
+                PPU.H_COUNTER_DOTS * (PPU.OVERSCAN_V_BLANK_START_SCANLINE - PPU.V_BLANK_START_SCANLINE) - 0xff);
+        snes.update();
+
+        assertEquals(1, renderer.drawScreenCalls);
+        assertEquals(0x82, snes.bus.read(0x4210));
+        assertEquals(0x80, snes.bus.read(0x4212) & 0x80);
+    }
+
+    @Test
     void updateRunsOnlyApuForAudioCartridges() throws IOException {
         TestRenderer renderer = new TestRenderer();
         SNES snes = new SNES(renderer);
