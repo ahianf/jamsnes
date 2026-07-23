@@ -270,21 +270,21 @@ public class PPU extends AMemory {
 
         switch (ppuRegisters.bgMode()) {
             case 0 -> {
-                addToMainSubScreen(backgrounds[3], 0, 15);
-                addToMainSubScreen(backgrounds[2], 10, 16);
-                addToMainSubScreen(backgrounds[1], 20, 35);
-                addToMainSubScreen(backgrounds[0], 30, 36);
+                addToMainSubScreen(backgrounds[3], 15, 25);
+                addToMainSubScreen(backgrounds[2], 16, 26);
+                addToMainSubScreen(backgrounds[1], 31, 35);
+                addToMainSubScreen(backgrounds[0], 32, 36);
             }
             case 1 -> {
-                addToMainSubScreen(backgrounds[2], 0, ppuRegisters.bgMode1Bg3PriorityBit() ? 30 : 5);
-                addToMainSubScreen(backgrounds[1], 10, 25);
-                addToMainSubScreen(backgrounds[0], 20, 26);
+                addToMainSubScreen(backgrounds[2], 15, ppuRegisters.bgMode1Bg3PriorityBit() ? 40 : 25);
+                addToMainSubScreen(backgrounds[1], 31, 35);
+                addToMainSubScreen(backgrounds[0], 32, 36);
             }
             case 2, 3, 4, 5 -> {
-                addToMainSubScreen(backgrounds[1], 10, 25);
-                addToMainSubScreen(backgrounds[0], 20, 26);
+                addToMainSubScreen(backgrounds[1], 15, 32);
+                addToMainSubScreen(backgrounds[0], 25, 36);
             }
-            case 6 -> addToMainSubScreen(backgrounds[0], 20, 26);
+            case 6 -> addToMainSubScreen(backgrounds[0], 25, 36);
             case 7 -> addMode7ToMainSubScreen();
             default -> throw new IllegalStateException("Bg mode not implemented or commented (bg nb "
                     + ppuRegisters.bgMode() + ")");
