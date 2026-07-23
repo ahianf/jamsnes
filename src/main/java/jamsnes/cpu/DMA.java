@@ -96,7 +96,7 @@ public class DMA {
         int i = 0;
 
         do {
-            cycles += writeOneByte(aAddress, 0x2100 | u8(port + getModeOffset(i)));
+            cycles += writeOneByte(aAddress, 0x2100 | u8(port + getModeOffset(i)), getDirection());
             if (!isFixed()) {
                 setAddressPage(getAddressPage() + (isIncrement() ? -1 : 1));
             }
@@ -165,7 +165,7 @@ public class DMA {
         int cycles = 0;
         for (int i = 0; i < getHdmaTransferLength(); i++) {
             int source = hdmaSourceAddress();
-            cycles += writeOneByte(source, 0x2100 | u8(port + getModeOffset(i)));
+            cycles += writeOneByte(source, 0x2100 | u8(port + getModeOffset(i)), 0);
             incrementHdmaSourceAddress();
         }
         return cycles;
@@ -186,18 +186,18 @@ public class DMA {
         }
     }
 
-    private int writeOneByte(int aAddress, int bAddress) {
+    private int writeOneByte(int aAddress, int bAddress, int direction) {
         if (port == 0x80) {
             IMemory accessor = bus.getAccessor(aAddress);
             if (accessor != null && accessor.getComponent() == Component.WRAM) {
-                if (getDirection() == 0) {
+                if (direction == 0) {
                     return 8;
                 }
                 bus.write(aAddress, 0xff);
                 return 4;
             }
         }
-        if (getDirection() == 0) {
+        if (direction == 0) {
             bus.write(bAddress, bus.read(aAddress));
         } else {
             bus.write(aAddress, bus.read(bAddress));
@@ -218,8 +218,8 @@ public class DMA {
     private int getHdmaTransferLength() {
         return switch (getMode()) {
             case ONE_TO_ONE -> 1;
-            case TWO_TO_TWO, TWO_TO_ONE, TWO_TO_TWO_BIS, TWO_TO_ONE_BIS -> 2;
-            case FOUR_TO_TWO, FOUR_TO_FOUR, FOUR_TO_TWO_BIS -> 4;
+            case TWO_TO_TWO, TWO_TO_ONE, TWO_TO_ONE_BIS -> 2;
+            case FOUR_TO_TWO, FOUR_TO_FOUR, TWO_TO_TWO_BIS, FOUR_TO_TWO_BIS -> 4;
             default -> 1;
         };
     }

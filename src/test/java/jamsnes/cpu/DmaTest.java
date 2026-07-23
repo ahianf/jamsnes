@@ -264,6 +264,53 @@ class DmaTest {
     }
 
     @Test
+    void hdmaModeFiveTransfersFourBytesToAlternatingRegisters() {
+        SNES snes = init();
+        DMA dma = snes.cpu.dmaChannels()[0];
+
+        snes.wram.data()[0x0200] = 0x01;
+        snes.wram.data()[0x0201] = 0x11;
+        snes.wram.data()[0x0202] = 0x22;
+        snes.wram.data()[0x0203] = 0x33;
+        snes.wram.data()[0x0204] = 0x44;
+        snes.wram.data()[0x0205] = 0x00;
+
+        setupHdma(snes, DMA.TWO_TO_TWO_BIS, 0x26, 0x7e0200);
+        snes.bus.write(0x420c, 0x01);
+
+        assertEquals(8, snes.cpu.initializeHDMA());
+        enterHBlank(snes);
+        assertEquals(40, snes.cpu.runHDMALine());
+
+        assertEquals(0x33, snes.ppu.registers()[0x26]);
+        assertEquals(0x44, snes.ppu.registers()[0x27]);
+        assertEquals(0x0206, dma.getTableAddress());
+        assertFalse(dma.isHdmaEnabled());
+    }
+
+    @Test
+    void hdmaIgnoresDmaDirectionBitAndAlwaysCopiesFromAToBBus() {
+        SNES snes = init();
+        DMA dma = snes.cpu.dmaChannels()[0];
+
+        snes.wram.data()[0x0200] = 0x01;
+        snes.wram.data()[0x0201] = 0x5a;
+        snes.wram.data()[0x0202] = 0x00;
+
+        setupHdma(snes, 0x80 | DMA.ONE_TO_ONE, 0x26, 0x7e0200);
+        snes.bus.write(0x420c, 0x01);
+
+        assertEquals(8, snes.cpu.initializeHDMA());
+        enterHBlank(snes);
+        assertEquals(16, snes.cpu.runHDMALine());
+
+        assertEquals(0x5a, snes.ppu.registers()[0x26]);
+        assertEquals(0x5a, snes.wram.data()[0x0201]);
+        assertEquals(0x0203, dma.getTableAddress());
+        assertFalse(dma.isHdmaEnabled());
+    }
+
+    @Test
     void vramWriteIncrementsAfterLowByteByDefault() {
         SNES snes = init();
 
