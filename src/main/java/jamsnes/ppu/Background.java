@@ -180,16 +180,37 @@ public class Background {
                 ? Math.min(backgroundSrc.backgroundSize.x, backgroundSrc.buffer[0].length)
                 : backgroundSrc.buffer[0].length;
         int pixelSize = Math.max(1, mosaicSize);
+        boolean offsetPerTile = backgroundSrc.ppu.usesMode2OffsetPerTile(backgroundSrc.backgroundNumber);
+        int[] offsetSourceX = null;
+        int[] offsetScrollY = null;
+        if (offsetPerTile && bufferDest.length > 0) {
+            int width = Math.min(bufferDest[0].length, backgroundSrc.buffer[0].length);
+            offsetSourceX = new int[width];
+            offsetScrollY = new int[width];
+            for (int x = 0; x < width; x++) {
+                int mosaicX = (x / pixelSize) * pixelSize;
+                offsetSourceX[x] = backgroundSrc.ppu.mode2OffsetPerTileHorizontalCoordinate(
+                        backgroundSrc.backgroundNumber, mosaicX, scrollX);
+                offsetScrollY[x] = backgroundSrc.ppu.mode2OffsetPerTileVerticalScroll(
+                        backgroundSrc.backgroundNumber, mosaicX, scrollX, scrollY);
+            }
+        }
         for (int y = 0; y < height; y++) {
             int width = Math.min(bufferDest[y].length, backgroundSrc.buffer[y].length);
             int mosaicY = (y / pixelSize) * pixelSize;
-            int sourceY = Math.floorMod(mosaicY + scrollY, sourceHeight);
             for (int x = 0; x < width; x++) {
                 if (windowMask != null && x < windowMask.length && windowMask[x]) {
                     continue;
                 }
                 int mosaicX = (x / pixelSize) * pixelSize;
-                int sourceX = Math.floorMod((mosaicX + scrollX) * horizontalScale, sourceWidth);
+                int sourceCoordinateX = mosaicX + scrollX;
+                int sourceScrollY = scrollY;
+                if (offsetSourceX != null) {
+                    sourceCoordinateX = offsetSourceX[x];
+                    sourceScrollY = offsetScrollY[x];
+                }
+                int sourceX = Math.floorMod(sourceCoordinateX * horizontalScale, sourceWidth);
+                int sourceY = Math.floorMod(mosaicY + sourceScrollY, sourceHeight);
                 int pixel = backgroundSrc.buffer[sourceY][sourceX];
                 if (Integer.compareUnsigned(pixel, 0xff) <= 0) {
                     continue;

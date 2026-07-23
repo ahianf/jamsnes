@@ -92,6 +92,24 @@ class PpuBackgroundHelperTest {
         assertEquals(new Vector2<>(0x234, 0), snes.ppu.getBgScroll(2));
     }
 
+    @Test
+    void modeTwoOffsetLookupPreservesFineScrollAndLayerSelection() {
+        SNES snes = init();
+        snes.bus.write(0x2105, 0x02);
+        snes.bus.write(0x2109, 0x04);
+        snes.ppu.vram.write(0x0800, 0x08);
+        snes.ppu.vram.write(0x0801, 0x20);
+
+        assertEquals(3, snes.ppu.mode2OffsetPerTileHorizontalCoordinate(1, 0, 3));
+        assertEquals(19, snes.ppu.mode2OffsetPerTileHorizontalCoordinate(1, 8, 3));
+        assertEquals(11, snes.ppu.mode2OffsetPerTileHorizontalCoordinate(2, 8, 3));
+
+        snes.ppu.vram.write(0x0801, 0x40);
+
+        assertEquals(11, snes.ppu.mode2OffsetPerTileHorizontalCoordinate(1, 8, 3));
+        assertEquals(19, snes.ppu.mode2OffsetPerTileHorizontalCoordinate(2, 8, 3));
+    }
+
     private static SNES init() {
         SNES snes = new SNES(new NoRenderer(0, 0, 0));
         snes.bus.mapComponents(snes);

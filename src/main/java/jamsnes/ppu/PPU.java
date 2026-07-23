@@ -338,6 +338,72 @@ public class PPU extends AMemory {
         return new Vector2<>(ppuRegisters.bgOffset(index), ppuRegisters.bgOffset(index + 1));
     }
 
+    boolean usesMode2OffsetPerTile(int backgroundNumber) {
+        return ppuRegisters.bgMode() == 2 && backgroundNumber >= 1 && backgroundNumber <= 2;
+    }
+
+    int mode2OffsetPerTileHorizontalCoordinate(int backgroundNumber, int screenX, int horizontalScroll) {
+        int normalCoordinate = screenX + horizontalScroll;
+        if (isFirstVisibleOffsetColumn(screenX, horizontalScroll)) {
+            return normalCoordinate;
+        }
+
+        int value = readOffsetPerTileEntry(backgroundNumber, screenX, horizontalScroll, false);
+        if (!offsetPerTileEnabledForBackground(value, backgroundNumber)) {
+            return normalCoordinate;
+        }
+        return (normalCoordinate & 0x07) | ((screenX & ~0x07) + (value & 0x03f8));
+    }
+
+    int mode2OffsetPerTileVerticalScroll(
+            int backgroundNumber,
+            int screenX,
+            int horizontalScroll,
+            int verticalScroll) {
+        if (isFirstVisibleOffsetColumn(screenX, horizontalScroll)) {
+            return verticalScroll;
+        }
+
+        int value = readOffsetPerTileEntry(backgroundNumber, screenX, horizontalScroll, true);
+        return offsetPerTileEnabledForBackground(value, backgroundNumber)
+                ? value & 0x03ff
+                : verticalScroll;
+    }
+
+    private boolean isFirstVisibleOffsetColumn(int screenX, int horizontalScroll) {
+        return screenX < 8 - (horizontalScroll & 0x07);
+    }
+
+    private int readOffsetPerTileEntry(
+            int backgroundNumber,
+            int screenX,
+            int horizontalScroll,
+            boolean vertical) {
+        Vector2<Integer> bg3Scroll = getBgScroll(3);
+        int normalCoordinate = screenX + horizontalScroll;
+        int mapX = (normalCoordinate & 0x07) | (((screenX - 8) & ~0x07) + (bg3Scroll.x & ~0x07));
+        int mapY = (bg3Scroll.y & ~0x07) + (vertical ? 8 : 0);
+        return readBackgroundTileMapEntry(3, mapX, mapY);
+    }
+
+    private boolean offsetPerTileEnabledForBackground(int value, int backgroundNumber) {
+        return (value & (backgroundNumber == 1 ? 0x2000 : 0x4000)) != 0;
+    }
+
+    private int readBackgroundTileMapEntry(int backgroundNumber, int pixelX, int pixelY) {
+        Vector2<Integer> characterSize = getCharacterSize(backgroundNumber);
+        Vector2<Boolean> mirroring = getBackgroundMirroring(backgroundNumber);
+        int mapColumns = mirroring.x ? 2 : 1;
+        int mapRows = mirroring.y ? 2 : 1;
+        int tileX = Math.floorMod(Math.floorDiv(pixelX, characterSize.x), mapColumns * 32);
+        int tileY = Math.floorMod(Math.floorDiv(pixelY, characterSize.y), mapRows * 32);
+        int page = (tileY / 32) * mapColumns + tileX / 32;
+        int address = getTileMapStartAddress(backgroundNumber)
+                + page * 0x800
+                + (((tileY & 0x1f) * 32 + (tileX & 0x1f)) * 2);
+        return vram.read(u16(address)) | (vram.read(u16(address + 1)) << 8);
+    }
+
     public int getBgMode() {
         return ppuRegisters.bgMode();
     }
