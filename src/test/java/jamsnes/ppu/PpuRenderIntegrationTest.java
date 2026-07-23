@@ -48,6 +48,24 @@ class PpuRenderIntegrationTest {
     }
 
     @Test
+    void modeZeroUsesBackgroundTwoPaletteRegion() {
+        SNES snes = init(new TestRenderer());
+        writeColor(snes, 1, 0x001f);
+        writeColor(snes, 33, 0x03e0);
+        snes.bus.write(0x2105, 0x00);
+        snes.bus.write(0x2108, 0x04);
+        snes.bus.write(0x210b, 0x10);
+        snes.bus.write(0x212c, 0x02);
+        snes.ppu.vram.write(0x0800, 0x00);
+        snes.ppu.vram.write(0x0801, 0x00);
+        snes.ppu.vram.write(0x2000, 0x80);
+
+        snes.ppu.renderMainAndSubScreen();
+
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), snes.ppu.mainScreen()[0][0]);
+    }
+
+    @Test
     void modeOneBg3PriorityBitRaisesBg3Priority() {
         SNES snes = init(new TestRenderer());
         writeColor(snes, 1, 0x001f);

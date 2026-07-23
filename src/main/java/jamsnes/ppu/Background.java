@@ -236,7 +236,8 @@ public class Background {
 
     private void drawTileFromMemoryToTileBuffer(TileData tileData) {
         clearTileBuffer();
-        tileRenderer.setPaletteIndex(tileData.palette);
+        int paletteBase = ppu.getBgMode() == 0 ? (backgroundNumber - 1) * 8 : 0;
+        tileRenderer.setPaletteIndex(paletteBase + tileData.palette);
         int tileOffsetY = 0;
         for (int y = 0; y < characterNbPixels.y; y += Tile.NB_PIXELS_HEIGHT) {
             int tileOffsetX = 0;
