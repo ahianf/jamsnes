@@ -379,6 +379,21 @@ class AddressingModeTest {
     }
 
     @Test
+    void peiPointerWrapsWithinBankZero() {
+        SparseBus bus = new SparseBus();
+        CPU cpu = new CPU(bus, new Header());
+        cpu.setEmulationMode(false);
+        cpu.registers().s = 0x0200;
+        bus.write(0x00ffff, 0x34);
+        bus.write(0x000000, 0x12);
+        bus.write(0x010000, 0x56);
+
+        assertEquals(0, cpu.PEI(0xffff));
+        assertEquals(0x01fe, cpu.registers().s);
+        assertEquals(0x1234, cpu._pop16());
+    }
+
+    @Test
     void absoluteIndexedIndirect() {
         SNES snes = init();
         snes.cpu.registers().setPac(0x7f0200);

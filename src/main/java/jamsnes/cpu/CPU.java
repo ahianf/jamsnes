@@ -958,7 +958,7 @@ public class CPU extends AMemory {
     }
 
     public int PEI(int value) {
-        int effective = bus.read(value) | (bus.read(value + 1) << 8);
+        int effective = bus.read(value) | (bus.read(u16(value + 1)) << 8);
         _push16(effective);
         return 0;
     }
