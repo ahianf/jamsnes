@@ -22,6 +22,7 @@ public class SNES {
     private static final int NMITIMEN_H_IRQ_ENABLE = 0x10;
     private static final int NMITIMEN_V_IRQ_ENABLE = 0x20;
     private static final int MASTER_CLOCKS_PER_PPU_DOT = 4;
+    static final int HDMA_START_DOT = 1104 / MASTER_CLOCKS_PER_PPU_DOT;
     private static final int AUTO_JOYPAD_READ_DOTS = 4224 / MASTER_CLOCKS_PER_PPU_DOT;
 
     private final IRenderer renderer;
@@ -119,14 +120,19 @@ public class SNES {
         int startVCounter = ppu.vCounter();
         cpu.update(0x0c);
         int cpuMasterClocks = cpu.elapsedMasterClocks();
-        int cpuDots = advancePpuForMasterClocks(cpuMasterClocks);
-        boolean entersHBlank = entersHBlank(startHCounter, startVCounter, cpuDots);
+        int cpuDots = ppuDotsForMasterClocks(cpuMasterClocks);
+        boolean entersHdma = entersHdma(startHCounter, startVCounter, cpuDots);
         int hdmaMasterClocks = 0;
         int hdmaDots = 0;
-        if (entersHBlank && !ppu.isInVBlank()) {
+        if (entersHdma) {
+            int dotsBeforeHdma = HDMA_START_DOT - startHCounter;
+            ppu.advanceCountersOnly(dotsBeforeHdma);
             ppu.captureScanlineState(startVCounter);
             hdmaMasterClocks = cpu.runHDMALine();
             hdmaDots = advancePpuForMasterClocks(hdmaMasterClocks);
+            ppu.advanceCountersOnly(cpuDots - dotsBeforeHdma);
+        } else {
+            ppu.advanceCountersOnly(cpuDots);
         }
         if (ppu.frameCounter() != startFrameCounter) {
             hdmaInitializedThisFrame = false;
@@ -147,13 +153,18 @@ public class SNES {
     }
 
     private int advancePpuForMasterClocks(int masterClocks) {
+        int dots = ppuDotsForMasterClocks(masterClocks);
+        ppu.advanceCountersOnly(dots);
+        return dots;
+    }
+
+    private int ppuDotsForMasterClocks(int masterClocks) {
         if (masterClocks <= 0) {
             return 0;
         }
         int totalMasterClocks = ppuMasterClockRemainder + masterClocks;
         int dots = totalMasterClocks / MASTER_CLOCKS_PER_PPU_DOT;
         ppuMasterClockRemainder = totalMasterClocks % MASTER_CLOCKS_PER_PPU_DOT;
-        ppu.advanceCountersOnly(dots);
         return dots;
     }
 
@@ -177,11 +188,11 @@ public class SNES {
         return cpu.initializeHDMA();
     }
 
-    private boolean entersHBlank(int hCounter, int vCounter, int cycles) {
-        if (cycles <= 0 || vCounter >= ppu.vBlankStartScanline() || hCounter >= PPU.H_BLANK_START_DOT) {
+    private boolean entersHdma(int hCounter, int vCounter, int cycles) {
+        if (cycles <= 0 || vCounter >= ppu.vBlankStartScanline() || hCounter >= HDMA_START_DOT) {
             return false;
         }
-        return hCounter + cycles >= PPU.H_BLANK_START_DOT;
+        return hCounter + cycles >= HDMA_START_DOT;
     }
 
     private boolean requestFrameNmi() {

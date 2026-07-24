@@ -394,6 +394,29 @@ class PpuRegisterWriteTest {
     }
 
     @Test
+    void cgDataWriteRemainsBlockedUntilHardwareHBlank() {
+        SNES snes = init();
+        snes.ppu.advanceCountersOnly(PPU.VISIBLE_WIDTH);
+
+        snes.bus.write(0x2121, 0x10);
+        snes.bus.write(0x2122, 0xff);
+        snes.bus.write(0x2122, 0x78);
+
+        assertFalse(snes.ppu.isInHBlank());
+        assertEquals(0x00, snes.ppu.cgram.read(0x20));
+        assertEquals(0x00, snes.ppu.cgram.read(0x21));
+
+        snes.ppu.advanceCountersOnly(PPU.H_BLANK_START_DOT - PPU.VISIBLE_WIDTH);
+        snes.bus.write(0x2121, 0x10);
+        snes.bus.write(0x2122, 0xff);
+        snes.bus.write(0x2122, 0x78);
+
+        assertTrue(snes.ppu.isInHBlank());
+        assertEquals(0xff, snes.ppu.cgram.read(0x20));
+        assertEquals(0x78, snes.ppu.cgram.read(0x21));
+    }
+
+    @Test
     void cgDataWriteCommitsDuringVBlankWithoutForcedBlank() {
         SNES snes = init();
 

@@ -43,7 +43,8 @@ public class PPU extends AMemory {
     private static final int MODE7_TILE_MAP_WIDTH = 128;
     private static final int MODE7_TILE_SIZE = 8;
     public static final int H_COUNTER_DOTS = 341;
-    public static final int H_BLANK_START_DOT = 256;
+    public static final int VISIBLE_WIDTH = 256;
+    public static final int H_BLANK_START_DOT = 274;
     public static final int V_COUNTER_SCANLINES = 262;
     private static final int NTSC_SHORT_SCANLINE = 240;
     public static final int V_BLANK_START_SCANLINE = 225;
@@ -1068,7 +1069,7 @@ public class PPU extends AMemory {
 
     private boolean objectIntersectsHorizontalScreen(int objectIndex, ObjectDimensions dimensions) {
         int x = objectX(objectIndex);
-        return x == -256 || (x < H_BLANK_START_DOT && x + dimensions.width() > 0);
+        return x == -256 || (x < VISIBLE_WIDTH && x + dimensions.width() > 0);
     }
 
     private boolean objectSliverCountsTowardLimit(int objectX, int sliver) {
@@ -1076,7 +1077,7 @@ public class PPU extends AMemory {
             return true;
         }
         int sliverX = objectX + sliver * Tile.NB_PIXELS_WIDTH;
-        return sliverX < H_BLANK_START_DOT && sliverX + Tile.NB_PIXELS_WIDTH > 0;
+        return sliverX < VISIBLE_WIDTH && sliverX + Tile.NB_PIXELS_WIDTH > 0;
     }
 
     private void renderObjectsToBuffer(int[][] destination, int[][] levelMap, int[][] sourceMap, int screenIndex) {
