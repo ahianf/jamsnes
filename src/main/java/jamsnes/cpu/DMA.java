@@ -219,7 +219,7 @@ public class DMA {
             }
             return 8;
         }
-        if (bAddress == 0x2180 && isWramBankAddress(aAddress)) {
+        if (bAddress == 0x2180 && isWramBusAddress(aAddress)) {
             if (direction == 0) {
                 return 8;
             }
@@ -234,8 +234,9 @@ public class DMA {
         return 8;
     }
 
-    private boolean isWramBankAddress(int address) {
-        return (address & 0xfe0000) == 0x7e0000;
+    private boolean isWramBusAddress(int address) {
+        return (address & 0xfe0000) == 0x7e0000
+                || (address & 0x40e000) == 0;
     }
 
     private boolean isInvalidABusAddress(int address) {
