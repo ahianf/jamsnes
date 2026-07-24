@@ -129,6 +129,32 @@ class MathLogicInstructionTest {
     }
 
     @Test
+    void decimalAdcOverflowIncludesCarryFromCorrectedLowerDigits() {
+        SNES snes = init();
+        snes.cpu.registers().p.d = true;
+        snes.cpu.registers().p.m = true;
+        snes.cpu.registers().p.c = true;
+        snes.cpu.registers().a = 0xab50;
+        snes.wram.data()[0] = 0x29;
+
+        snes.cpu.ADC(0);
+
+        assertEquals(0xab80, snes.cpu.registers().a);
+        assertTrue(snes.cpu.registers().p.v);
+
+        snes.cpu.registers().p.m = false;
+        snes.cpu.registers().p.c = true;
+        snes.cpu.registers().a = 0x5000;
+        snes.wram.data()[0] = 0x99;
+        snes.wram.data()[1] = 0x29;
+
+        snes.cpu.ADC(0);
+
+        assertEquals(0x8000, snes.cpu.registers().a);
+        assertTrue(snes.cpu.registers().p.v);
+    }
+
+    @Test
     void sbcHandlesBorrowAndWidth() {
         SNES snes = init();
         snes.cpu.registers().p.m = true;

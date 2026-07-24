@@ -1824,14 +1824,17 @@ public class CPU extends AMemory {
     private int decimalAdd(int value) {
         int left = accumulatorValue();
         int carryIn = registers.p.c ? 1 : 0;
-        int binaryResult = left + value + carryIn;
         int result = 0;
+        int overflowResult = 0;
         int carry = carryIn;
         int digits = registers.p.m ? 2 : 4;
 
         for (int digit = 0; digit < digits; digit++) {
             int shift = digit * 4;
             int sum = ((left >>> shift) & 0x0f) + ((value >>> shift) & 0x0f) + carry;
+            if (digit == digits - 1) {
+                overflowResult = (sum & 0x0f) << shift;
+            }
             if (sum > 9) {
                 sum += 6;
                 carry = 1;
@@ -1843,7 +1846,7 @@ public class CPU extends AMemory {
 
         registers.p.c = carry != 0;
         int negativeMask = registers.p.m ? 0x80 : 0x8000;
-        registers.p.v = (~(left ^ value) & (left ^ binaryResult) & negativeMask) != 0;
+        registers.p.v = (~(left ^ value) & (left ^ overflowResult) & negativeMask) != 0;
         setAccumulatorValue(result);
         setZNAccumulator(registers.a);
         return registers.p.m ? 0 : 1;
