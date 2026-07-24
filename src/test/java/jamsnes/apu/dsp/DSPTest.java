@@ -70,12 +70,12 @@ class DSPTest {
     }
 
     @Test
-    void apuUpdateTicksDspAfterApuWork() {
+    void zeroCycleApuUpdateDoesNotTickDsp() {
         SNES snes = new SNES(new NoRenderer(0, 0, 0));
 
         snes.apu.update(0);
 
-        assertEquals(1, snes.apu.dsp().voicePhase());
+        assertEquals(0, snes.apu.dsp().voicePhase());
     }
 
     @Test

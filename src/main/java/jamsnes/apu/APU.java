@@ -847,6 +847,7 @@ public class APU extends AMemory {
 
         if (paddingCycles > remainingCycles) {
             paddingCycles -= remainingCycles;
+            advanceDsp(cycles);
             return;
         }
 
@@ -858,7 +859,13 @@ public class APU extends AMemory {
         if (state == StateMode.RUNNING) {
             paddingCycles = total - remainingCycles;
         }
-        dsp.update();
+        advanceDsp(cycles);
+    }
+
+    private void advanceDsp(int cycles) {
+        for (int i = 0; i < cycles; i++) {
+            dsp.update();
+        }
     }
 
     public void loadFromSPC(Cartridge cartridge) {

@@ -31,11 +31,43 @@ class UpdateLoopTest {
 
         assertEquals(0x201, snes.apu.internalRegisters().pc);
         assertEquals(1, snes.apu.paddingCycles());
+        assertEquals(1, snes.apu.dsp().voicePhase());
 
         snes.apu.update(1);
 
         assertEquals(0x201, snes.apu.internalRegisters().pc);
         assertEquals(0, snes.apu.paddingCycles());
+        assertEquals(2, snes.apu.dsp().voicePhase());
+    }
+
+    @Test
+    void updateAdvancesOneDspPhaseForEveryElapsedApuCycle() {
+        SNES snes = init();
+        snes.apu.internalRegisters().pc = 0x200;
+        snes.apu._internalWrite(0x200, 0x00);
+
+        snes.apu.update(31);
+        assertEquals(31, snes.apu.dsp().voicePhase());
+
+        snes.apu.update(1);
+        assertEquals(0, snes.apu.dsp().voicePhase());
+    }
+
+    @Test
+    void updateAdvancesDspWhilePayingDownInstructionPadding() {
+        SNES snes = init();
+        snes.apu.internalRegisters().pc = 0x200;
+        snes.apu._internalWrite(0x200, 0x3f);
+        snes.apu._internalWrite(0x201, 0x00);
+        snes.apu._internalWrite(0x202, 0x03);
+
+        snes.apu.update(1);
+        assertEquals(7, snes.apu.paddingCycles());
+        assertEquals(1, snes.apu.dsp().voicePhase());
+
+        snes.apu.update(1);
+        assertEquals(6, snes.apu.paddingCycles());
+        assertEquals(2, snes.apu.dsp().voicePhase());
     }
 
     @Test
