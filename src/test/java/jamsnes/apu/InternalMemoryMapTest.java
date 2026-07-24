@@ -291,7 +291,7 @@ class InternalMemoryMapTest {
         assertEquals(0x22, snes.apu._internalRead(0x0100));
         assertEquals(0x33, snes.apu._internalRead(0x0200));
         assertEquals(0x44, snes.apu._internalRead(0xffbf));
-        assertEquals(0x99, snes.apu._internalRead(0xffc0));
+        assertEquals(0x5a, snes.apu._internalRead(0xffc0));
         assertEquals(0xaa, snes.apu._internalRead(0x00f4));
         assertEquals(0xbb, snes.apu._internalRead(0x00f8));
         assertEquals(0x0c, snes.apu._internalRead(0x00fd));
@@ -337,9 +337,9 @@ class InternalMemoryMapTest {
     }
 
     @Test
-    void loadFromSpcRejectsShortCartridge() throws IOException {
+    void loadFromSpcRejectsSnapshotWithoutCompleteExtraRam() throws IOException {
         SNES snes = init();
-        byte[] spc = spcHeader(0x25);
+        byte[] spc = spcHeader(0x101ff);
         Path path = tempDir.resolve("short.spc");
         Files.write(path, spc);
         Cartridge cartridge = new Cartridge(path.toString());
@@ -401,7 +401,7 @@ class InternalMemoryMapTest {
     }
 
     private Path writeSpcFile() throws IOException {
-        byte[] spc = spcHeader(0x101c0);
+        byte[] spc = spcHeader(0x10200);
         spc[0x25] = 0x34;
         spc[0x26] = 0x12;
         spc[0x27] = 0x56;
@@ -415,6 +415,7 @@ class InternalMemoryMapTest {
         spc[0x300] = 0x33;
         spc[0x100bf] = 0x44;
         spc[0x100c0] = (byte) 0x99;
+        spc[0x101c0] = 0x5a;
         spc[0x1f2] = 0x00;
         spc[0x1f3] = 0x55;
         spc[0x1f4] = (byte) 0xaa;
@@ -436,7 +437,7 @@ class InternalMemoryMapTest {
     }
 
     private Path writeTimerSpcFile() throws IOException {
-        byte[] spc = spcHeader(0x101c0);
+        byte[] spc = spcHeader(0x10200);
         spc[0x1f1] = 0x01;
         spc[0x1fa] = 0x02;
         Path path = tempDir.resolve("timer-state.spc");

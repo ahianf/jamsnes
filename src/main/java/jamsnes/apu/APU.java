@@ -877,7 +877,7 @@ public class APU extends AMemory {
 
     public void loadFromSPC(Cartridge cartridge) {
         int size = cartridge.getSize();
-        if (size < 0x101c0) {
+        if (size < 0x10200) {
             throw new InvalidAddress("Cartridge is not the right size", size);
         }
 
@@ -901,7 +901,7 @@ public class APU extends AMemory {
             internalMemory[0x0200 + i] = cartridge.read(0x300 + i);
         }
         for (int i = 0; i < 0x0040; i++) {
-            internalMemory[0xffc0 + i] = cartridge.read(0x100 + 0xffc0 + i);
+            internalMemory[0xffc0 + i] = cartridge.read(0x101c0 + i);
         }
 
         unknownRegister = cartridge.read(0x100 + 0x00f0);
