@@ -1701,10 +1701,14 @@ public class CPU extends AMemory {
         if (!isNMIRequested && !isIRQRequested && !isAbortRequested) {
             return 0;
         }
+        boolean wasWaitingForInterrupt = waitingForInterrupt;
         waitingForInterrupt = false;
 
         if (isAbortRequested) {
             isAbortRequested = false;
+            if (wasWaitingForInterrupt) {
+                registers.incrementPc(-1);
+            }
             runInterrupt(cartridgeHeader.nativeInterrupts.abort, cartridgeHeader.emulationInterrupts.abort, false);
             return interruptEntryCycles();
         }

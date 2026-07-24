@@ -89,6 +89,31 @@ class CpuUpdateLoopTest {
     }
 
     @Test
+    void abortDuringWaitReturnsToWaiInstruction() {
+        SNES snes = init();
+        snes.cpu.registers().setPc(0x0200);
+        snes.cpu.registers().s = 0x01ff;
+        snes.cartridge.header.emulationInterrupts.abort = 0x0300;
+        writeProgram(snes, 0x0200, 0xcb, 0xea);
+        writeProgram(snes, 0x0300, 0x40);
+
+        assertEquals(3, snes.cpu.update(3));
+        assertTrue(snes.cpu.isWaitingForInterrupt());
+        assertEquals(0x0201, snes.cpu.registers().pc);
+
+        snes.cpu.requestABORT();
+
+        assertEquals(13, snes.cpu.update(13));
+        assertFalse(snes.cpu.isWaitingForInterrupt());
+        assertEquals(0x0200, snes.cpu.registers().pc);
+        assertFalse(snes.cpu.isAbortRequested);
+
+        assertEquals(3, snes.cpu.update(3));
+        assertTrue(snes.cpu.isWaitingForInterrupt());
+        assertEquals(0x0201, snes.cpu.registers().pc);
+    }
+
+    @Test
     void updateLeavesMaskedIrqPendingAndRunsNextInstruction() {
         SNES snes = init();
         snes.cpu.registers().setPc(0x0200);
