@@ -41,7 +41,6 @@ public class PPU extends AMemory {
     private static final int MODE7_SIZE = 1024;
     private static final int MODE7_TILE_MAP_WIDTH = 128;
     private static final int MODE7_TILE_SIZE = 8;
-    private static final int MODE7_TILE_DATA_ADDRESS = 0x4000;
     public static final int H_COUNTER_DOTS = 341;
     public static final int H_BLANK_START_DOT = 256;
     public static final int V_COUNTER_SCANLINES = 262;
@@ -266,8 +265,10 @@ public class PPU extends AMemory {
     }
 
     public void renderMainAndSubScreen() {
-        for (Background background : backgrounds) {
-            background.renderBackground();
+        if (ppuRegisters.bgMode() != 7) {
+            for (Background background : backgrounds) {
+                background.renderBackground();
+            }
         }
 
         fillBuffer(subScreen, PPUUtils.cgramColorToRGBA(ppuRegisters.fixedColor()));
@@ -1093,9 +1094,11 @@ public class PPU extends AMemory {
         } else {
             int tileX = wrappedX / MODE7_TILE_SIZE;
             int tileY = wrappedY / MODE7_TILE_SIZE;
-            tile = vram.read(u16(tileY * MODE7_TILE_MAP_WIDTH + tileX));
+            int tileWordAddress = tileY * MODE7_TILE_MAP_WIDTH + tileX;
+            tile = vram.read(u16(tileWordAddress * 2));
         }
-        int colorIndex = vram.read(u16(MODE7_TILE_DATA_ADDRESS + tile * 64 + pixelY * MODE7_TILE_SIZE + pixelX));
+        int pixelWordAddress = tile * 64 + pixelY * MODE7_TILE_SIZE + pixelX;
+        int colorIndex = vram.read(u16(pixelWordAddress * 2 + 1));
         boolean priority = false;
         if (extBg) {
             priority = (colorIndex & 0x80) != 0;

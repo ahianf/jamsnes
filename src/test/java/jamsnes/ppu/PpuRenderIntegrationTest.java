@@ -490,8 +490,8 @@ class PpuRenderIntegrationTest {
         SNES snes = init(new TestRenderer());
         writeColor(snes, 5, 0x001f);
         setupMode7Identity(snes);
-        snes.ppu.vram.write(0x0000, 0x01);
-        snes.ppu.vram.write(0x4040, 0x05);
+        writeMode7Map(snes, 0, 0, 1);
+        writeMode7Pixel(snes, 1, 0, 0, 5);
 
         snes.ppu.renderMainAndSubScreen();
 
@@ -505,10 +505,10 @@ class PpuRenderIntegrationTest {
         writeColor(snes, 6, 0x03e0);
         setupMode7Identity(snes);
         snes.bus.write(0x2106, 0x11);
-        snes.ppu.vram.write(0x0000, 0x01);
-        snes.ppu.vram.write(0x4040, 0x05);
-        snes.ppu.vram.write(0x4041, 0x06);
-        snes.ppu.vram.write(0x4048, 0x06);
+        writeMode7Map(snes, 0, 0, 1);
+        writeMode7Pixel(snes, 1, 0, 0, 5);
+        writeMode7Pixel(snes, 1, 1, 0, 6);
+        writeMode7Pixel(snes, 1, 0, 1, 6);
 
         snes.ppu.renderMainAndSubScreen();
 
@@ -524,8 +524,8 @@ class PpuRenderIntegrationTest {
         writeColor(snes, 0xe7, 0x001f);
         setupMode7Identity(snes);
         snes.bus.write(0x2130, 0x01);
-        snes.ppu.vram.write(0x0000, 0x01);
-        snes.ppu.vram.write(0x4040, 0xe7);
+        writeMode7Map(snes, 0, 0, 1);
+        writeMode7Pixel(snes, 1, 0, 0, 0xe7);
 
         snes.ppu.renderMainAndSubScreen();
 
@@ -538,7 +538,7 @@ class PpuRenderIntegrationTest {
         setupMode7Identity(snes);
         snes.bus.write(0x211a, 0x80);
         writeMode7Register(snes, 0x210d, 0x03ff);
-        snes.ppu.vram.write(0x4000, 0x05);
+        writeMode7Pixel(snes, 0, 0, 0, 5);
 
         snes.ppu.renderMainAndSubScreen();
 
@@ -552,7 +552,7 @@ class PpuRenderIntegrationTest {
         setupMode7Identity(snes);
         snes.bus.write(0x211a, 0xc0);
         writeMode7Register(snes, 0x210d, 0x03ff);
-        snes.ppu.vram.write(0x4000, 0x05);
+        writeMode7Pixel(snes, 0, 0, 0, 5);
 
         snes.ppu.renderMainAndSubScreen();
 
@@ -565,8 +565,8 @@ class PpuRenderIntegrationTest {
         writeColor(snes, 5, 0x001f);
         setupMode7Identity(snes);
         snes.bus.write(0x211a, 0x01);
-        snes.ppu.vram.write(0x001f, 0x01);
-        snes.ppu.vram.write(0x4047, 0x05);
+        writeMode7Map(snes, 31, 0, 1);
+        writeMode7Pixel(snes, 1, 7, 0, 5);
 
         snes.ppu.renderMainAndSubScreen();
 
@@ -579,8 +579,8 @@ class PpuRenderIntegrationTest {
         writeColor(snes, 5, 0x001f);
         setupMode7Identity(snes);
         snes.bus.write(0x211a, 0x02);
-        snes.ppu.vram.write(0x0f80, 0x01);
-        snes.ppu.vram.write(0x4078, 0x05);
+        writeMode7Map(snes, 0, 31, 1);
+        writeMode7Pixel(snes, 1, 0, 7, 5);
 
         snes.ppu.renderMainAndSubScreen();
 
@@ -595,9 +595,9 @@ class PpuRenderIntegrationTest {
         setupMode7Identity(snes);
         writeMode7Register(snes, 0x211b, 0x0200);
         writeMode7Register(snes, 0x210d, 0x0001);
-        snes.ppu.vram.write(0x0000, 0x01);
-        snes.ppu.vram.write(0x4041, 0x06);
-        snes.ppu.vram.write(0x4042, 0x05);
+        writeMode7Map(snes, 0, 0, 1);
+        writeMode7Pixel(snes, 1, 1, 0, 6);
+        writeMode7Pixel(snes, 1, 2, 0, 5);
 
         snes.ppu.renderMainAndSubScreen();
 
@@ -611,8 +611,8 @@ class PpuRenderIntegrationTest {
         setupMode7Identity(snes);
         snes.bus.write(0x2133, 0x40);
         snes.bus.write(0x212c, 0x02);
-        snes.ppu.vram.write(0x0000, 0x01);
-        snes.ppu.vram.write(0x4040, 0x05);
+        writeMode7Map(snes, 0, 0, 1);
+        writeMode7Pixel(snes, 1, 0, 0, 5);
 
         snes.ppu.renderMainAndSubScreen();
 
@@ -628,10 +628,10 @@ class PpuRenderIntegrationTest {
         snes.bus.write(0x2133, 0x40);
         snes.bus.write(0x212c, 0x02);
         snes.bus.write(0x2106, 0x11);
-        snes.ppu.vram.write(0x0000, 0x01);
-        snes.ppu.vram.write(0x4040, 0x05);
-        snes.ppu.vram.write(0x4041, 0x06);
-        snes.ppu.vram.write(0x4048, 0x06);
+        writeMode7Map(snes, 0, 0, 1);
+        writeMode7Pixel(snes, 1, 0, 0, 5);
+        writeMode7Pixel(snes, 1, 1, 0, 6);
+        writeMode7Pixel(snes, 1, 0, 1, 6);
 
         snes.ppu.renderMainAndSubScreen();
 
@@ -647,8 +647,8 @@ class PpuRenderIntegrationTest {
         snes.bus.write(0x2130, 0x01);
         snes.bus.write(0x2133, 0x40);
         snes.bus.write(0x212c, 0x02);
-        snes.ppu.vram.write(0x0000, 0x01);
-        snes.ppu.vram.write(0x4040, 0x85);
+        writeMode7Map(snes, 0, 0, 1);
+        writeMode7Pixel(snes, 1, 0, 0, 0x85);
 
         snes.ppu.renderMainAndSubScreen();
 
@@ -663,8 +663,8 @@ class PpuRenderIntegrationTest {
         setupMode7Identity(snes);
         snes.bus.write(0x2133, 0x40);
         snes.bus.write(0x212c, 0x03);
-        snes.ppu.vram.write(0x0000, 0x01);
-        snes.ppu.vram.write(0x4040, 0x86);
+        writeMode7Map(snes, 0, 0, 1);
+        writeMode7Pixel(snes, 1, 0, 0, 0x86);
 
         snes.ppu.renderMainAndSubScreen();
 
@@ -1254,6 +1254,16 @@ class PpuRenderIntegrationTest {
     private static void writeMode7Register(SNES snes, int address, int value) {
         snes.bus.write(address, value);
         snes.bus.write(address, value >>> 8);
+    }
+
+    private static void writeMode7Map(SNES snes, int tileX, int tileY, int tile) {
+        int wordAddress = tileY * 128 + tileX;
+        snes.ppu.vram.write(wordAddress * 2, tile);
+    }
+
+    private static void writeMode7Pixel(SNES snes, int tile, int pixelX, int pixelY, int color) {
+        int wordAddress = tile * 64 + pixelY * 8 + pixelX;
+        snes.ppu.vram.write(wordAddress * 2 + 1, color);
     }
 
     private static void setupMode7Identity(SNES snes) {
