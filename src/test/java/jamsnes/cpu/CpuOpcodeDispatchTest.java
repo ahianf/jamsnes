@@ -440,6 +440,32 @@ class CpuOpcodeDispatchTest {
     }
 
     @Test
+    void immediateAccumulatorAndIndexWordsWrapWithinProgramBank() {
+        SNES snes = init();
+        snes.cpu.setEmulationMode(false);
+        snes.cpu.registers().p.m = false;
+        snes.cpu.registers().p.x_b = false;
+        snes.cpu.registers().setPac(0x7ffffe);
+        writeWramBank7f(snes, 0xfffe, 0xa9, 0x34);
+        writeWramBank7f(snes, 0x0000, 0x12);
+        snes.wram.data()[0x0000] = 0xaa;
+
+        assertEquals(3, snes.cpu.executeInstruction());
+        assertEquals(0x1234, snes.cpu.registers().a);
+        assertEquals(0x7f0001, snes.cpu.registers().pac);
+
+        snes.cpu.registers().setPac(0x7ffffe);
+        snes.cpu.registers().x = 0x5678;
+        writeWramBank7f(snes, 0xfffe, 0xe0, 0x78);
+        writeWramBank7f(snes, 0x0000, 0x56);
+
+        assertEquals(3, snes.cpu.executeInstruction());
+        assertTrue(snes.cpu.registers().p.z);
+        assertTrue(snes.cpu.registers().p.c);
+        assertEquals(0x7f0001, snes.cpu.registers().pac);
+    }
+
+    @Test
     void executesDirectAndAbsoluteStoreOpcodes() {
         SNES snes = init();
         snes.cpu.registers().setPc(0x0200);
