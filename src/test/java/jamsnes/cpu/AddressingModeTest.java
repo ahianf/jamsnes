@@ -309,6 +309,24 @@ class AddressingModeTest {
     }
 
     @Test
+    void absoluteIndexedAddressesWrapWithinDataBank() {
+        SNES snes = init();
+        snes.cpu.registers().dbr = 0x7e;
+        snes.cpu.registers().x = 1;
+        snes.cpu.registers().y = 1;
+        snes.cartridge.data()[0] = 0xff;
+        snes.cartridge.data()[1] = 0xff;
+
+        snes.cpu.registers().setPac(0x808000);
+        assertEquals(0x7e0000, snes.cpu._getAbsoluteIndexedByXAddr());
+        assertTrue(snes.cpu.hasIndexCrossedPageBoundary());
+
+        snes.cpu.registers().setPac(0x808000);
+        assertEquals(0x7e0000, snes.cpu._getAbsoluteIndexedByYAddr());
+        assertTrue(snes.cpu.hasIndexCrossedPageBoundary());
+    }
+
+    @Test
     void absoluteIndexedByXLong() {
         SNES snes = init();
         snes.cpu.registers().setPac(0x808000);
