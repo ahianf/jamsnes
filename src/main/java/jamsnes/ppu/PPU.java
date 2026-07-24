@@ -67,6 +67,8 @@ public class PPU extends AMemory {
     private final int[][] evaluatedObjectIndices = new int[OBJ_EVALUATED_SCANLINES][OBJ_SCANLINE_LIMIT];
     private final int[][] evaluatedObjectSliverMasks = new int[OBJ_EVALUATED_SCANLINES][OBJ_SCANLINE_LIMIT];
     private final int[] evaluatedObjectCounts = new int[OBJ_EVALUATED_SCANLINES];
+    private final int[] scanlineDisplayControl = new int[Background.BUFFER_SIZE];
+    private final boolean[] scanlineDisplayControlCaptured = new boolean[Background.BUFFER_SIZE];
     private int vramAddress;
     private int vmain;
     private int vramIncrementAmount = 1;
@@ -209,12 +211,16 @@ public class PPU extends AMemory {
         renderMainAndSubScreen();
 
         for (int y = 0; y < screen.length; y++) {
+            int displayControl = scanlineDisplayControlCaptured[y]
+                    ? scanlineDisplayControl[y]
+                    : registers[0x00];
             for (int x = 0; x < screen[y].length; x++) {
                 screen[y][x] = composePixel(x, y);
-                renderer.putPixel(y, x, applyDisplayControl(screen[y][x]));
+                renderer.putPixel(y, x, applyDisplayControl(screen[y][x], displayControl));
             }
         }
         renderer.drawScreen();
+        Arrays.fill(scanlineDisplayControlCaptured, false);
         clearBuffer(mainScreen);
         clearBuffer(subScreen);
         clearSourceMap(mainScreenSourceMap, SOURCE_NONE);
@@ -250,6 +256,8 @@ public class PPU extends AMemory {
         objectTimeOver = false;
         ppu1OpenBus = 0;
         ppu2OpenBus = 0;
+        Arrays.fill(scanlineDisplayControl, 0);
+        Arrays.fill(scanlineDisplayControlCaptured, false);
         updateBackgroundModes();
         for (int i = 0; i < backgrounds.length; i++) {
             updateBackgroundTileMap(i);
@@ -300,6 +308,14 @@ public class PPU extends AMemory {
                     + ppuRegisters.bgMode() + ")");
         }
         addObjectsToMainSubScreen();
+    }
+
+    public void captureScanlineState(int scanline) {
+        if (scanline < 0 || scanline >= vBlankStartScanline()) {
+            return;
+        }
+        scanlineDisplayControl[scanline] = registers[0x00];
+        scanlineDisplayControlCaptured[scanline] = true;
     }
 
     public int getBpp(int backgroundNumber) {
@@ -1341,11 +1357,11 @@ public class PPU extends AMemory {
         }
     }
 
-    private int applyDisplayControl(int rgba) {
-        if (ppuRegisters.inidispFblank()) {
+    private int applyDisplayControl(int rgba, int displayControl) {
+        if ((displayControl & 0x80) != 0) {
             return 0x000000ff;
         }
-        int brightness = ppuRegisters.inidispBrightness();
+        int brightness = displayControl & 0x0f;
         int red = (channel5(rgba, 24) * brightness) / 15;
         int green = (channel5(rgba, 16) * brightness) / 15;
         int blue = (channel5(rgba, 8) * brightness) / 15;

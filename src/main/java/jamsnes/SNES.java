@@ -108,6 +108,7 @@ public class SNES {
         }
         int hdmaCycles = 0;
         if (entersHBlank && !ppu.isInVBlank()) {
+            ppu.captureScanlineState(startVCounter);
             hdmaCycles = cpu.runHDMALine();
             if (hdmaCycles > 0) {
                 ppu.advanceCountersOnly(hdmaCycles);

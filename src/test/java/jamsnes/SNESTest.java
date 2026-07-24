@@ -6,6 +6,7 @@ import jamsnes.cpu.DMA;
 import jamsnes.input.Joypad;
 import jamsnes.ppu.Background;
 import jamsnes.ppu.PPU;
+import jamsnes.ppu.PPUUtils;
 import jamsnes.renderer.IRenderer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -659,6 +660,31 @@ class SNESTest {
     }
 
     @Test
+    void updatePreservesDisplayBrightnessFromBeforeEachScanlineHdmaTransfer() {
+        TestRenderer renderer = new TestRenderer();
+        SNES snes = new SNES(renderer);
+        snes.bus.mapComponents(snes);
+        snes.cpu.isDisabled = true;
+        snes.apu.isDisabled = true;
+        snes.ppu.cgram.write(0, 0x1f);
+        snes.ppu.cgram.write(1, 0x00);
+        snes.bus.write(0x2100, 0x0f);
+        snes.wram.data()[0x0200] = 0x01;
+        snes.wram.data()[0x0201] = 0x07;
+        snes.wram.data()[0x0202] = 0x00;
+        setupHdma(snes, DMA.ONE_TO_ONE, 0x00, 0x7e0200);
+        snes.bus.write(0x420c, 0x01);
+
+        for (int updates = 0; renderer.drawScreenCalls == 0 && updates < 400; updates++) {
+            snes.update();
+        }
+
+        assertEquals(1, renderer.drawScreenCalls);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.firstScanlinePixel);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x000e), renderer.secondScanlinePixel);
+    }
+
+    @Test
     void updateSpreadsNormalDmaAcrossHblankAccessWindow() {
         SNES snes = new SNES(new TestRenderer());
         snes.bus.mapComponents(snes);
@@ -851,6 +877,8 @@ class SNESTest {
     private static final class TestRenderer implements IRenderer {
         private long putPixelCalls;
         private int drawScreenCalls;
+        private int firstScanlinePixel;
+        private int secondScanlinePixel;
 
         @Override
         public void setWindowName(String newWindowName) {
@@ -864,6 +892,11 @@ class SNESTest {
         @Override
         public void putPixel(int y, int x, int rgba) {
             putPixelCalls++;
+            if (x == 0 && y == 0) {
+                firstScanlinePixel = rgba;
+            } else if (x == 0 && y == 1) {
+                secondScanlinePixel = rgba;
+            }
         }
 
         @Override
