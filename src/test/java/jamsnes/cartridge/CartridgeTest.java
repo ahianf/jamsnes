@@ -120,6 +120,20 @@ class CartridgeTest {
         assertEquals(0x40000, hiRomCartridge.header.sramSize);
     }
 
+    @Test
+    void oversizedRomDeclarationIsCappedBeforeHeaderScoring() throws IOException {
+        byte[] rom = new byte[0x8000];
+        rom[0] = 0x78;
+        writeLoRomHeader(rom, 0x7f00, "JAMSNES LARGE ROM");
+        rom[0x7fd7] = (byte) 0xff;
+        Path path = tempDir.resolve("oversized-rom.sfc");
+        Files.write(path, rom);
+
+        Cartridge cartridge = new Cartridge(path.toString());
+
+        assertEquals(0x4000000, cartridge.header.romSize);
+    }
+
     private static void writeLoRomHeader(byte[] rom, int base, String title) {
         writeHeader(rom, base, title, 0x20);
     }

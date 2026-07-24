@@ -15,6 +15,7 @@ import static jamsnes.models.Unsigned.u8;
 
 public class Cartridge extends Ram {
     private static final int HEADER_SIZE = 0x40;
+    private static final int MAX_SCORED_ROM_SIZE = 0x4000000;
     private static final String MAGIC_SPC = "SNES-SPC700 Sound File Data v0.30";
 
     public final Header header = new Header();
@@ -106,7 +107,7 @@ public class Cartridge extends Ram {
             result.addMappingMode(MappingMode.EXROM);
         }
         result.romType = data()[base + 0xd6];
-        result.romSize = 0x400 << data()[base + 0xd7];
+        result.romSize = decodeRomSize(data()[base + 0xd7]);
         int sramSizeByte = data()[base + 0xd8];
         int mappedSramLimit = result.hasMappingMode(MappingMode.HIROM) ? 0x40000 : 0x80000;
         result.sramSize = decodeSramSize(sramSizeByte, mappedSramLimit);
@@ -129,6 +130,14 @@ public class Cartridge extends Ram {
         result.emulationInterrupts.setBrkBytes(data()[base + 0xfe], data()[base + 0xff]);
         result.emulationInterrupts.setIrqBytes(data()[base + 0xfe], data()[base + 0xff]);
         return result;
+    }
+
+    private static int decodeRomSize(int exponent) {
+        int maximumExponent = Integer.numberOfTrailingZeros(MAX_SCORED_ROM_SIZE) - 10;
+        if (exponent >= maximumExponent) {
+            return MAX_SCORED_ROM_SIZE;
+        }
+        return 0x400 << exponent;
     }
 
     private static int decodeSramSize(int exponent, int mappedLimit) {
@@ -163,7 +172,7 @@ public class Cartridge extends Ram {
             if (info.romType <= 0x8) {
                 score++;
             }
-            if (info.romSize < (0x400 << 0x10)) {
+            if (info.romSize < MAX_SCORED_ROM_SIZE) {
                 score++;
             }
             if (info.sramSize < (0x400 << 0x08)) {
