@@ -459,6 +459,24 @@ class SNESTest {
     }
 
     @Test
+    void disablingAutoJoypadAbortsActiveRead() {
+        SNES snes = new SNES(new TestRenderer());
+        snes.bus.mapComponents(snes);
+        snes.cpu.isDisabled = true;
+        snes.apu.isDisabled = true;
+        snes.bus.write(0x4200, 0x01);
+        snes.ppu.advanceCountersOnly(PPU.H_COUNTER_DOTS * PPU.V_BLANK_START_SCANLINE - 0xff);
+
+        snes.update();
+        assertEquals(0x01, snes.bus.read(0x4212) & 0x01);
+
+        snes.bus.write(0x4200, 0x00);
+        snes.update();
+
+        assertEquals(0x00, snes.bus.read(0x4212) & 0x01);
+    }
+
+    @Test
     void updateDoesNotCopyJoypadStateWhenAutoReadIsDisabled() {
         SNES snes = new SNES(new TestRenderer());
         snes.cpu.isDisabled = true;

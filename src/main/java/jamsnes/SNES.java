@@ -218,6 +218,10 @@ public class SNES {
                     autoJoypadReadCyclesRemaining - cyclesAfterVBlankStart(startHCounter, startVCounter, cycles));
             return;
         }
+        if (!autoJoypadEnabled()) {
+            autoJoypadReadCyclesRemaining = 0;
+            return;
+        }
         if (autoJoypadReadCyclesRemaining > 0) {
             autoJoypadReadCyclesRemaining = Math.max(0, autoJoypadReadCyclesRemaining - Math.max(0, cycles));
         }
