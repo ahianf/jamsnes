@@ -673,17 +673,19 @@ public class CPU extends AMemory {
     public int _getAbsoluteIndexedByXAddr() {
         int abs = readPC();
         abs = u16(abs + (readPC() << 8));
+        int effective = abs + (registers.dbr << 16);
         int index = indexXValue();
-        markIndexBoundary(abs, index);
-        return (registers.dbr << 16) | u16(abs + index);
+        markIndexBoundary(effective, index);
+        return u24(effective + index);
     }
 
     public int _getAbsoluteIndexedByYAddr() {
         int abs = readPC();
         abs = u16(abs + (readPC() << 8));
+        int effective = abs + (registers.dbr << 16);
         int index = indexYValue();
-        markIndexBoundary(abs, index);
-        return (registers.dbr << 16) | u16(abs + index);
+        markIndexBoundary(effective, index);
+        return u24(effective + index);
     }
 
     public int _getAbsoluteIndexedByXLongAddr() {
