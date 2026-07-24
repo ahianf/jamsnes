@@ -260,9 +260,7 @@ public class PPU extends AMemory {
             background.renderBackground();
         }
 
-        int colorPalette = cgram.read(0) | (cgram.read(1) << 8);
-        int color = PPUUtils.cgramColorToRGBA(colorPalette);
-        fillBuffer(subScreen, color);
+        fillBuffer(subScreen, PPUUtils.cgramColorToRGBA(ppuRegisters.fixedColor()));
         clearBuffer(mainScreen);
         clearBuffer(mainScreenLevelMap);
         clearBuffer(subScreenLevelMap);
@@ -1016,30 +1014,34 @@ public class PPU extends AMemory {
     }
 
     private int composePixel(int x, int y) {
-        int mainPixel = mainScreen[y][x];
+        int pixel = mainScreen[y][x];
         int source = mainScreenSourceMap[y][x];
-        int pixel = mainPixel;
-        boolean mainPixelVisible = Integer.compareUnsigned(mainPixel, 0xff) > 0;
-        if (!mainPixelVisible) {
-            pixel = subScreen[y][x];
-            source = subScreenSourceMap[y][x];
+        if (source == SOURCE_NONE) {
+            int backdrop = cgram.read(0) | (cgram.read(1) << 8);
+            pixel = PPUUtils.cgramColorToRGBA(backdrop);
+            source = SOURCE_BACKDROP;
         }
-        if (isColorClippedToBlack(x)) {
+        boolean clippedToBlack = isColorClippedToBlack(x);
+        if (clippedToBlack) {
             pixel = 0x000000ff;
         }
-        return applyColorMath(pixel, source, x, y, mainPixelVisible);
+        return applyColorMath(pixel, source, x, y, clippedToBlack);
     }
 
-    private int applyColorMath(int pixel, int source, int x, int y, boolean mainPixelVisible) {
+    private int applyColorMath(int pixel, int source, int x, int y, boolean clippedToBlack) {
         if (isColorMathPrevented(x) || !isColorMathEnabledForSource(source)) {
             return pixel;
         }
-        int other = ppuRegisters.cgwselAddSubscreen()
-                ? (mainPixelVisible ? subScreen[y][x] : 0)
+        boolean addSubscreen = ppuRegisters.cgwselAddSubscreen();
+        int other = addSubscreen
+                ? subScreen[y][x]
                 : PPUUtils.cgramColorToRGBA(ppuRegisters.fixedColor());
+        boolean half = ppuRegisters.cgadsubHalfColorMath()
+                && !clippedToBlack
+                && (!addSubscreen || subScreenSourceMap[y][x] != SOURCE_BACKDROP);
         return ppuRegisters.cgadsubAddSubtractSelect()
-                ? subtractColor(pixel, other, ppuRegisters.cgadsubHalfColorMath())
-                : addColor(pixel, other, ppuRegisters.cgadsubHalfColorMath());
+                ? subtractColor(pixel, other, half)
+                : addColor(pixel, other, half);
     }
 
     private boolean isColorMathEnabledForSource(int source) {

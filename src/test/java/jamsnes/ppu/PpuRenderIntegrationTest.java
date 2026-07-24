@@ -622,6 +622,25 @@ class PpuRenderIntegrationTest {
     }
 
     @Test
+    void updateDoesNotDisplaySubscreenWithoutColorMath() {
+        TestRenderer renderer = new TestRenderer();
+        SNES snes = init(renderer);
+        writeColor(snes, 0, 0x0010);
+        writeColor(snes, 1, 0x0200);
+        snes.bus.write(0x2100, 0x0f);
+        snes.bus.write(0x210b, 0x01);
+        snes.bus.write(0x212d, 0x01);
+        snes.ppu.vram.write(0x0000, 0x00);
+        snes.ppu.vram.write(0x0001, 0x00);
+        snes.ppu.vram.write(0x2000, 0x80);
+        snes.ppu.vram.write(0x2001, 0x00);
+
+        snes.ppu.update(1);
+
+        assertEquals(PPUUtils.cgramColorToRGBA(0x0010), renderer.firstPixel);
+    }
+
+    @Test
     void updateAppliesDisplayBrightness() {
         TestRenderer renderer = new TestRenderer();
         SNES snes = init(renderer);
@@ -686,18 +705,54 @@ class PpuRenderIntegrationTest {
     }
 
     @Test
-    void updateAddsSubscreenColorMathForEnabledBackground() {
+    void updateUsesFixedColorForTransparentSubscreenColorMath() {
         TestRenderer renderer = new TestRenderer();
         SNES snes = init(renderer);
         setupBg1FirstPixel(snes, 0x0010);
-        writeColor(snes, 0, 0x0200);
         snes.bus.write(0x2100, 0x0f);
         snes.bus.write(0x2130, 0x02);
         snes.bus.write(0x2131, 0x01);
+        snes.bus.write(0x2132, 0x50);
 
         snes.ppu.update(1);
 
         assertEquals(0x848400ff, renderer.firstPixel);
+    }
+
+    @Test
+    void updateDoesNotHalfTransparentSubscreenBackdrop() {
+        TestRenderer renderer = new TestRenderer();
+        SNES snes = init(renderer);
+        setupBg1FirstPixel(snes, 0x0010);
+        snes.bus.write(0x2100, 0x0f);
+        snes.bus.write(0x2130, 0x02);
+        snes.bus.write(0x2131, 0x41);
+        snes.bus.write(0x2132, 0x90);
+
+        snes.ppu.update(1);
+
+        assertEquals(PPUUtils.cgramColorToRGBA(0x4010), renderer.firstPixel);
+    }
+
+    @Test
+    void updateHalvesVisibleSubscreenAgainstMainBackdrop() {
+        TestRenderer renderer = new TestRenderer();
+        SNES snes = init(renderer);
+        writeColor(snes, 0, 0x0010);
+        writeColor(snes, 1, 0x0200);
+        snes.bus.write(0x2100, 0x0f);
+        snes.bus.write(0x210b, 0x01);
+        snes.bus.write(0x212d, 0x01);
+        snes.bus.write(0x2130, 0x02);
+        snes.bus.write(0x2131, 0x60);
+        snes.ppu.vram.write(0x0000, 0x00);
+        snes.ppu.vram.write(0x0001, 0x00);
+        snes.ppu.vram.write(0x2000, 0x80);
+        snes.ppu.vram.write(0x2001, 0x00);
+
+        snes.ppu.update(1);
+
+        assertEquals(PPUUtils.cgramColorToRGBA(0x0108), renderer.firstPixel);
     }
 
     @Test
@@ -742,6 +797,21 @@ class PpuRenderIntegrationTest {
         snes.ppu.update(1);
 
         assertEquals(0x008400ff, renderer.firstPixel);
+    }
+
+    @Test
+    void updateDoesNotHalfColorMathWhenMainScreenIsClippedToBlack() {
+        TestRenderer renderer = new TestRenderer();
+        SNES snes = init(renderer);
+        setupBg1FirstPixel(snes, 0x0010);
+        snes.bus.write(0x2100, 0x0f);
+        snes.bus.write(0x2130, 0xc0);
+        snes.bus.write(0x2131, 0x41);
+        snes.bus.write(0x2132, 0x50);
+
+        snes.ppu.update(1);
+
+        assertEquals(PPUUtils.cgramColorToRGBA(0x0200), renderer.firstPixel);
     }
 
     @Test
