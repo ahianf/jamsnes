@@ -351,7 +351,7 @@ public class CPU extends AMemory {
             case 0x1b -> 2 + TCS(0);
             case 0x1c -> 6 + TRB(_getAbsoluteAddr());
             case 0x1d -> 4 + ORA(_getAbsoluteIndexedByXAddr()) + indexBoundaryExtraCycle();
-            case 0x1e -> 7 + ASL(_getAbsoluteIndexedByXAddr(), AddressingMode.ABSOLUTE_INDEXED_BY_X) + indexBoundaryExtraCycle();
+            case 0x1e -> 7 + ASL(_getAbsoluteIndexedByXAddr(), AddressingMode.ABSOLUTE_INDEXED_BY_X);
             case 0x1f -> 5 + ORA(_getAbsoluteIndexedByXLongAddr());
             case 0x20 -> 6 + JSR(_getAbsoluteAddr());
             case 0x21 -> 6 + AND(_getDirectIndirectIndexedXAddr()) + directPageExtraCycle();
@@ -383,7 +383,7 @@ public class CPU extends AMemory {
             case 0x3b -> 2 + TSC(0);
             case 0x3c -> 4 + BIT(_getAbsoluteIndexedByXAddr(), AddressingMode.ABSOLUTE_INDEXED_BY_X) + indexBoundaryExtraCycle();
             case 0x3d -> 4 + AND(_getAbsoluteIndexedByXAddr()) + indexBoundaryExtraCycle();
-            case 0x3e -> 7 + ROL(_getAbsoluteIndexedByXAddr(), AddressingMode.ABSOLUTE_INDEXED_BY_X) + indexBoundaryExtraCycle();
+            case 0x3e -> 7 + ROL(_getAbsoluteIndexedByXAddr(), AddressingMode.ABSOLUTE_INDEXED_BY_X);
             case 0x3f -> 5 + AND(_getAbsoluteIndexedByXLongAddr());
             case 0x40 -> 6 + RTI(0);
             case 0x41 -> 6 + EOR(_getDirectIndirectIndexedXAddr()) + directPageExtraCycle();
@@ -415,7 +415,7 @@ public class CPU extends AMemory {
             case 0x5b -> 2 + TCD(0);
             case 0x5c -> 4 + JML(_getAbsoluteLongAddr());
             case 0x5d -> 4 + EOR(_getAbsoluteIndexedByXAddr()) + indexBoundaryExtraCycle();
-            case 0x5e -> 7 + LSR(_getAbsoluteIndexedByXAddr(), AddressingMode.ABSOLUTE_INDEXED_BY_X) + indexBoundaryExtraCycle();
+            case 0x5e -> 7 + LSR(_getAbsoluteIndexedByXAddr(), AddressingMode.ABSOLUTE_INDEXED_BY_X);
             case 0x5f -> 5 + EOR(_getAbsoluteIndexedByXLongAddr());
             case 0x60 -> 6 + RTS(0);
             case 0x61 -> 6 + ADC(_getDirectIndirectIndexedXAddr()) + directPageExtraCycle();
@@ -447,7 +447,7 @@ public class CPU extends AMemory {
             case 0x7b -> 2 + TDC(0);
             case 0x7c -> 6 + JMP(_getAbsoluteIndirectIndexedByXAddr());
             case 0x7d -> 4 + ADC(_getAbsoluteIndexedByXAddr()) + indexBoundaryExtraCycle();
-            case 0x7e -> 7 + ROR(_getAbsoluteIndexedByXAddr(), AddressingMode.ABSOLUTE_INDEXED_BY_X) + indexBoundaryExtraCycle();
+            case 0x7e -> 7 + ROR(_getAbsoluteIndexedByXAddr(), AddressingMode.ABSOLUTE_INDEXED_BY_X);
             case 0x7f -> 5 + ADC(_getAbsoluteIndexedByXLongAddr());
             case 0x80 -> 3 + BRA(_getImmediateAddr8Bits());
             case 0x81 -> 6 + STA(_getDirectIndirectIndexedXAddr()) + directPageExtraCycle();
@@ -543,7 +543,7 @@ public class CPU extends AMemory {
             case 0xdb -> 3 + STP(0);
             case 0xdc -> 6 + JML(_getAbsoluteIndirectLongAddr());
             case 0xdd -> 4 + CMP(_getAbsoluteIndexedByXAddr()) + indexBoundaryExtraCycle();
-            case 0xde -> 7 + DEC(_getAbsoluteIndexedByXAddr()) + indexBoundaryExtraCycle();
+            case 0xde -> 7 + DEC(_getAbsoluteIndexedByXAddr());
             case 0xdf -> 5 + CMP(_getAbsoluteIndexedByXLongAddr());
             case 0xe0 -> 2 + CPX(_getImmediateAddrForX());
             case 0xe1 -> 6 + SBC(_getDirectIndirectIndexedXAddr()) + directPageExtraCycle();
@@ -575,7 +575,7 @@ public class CPU extends AMemory {
             case 0xfb -> 2 + XCE(0);
             case 0xfc -> 8 + JSR(_getAbsoluteIndirectIndexedByXAddr());
             case 0xfd -> 4 + SBC(_getAbsoluteIndexedByXAddr()) + indexBoundaryExtraCycle();
-            case 0xfe -> 7 + INC(_getAbsoluteIndexedByXAddr()) + indexBoundaryExtraCycle();
+            case 0xfe -> 7 + INC(_getAbsoluteIndexedByXAddr());
             case 0xff -> 5 + SBC(_getAbsoluteIndexedByXLongAddr());
             default -> throw new InvalidOpcode("CPU opcode 0x%02x is not implemented".formatted(opcode));
         };

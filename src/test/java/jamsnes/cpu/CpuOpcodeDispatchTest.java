@@ -629,9 +629,25 @@ class CpuOpcodeDispatchTest {
         assertEquals(0x01, snes.wram.data()[0x0400]);
         assertTrue(snes.cpu.registers().p.c);
 
-        assertEquals(8, snes.cpu.executeInstruction());
+        assertEquals(7, snes.cpu.executeInstruction());
         assertEquals(0x81, snes.wram.data()[0x0500]);
         assertEquals(0x020a, snes.cpu.registers().pc);
+    }
+
+    @Test
+    void absoluteIndexedReadModifyWriteOpcodesDoNotAddPageCrossCycles() {
+        int[] opcodes = {0x1e, 0x3e, 0x5e, 0x7e, 0xde, 0xfe};
+
+        for (int opcode : opcodes) {
+            SNES snes = init();
+            snes.cpu.registers().setPc(0x0200);
+            snes.cpu.registers().x = 1;
+            snes.wram.data()[0x0500] = 0x02;
+            writeProgram(snes, 0x0200, opcode, 0xff, 0x04);
+
+            assertEquals(7, snes.cpu.executeInstruction(), "opcode 0x%02x".formatted(opcode));
+            assertEquals(0x0203, snes.cpu.registers().pc);
+        }
     }
 
     @Test
