@@ -566,6 +566,7 @@ class PpuRegisterWriteTest {
     @Test
     void readOnlyPpuRegisterWritesAreNoop() {
         SNES snes = init();
+        snes.bus.write(0x4201, 0x80);
         writeMode7Register(snes, 0x211b, 0x0100);
         snes.ppu.advanceCountersOnly(PPU.H_COUNTER_DOTS + 3);
         snes.bus.read(0x2137);

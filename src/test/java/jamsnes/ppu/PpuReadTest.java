@@ -318,6 +318,19 @@ class PpuReadTest {
     }
 
     @Test
+    void softwareLatchIsIgnoredWhileWrioIsLow() {
+        SNES snes = init();
+
+        snes.ppu.advanceCountersOnly(0x03);
+        snes.bus.write(0x4201, 0x00);
+        snes.ppu.advanceCountersOnly(0x20);
+
+        snes.bus.read(0x2137);
+
+        assertEquals(0x03, snes.bus.read(0x213c));
+    }
+
+    @Test
     void softwareLatchDoesNotResetCounterReadFlipFlops() {
         SNES snes = init();
 
