@@ -58,6 +58,33 @@ class ArithmeticInstructionTest {
     }
 
     @Test
+    void sbcHalfCarryTracksLowNibbleBorrowAcrossOperandForms() {
+        SNES snes = init();
+
+        snes.apu._internalWrite(0x40, 0x45);
+        snes.apu._internalWrite(0x41, 0x23);
+        snes.apu.internalRegisters().c = true;
+        snes.apu.SBC(0x40, 0x41, 6);
+        assertTrue(snes.apu.internalRegisters().h);
+
+        snes.apu.internalRegisters().a = 0x10;
+        snes.apu._internalWrite(0x42, 0x01);
+        snes.apu.internalRegisters().c = true;
+        snes.apu.SBCacc(0x42, 3);
+        assertFalse(snes.apu.internalRegisters().h);
+
+        snes.apu._internalWrite(0x43, 0x11);
+        snes.apu.internalRegisters().c = false;
+        snes.apu.SBCmemValue(0x43, 0x00, 5);
+        assertTrue(snes.apu.internalRegisters().h);
+
+        snes.apu.internalRegisters().a = 0x45;
+        snes.apu.internalRegisters().c = true;
+        snes.apu.SBCaccValue(0x23, 2);
+        assertTrue(snes.apu.internalRegisters().h);
+    }
+
+    @Test
     void cmpUpdatesCarryAndNzFlags() {
         SNES snes = init();
         snes.apu.internalRegisters().x = 4;

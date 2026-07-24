@@ -1369,7 +1369,7 @@ public class APU extends AMemory {
         int result = data1 - data2 - (carry ^ 1);
 
         internalRegisters.v = (((data1 ^ data2) & (data1 ^ result)) & 0x80) != 0;
-        internalRegisters.h = ((result & 0x0f) - (data1 & 0x0f) + carry) > 0x0f;
+        internalRegisters.h = subtractionHasNoHalfBorrow(data1, data2, carry);
         internalRegisters.c = result >= 0 && result <= 0xff;
         setNzFlags(result);
         _internalWrite(operand1, result);
@@ -1382,7 +1382,7 @@ public class APU extends AMemory {
         int result = internalRegisters.a - data - (carry ^ 1);
 
         internalRegisters.v = (((internalRegisters.a ^ data) & (internalRegisters.a ^ result)) & 0x80) != 0;
-        internalRegisters.h = ((result & 0x0f) - (internalRegisters.a & 0x0f) + carry) > 0x0f;
+        internalRegisters.h = subtractionHasNoHalfBorrow(internalRegisters.a, data, carry);
         internalRegisters.c = result >= 0 && result <= 0xff;
         setNzFlags(result);
         internalRegisters.a = u8(result);
@@ -1396,7 +1396,7 @@ public class APU extends AMemory {
         int result = data1 - data2 - (carry ^ 1);
 
         internalRegisters.v = (((data1 ^ data2) & (data1 ^ result)) & 0x80) != 0;
-        internalRegisters.h = ((result & 0x0f) - (data1 & 0x0f) + carry) > 0x0f;
+        internalRegisters.h = subtractionHasNoHalfBorrow(data1, data2, carry);
         internalRegisters.c = result >= 0 && result <= 0xff;
         setNzFlags(result);
         _internalWrite(address, result);
@@ -1409,11 +1409,16 @@ public class APU extends AMemory {
         int result = internalRegisters.a - data - (carry ^ 1);
 
         internalRegisters.v = (((internalRegisters.a ^ data) & (internalRegisters.a ^ result)) & 0x80) != 0;
-        internalRegisters.h = ((result & 0x0f) - (internalRegisters.a & 0x0f) + carry) > 0x0f;
+        internalRegisters.h = subtractionHasNoHalfBorrow(internalRegisters.a, data, carry);
         internalRegisters.c = result >= 0 && result <= 0xff;
         setNzFlags(result);
         internalRegisters.a = u8(result);
         return cycles;
+    }
+
+    private boolean subtractionHasNoHalfBorrow(int minuend, int subtrahend, int carry) {
+        int lowNibbleDifference = (minuend & 0x0f) - (subtrahend & 0x0f) - (carry ^ 1);
+        return lowNibbleDifference >= 0;
     }
 
     public int CMP(int operand1, int operand2, int cycles) {
