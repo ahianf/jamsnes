@@ -230,13 +230,13 @@ class InternalMemoryMapTest {
     }
 
     @Test
-    void dspRegisterAddressRetainsHighBitWhileMirroringReadsAndBlockingWrites() {
+    void dspRegisterAddressHighBitMirrorsReadsAndBlocksWrites() {
         SNES snes = init();
         snes.apu._internalWrite(0x00f2, 0x0c);
         snes.apu._internalWrite(0x00f3, 0x34);
 
         snes.apu._internalWrite(0x00f2, 0x8c);
-        assertEquals(0x8c, snes.apu._internalRead(0x00f2));
+        assertEquals(0x0c, snes.apu._internalRead(0x00f2));
         assertEquals(0x34, snes.apu._internalRead(0x00f3));
         snes.apu._internalWrite(0x00f3, 0x56);
 
@@ -292,6 +292,7 @@ class InternalMemoryMapTest {
         assertEquals(0x33, snes.apu._internalRead(0x0200));
         assertEquals(0x44, snes.apu._internalRead(0xffbf));
         assertEquals(0x5a, snes.apu._internalRead(0xffc0));
+        assertEquals(0x55, snes.apu.readApuRam(0x00f3));
         assertEquals(0xaa, snes.apu._internalRead(0x00f4));
         assertEquals(0xbb, snes.apu._internalRead(0x00f8));
         assertEquals(0x0c, snes.apu._internalRead(0x00fd));

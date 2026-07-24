@@ -49,7 +49,7 @@ public class APU extends AMemory {
     public boolean isDisabled;
 
     public APU(IRenderer renderer) {
-        dsp = new DSP(this::_internalRead, this::_internalWrite, renderer);
+        dsp = new DSP(this::readApuRam, this::writeApuRam, renderer);
         reset();
     }
 
@@ -101,7 +101,7 @@ public class APU extends AMemory {
         validateInternalAddress(address, "APU Registers read");
         return switch (address) {
             case 0x00f0, 0x00f1, 0x00fa, 0x00fb, 0x00fc -> 0;
-            case 0x00f2 -> dspRegisterAddress;
+            case 0x00f2 -> dspRegisterAddress & 0x7f;
             case 0x00f3 -> dsp.read(dspRegisterAddress);
             case 0x00f4, 0x00f5, 0x00f6, 0x00f7 -> apuReadPorts[address - 0x00f4];
             case 0x00f8 -> registerMemory1;
@@ -122,6 +122,7 @@ public class APU extends AMemory {
     public void _internalWrite(int address, int data) {
         validateInternalAddress(address, "APU Registers write");
         int value = u8(data);
+        writeApuRam(address, value);
         switch (address) {
             case 0x00f0 -> unknownRegister = value;
             case 0x00f1 -> writeControlRegister(value);
@@ -139,12 +140,19 @@ public class APU extends AMemory {
             }
             default -> {
                 if (address <= 0x00ef || address >= 0x0100) {
-                    internalMemory[address] = value;
                     return;
                 }
                 throw new InvalidAddress("APU Registers write", address);
             }
         }
+    }
+
+    int readApuRam(int address) {
+        return internalMemory[u16(address)];
+    }
+
+    private void writeApuRam(int address, int data) {
+        internalMemory[u16(address)] = u8(data);
     }
 
     private int readCounter(int index) {
@@ -891,14 +899,8 @@ public class APU extends AMemory {
         internalRegisters.setPsw(cartridge.read(0x2a));
         internalRegisters.sp = cartridge.read(0x2b);
 
-        for (int i = 0; i < 0x00f0; i++) {
+        for (int i = 0; i < 0x10000; i++) {
             internalMemory[i] = cartridge.read(0x100 + i);
-        }
-        for (int i = 0; i < 0x0100; i++) {
-            internalMemory[0x0100 + i] = cartridge.read(0x200 + i);
-        }
-        for (int i = 0; i < 0xfdc0; i++) {
-            internalMemory[0x0200 + i] = cartridge.read(0x300 + i);
         }
         for (int i = 0; i < 0x0040; i++) {
             internalMemory[0xffc0 + i] = cartridge.read(0x101c0 + i);

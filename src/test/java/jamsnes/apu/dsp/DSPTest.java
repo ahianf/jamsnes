@@ -11,6 +11,26 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DSPTest {
     @Test
+    void apuDspRamAccessBypassesIoAndIplOverlays() {
+        SNES snes = new SNES(new NoRenderer(0, 0, 0));
+        snes.apu._internalWrite(0x00f2, 0x8c);
+        snes.apu._internalWrite(0xffc0, 0x42);
+
+        assertEquals(0x0c, snes.apu._internalRead(0x00f2));
+        assertEquals(0xcd, snes.apu._internalRead(0xffc0));
+        assertEquals(0x8c, snes.apu.dsp().readRam(0x00f2));
+        assertEquals(0x42, snes.apu.dsp().readRam(0xffc0));
+
+        snes.apu.dsp().writeRam(0x00f2, 0x24);
+        snes.apu.dsp().writeRam(0xffc0, 0x66);
+
+        assertEquals(0x0c, snes.apu._internalRead(0x00f2));
+        assertEquals(0xcd, snes.apu._internalRead(0xffc0));
+        assertEquals(0x24, snes.apu.dsp().readRam(0x00f2));
+        assertEquals(0x66, snes.apu.dsp().readRam(0xffc0));
+    }
+
+    @Test
     void timerTickReloadsAndDecrementsCounter() {
         DSP dsp = new DSP();
 
