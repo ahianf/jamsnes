@@ -9,6 +9,8 @@ import static jamsnes.models.Unsigned.u16;
 import static jamsnes.models.Unsigned.u8;
 
 public class DSP {
+    static final int AUDIO_BATCH_SAMPLES = 1024;
+
     @FunctionalInterface
     public interface RamWriter {
         void write(int address, int value);
@@ -442,7 +444,7 @@ public class DSP {
 
     private void playBufferedAudio() {
         int samples = getSamplesCount();
-        if (renderer != null && samples > 0) {
+        if (renderer != null && samples >= AUDIO_BATCH_SAMPLES) {
             renderer.playAudio(Arrays.copyOf(soundBuffer, samples));
             bufferOffset = 0;
         }

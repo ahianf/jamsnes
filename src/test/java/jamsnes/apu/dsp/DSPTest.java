@@ -225,11 +225,17 @@ class DSPTest {
         for (int i = 0; i < 28; i++) {
             snes.apu.dsp().update();
         }
+        for (int frame = 1; frame < DSP.AUDIO_BATCH_SAMPLES / 2; frame++) {
+            for (int phase = 0; phase < 32; phase++) {
+                snes.apu.dsp().update();
+            }
+        }
 
         assertEquals(1, renderer.playAudioCalls);
-        assertEquals(2, renderer.lastAudioSamples.length);
+        assertEquals(DSP.AUDIO_BATCH_SAMPLES, renderer.lastAudioSamples.length);
         assertEquals(4623, renderer.lastAudioSamples[0]);
         assertEquals(0, renderer.lastAudioSamples[1]);
+        assertEquals(0, snes.apu.dsp().getSamplesCount());
     }
 
     @Test
@@ -247,8 +253,8 @@ class DSPTest {
             snes.apu.dsp().update();
         }
 
-        assertEquals(1, renderer.playAudioCalls);
-        assertEquals(0, snes.apu.dsp().getSamplesCount());
+        assertEquals(0, renderer.playAudioCalls);
+        assertEquals(2, snes.apu.dsp().getSamplesCount());
     }
 
     @Test
