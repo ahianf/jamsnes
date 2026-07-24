@@ -159,7 +159,7 @@ class MemoryBusTest {
     }
 
     @Test
-    void wramPortAddressRegisterReadsUseOpenBus() {
+    void wramPortAddressRegisterReadsUseLastExternalBusValue() {
         SNES snes = init();
         snes.bus.setOpenBus(0x5a);
 
@@ -167,30 +167,52 @@ class MemoryBusTest {
         snes.bus.write(0x2182, 0x34);
         snes.bus.write(0x2183, 0x01);
 
-        assertEquals(0x5a, snes.bus.read(0x2181));
-        assertEquals(0x5a, snes.bus.read(0x802182));
-        assertEquals(0x5a, snes.bus.read(0x2183));
+        assertEquals(0x01, snes.bus.read(0x2181));
+        assertEquals(0x01, snes.bus.read(0x802182));
+        assertEquals(0x01, snes.bus.read(0x2183));
         assertEquals(0x13412, snes.wramPort.address());
     }
 
     @Test
-    void unmappedCpuRegisterSpaceUsesOpenBus() {
+    void cpuInternalOpenBusIgnoresInterveningWrites() {
         SNES snes = init();
         snes.bus.setOpenBus(0x5a);
 
-        assertEquals(0x5a, snes.bus.read(0x00420e));
-        assertEquals(0x5a, snes.bus.read(0x80420f));
-        assertEquals(0x5a, snes.bus.read(0x004380));
-        assertEquals(0x5a, snes.bus.read(0x004400));
-
         snes.bus.write(0x00420e, 0x56);
         snes.bus.write(0x80420f, 0x78);
-        snes.bus.write(0x004380, 0x12);
-        snes.bus.write(0x004400, 0x34);
         assertEquals(0x5a, snes.bus.read(0x00420e));
         assertEquals(0x5a, snes.bus.read(0x80420f));
-        assertEquals(0x5a, snes.bus.read(0x004380));
-        assertEquals(0x5a, snes.bus.read(0x004400));
+
+        snes.bus.write(0x004380, 0x12);
+        snes.bus.write(0x004400, 0x34);
+        assertEquals(0x34, snes.bus.read(0x004380));
+        assertEquals(0x34, snes.bus.read(0x004400));
+    }
+
+    @Test
+    void externalWritesDriveExternalBusWithoutChangingCpuReadBus() {
+        SNES snes = init();
+        snes.wram.data()[0] = 0x34;
+
+        assertEquals(0x34, snes.bus.read(0x7e0000));
+        snes.bus.write(0x7e0001, 0x5a);
+
+        assertEquals(0x34, snes.bus.getOpenBus());
+        assertEquals(0x5a, snes.bus.getExternalOpenBus());
+        assertEquals(0x32, snes.bus.read(0x4210));
+        assertEquals(0x32, snes.bus.getOpenBus());
+        assertEquals(0x5a, snes.bus.read(0x126000));
+    }
+
+    @Test
+    void unmappedExternalWritesDriveExternalOpenBus() {
+        SNES snes = init();
+        snes.bus.setOpenBus(0x5a);
+
+        snes.bus.write(0x126000, 0xa5);
+
+        assertEquals(0x5a, snes.bus.read(0x00420e));
+        assertEquals(0xa5, snes.bus.read(0x126001));
     }
 
     @Test

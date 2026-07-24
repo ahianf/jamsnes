@@ -204,7 +204,7 @@ public class DMA {
     private int writeOneByte(int aAddress, int bAddress, int direction) {
         if (isInvalidABusAddress(aAddress)) {
             if (direction == 0) {
-                bus.write(bAddress, bus.getOpenBus());
+                bus.write(bAddress, bus.getExternalOpenBus());
             } else {
                 bus.read(bAddress);
             }
@@ -216,7 +216,7 @@ public class DMA {
                 if (direction == 0) {
                     return 8;
                 }
-                bus.write(aAddress, bus.getOpenBus());
+                bus.write(aAddress, bus.getExternalOpenBus());
                 return 4;
             }
         }

@@ -3,6 +3,7 @@ package jamsnes.memory;
 import jamsnes.SNES;
 import jamsnes.cartridge.MappingMode;
 import jamsnes.exceptions.InvalidAddress;
+import jamsnes.models.Component;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -17,6 +18,7 @@ public class MemoryBus implements IMemoryBus {
     private final List<RepeatingMemoryShadow> repeatingShadows = new ArrayList<>();
     private final List<RectangleShadow> rectangleShadows = new ArrayList<>();
     private int openBus;
+    private int externalOpenBus;
 
     @Override
     public IMemory getAccessor(int address) {
@@ -31,28 +33,35 @@ public class MemoryBus implements IMemoryBus {
 
     @Override
     public int read(int address) {
-        IMemory handler = getAccessor(address);
-        if (handler == null) {
-            return openBus;
-        }
+        int normalized = u24(address);
+        IMemory handler = getAccessor(normalized);
+        boolean internal = isInternalCpuBus(normalized, handler);
         int data;
-        try {
-            data = handler.read(handler.getRelativeAddress(address));
-        } catch (InvalidAddress exception) {
-            return openBus;
+        if (handler == null) {
+            data = internal ? openBus : externalOpenBus;
+        } else {
+            try {
+                data = handler.read(handler.getRelativeAddress(normalized));
+            } catch (InvalidAddress exception) {
+                data = internal ? openBus : externalOpenBus;
+            }
         }
-        openBus = data;
-        return data;
+        openBus = u8(data);
+        if (!internal) {
+            externalOpenBus = openBus;
+        }
+        return openBus;
     }
 
     @Override
     public OptionalInt peek(int address) {
-        IMemory handler = getAccessor(address);
+        int normalized = u24(address);
+        IMemory handler = getAccessor(normalized);
         if (handler == null) {
-            return OptionalInt.of(openBus);
+            return OptionalInt.of(isInternalCpuBus(normalized, null) ? openBus : externalOpenBus);
         }
         try {
-            return OptionalInt.of(handler.read(handler.getRelativeAddress(address)));
+            return OptionalInt.of(handler.read(handler.getRelativeAddress(normalized)));
         } catch (RuntimeException exception) {
             return OptionalInt.empty();
         }
@@ -65,11 +74,27 @@ public class MemoryBus implements IMemoryBus {
 
     @Override
     public void write(int address, int data) {
-        IMemory handler = getAccessor(address);
+        int normalized = u24(address);
+        int value = u8(data);
+        IMemory handler = getAccessor(normalized);
+        if (!isInternalCpuBus(normalized, handler)) {
+            externalOpenBus = value;
+        }
         if (handler == null) {
             return;
         }
-        handler.write(handler.getRelativeAddress(address), data);
+        handler.write(handler.getRelativeAddress(normalized), value);
+    }
+
+    private boolean isInternalCpuBus(int address, IMemory handler) {
+        if (handler != null) {
+            Component component = handler.getComponent();
+            return component == Component.CPU || component == Component.JOYPAD;
+        }
+        int bank = address >>> 16;
+        int page = address & 0xffff;
+        boolean lowBank = bank <= 0x3f || (bank >= 0x80 && bank <= 0xbf);
+        return lowBank && page >= 0x4000 && page <= 0x437f;
     }
 
     public void mapComponents(SNES console) {
@@ -164,7 +189,13 @@ public class MemoryBus implements IMemoryBus {
         return openBus;
     }
 
+    @Override
+    public int getExternalOpenBus() {
+        return externalOpenBus;
+    }
+
     public void setOpenBus(int openBus) {
         this.openBus = u8(openBus);
+        externalOpenBus = this.openBus;
     }
 }

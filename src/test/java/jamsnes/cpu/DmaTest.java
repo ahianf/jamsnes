@@ -642,7 +642,7 @@ class DmaTest {
     }
 
     @Test
-    void dmaReadsOpenBusInsteadOfPpuRegisterThroughABus() {
+    void dmaReadsExternalOpenBusInsteadOfPpuRegisterThroughABus() {
         SNES snes = init();
         snes.bus.write(0x2100, 0x80);
         snes.ppu.cgram.write(0x40, 0x34);
@@ -650,6 +650,7 @@ class DmaTest {
         setupDma(snes, DMA.ONE_TO_ONE, 0x26, 0x00213b, 0x0001);
         snes.bus.write(0x420b, 0x01);
         snes.bus.setOpenBus(0x5a);
+        assertEquals(0x52, snes.bus.read(0x4210));
 
         DMA dma = snes.cpu.dmaChannels()[0];
         assertEquals(16, dma.run(1_000_000));

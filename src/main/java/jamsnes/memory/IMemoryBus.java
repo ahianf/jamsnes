@@ -11,6 +11,10 @@ public interface IMemoryBus {
 
     int getOpenBus();
 
+    default int getExternalOpenBus() {
+        return getOpenBus();
+    }
+
     void write(int address, int data);
 
     IMemory getAccessor(int address);
