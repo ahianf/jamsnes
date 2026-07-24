@@ -282,6 +282,20 @@ class SNESTest {
     }
 
     @Test
+    void gameUpdatesAdvanceApuAtItsOwnFractionalClockRate() {
+        SNES snes = new SNES(new TestRenderer());
+        snes.cpu.isDisabled = true;
+
+        snes.update();
+        int expectedFirstCycles = (int) ((255L * SNES.APU_CLOCK_HZ) / SNES.PPU_DOT_CLOCK_HZ);
+        assertEquals(expectedFirstCycles % 32, snes.apu.dsp().voicePhase());
+
+        snes.update();
+        int expectedTotalCycles = (int) ((510L * SNES.APU_CLOCK_HZ) / SNES.PPU_DOT_CLOCK_HZ);
+        assertEquals(expectedTotalCycles % 32, snes.apu.dsp().voicePhase());
+    }
+
+    @Test
     void updateAdvancesRequestedCyclesWhileCpuWaitsForInterrupt() {
         SNES snes = new SNES(new TestRenderer());
         snes.cartridge.setSize(0x10000);
@@ -371,6 +385,7 @@ class SNESTest {
 
         assertEquals(0, renderer.drawScreenCalls);
         assertEquals(0, renderer.putPixelCalls);
+        assertEquals(0x1244, snes.apu.internalRegisters().pc);
     }
 
     @Test

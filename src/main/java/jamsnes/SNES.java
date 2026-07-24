@@ -14,6 +14,9 @@ import jamsnes.ram.Ram;
 import jamsnes.renderer.IRenderer;
 
 public class SNES {
+    static final int APU_CLOCK_HZ = 1_024_000;
+    static final int PPU_DOT_CLOCK_HZ = 5_369_318;
+    private static final int APU_CYCLES_PER_AUDIO_UPDATE = 32;
     private static final int NMITIMEN_AUTO_JOYPAD_ENABLE = 0x01;
     private static final int NMITIMEN_H_IRQ_ENABLE = 0x10;
     private static final int NMITIMEN_V_IRQ_ENABLE = 0x20;
@@ -36,6 +39,7 @@ public class SNES {
     private boolean wasInVBlank;
     private boolean wasNmiEnabled;
     private int autoJoypadReadCyclesRemaining;
+    private long apuClockRemainder;
 
     public SNES(IRenderer renderer) {
         this.renderer = renderer;
@@ -82,11 +86,12 @@ public class SNES {
         wasInVBlank = ppu.isInVBlank();
         wasNmiEnabled = nmiEnabled();
         autoJoypadReadCyclesRemaining = 0;
+        apuClockRemainder = 0;
     }
 
     public void update() {
         if (cartridge.getType() == CartridgeType.AUDIO) {
-            apu.update(0x01);
+            apu.update(APU_CYCLES_PER_AUDIO_UPDATE);
             return;
         }
 
@@ -97,7 +102,7 @@ public class SNES {
         int hdmaInitCycles = initializeHdmaAtFrameStart();
         if (hdmaInitCycles > 0) {
             ppu.advanceCountersOnly(hdmaInitCycles);
-            apu.update(hdmaInitCycles);
+            advanceApuForPpuDots(hdmaInitCycles);
         }
 
         int startHCounter = ppu.hCounter();
@@ -125,9 +130,21 @@ public class SNES {
         updateVideoStatusRegisters();
         updateTimerIrq(timerStartHCounter, timerStartVCounter, timerStartSecondField,
                 hdmaInitCycles + cycleCount + hdmaCycles);
-        apu.update(cycleCount);
+        advanceApuForPpuDots(cycleCount);
         if (hdmaCycles > 0) {
-            apu.update(hdmaCycles);
+            advanceApuForPpuDots(hdmaCycles);
+        }
+    }
+
+    private void advanceApuForPpuDots(int dots) {
+        if (dots <= 0) {
+            return;
+        }
+        long scaledCycles = apuClockRemainder + (long) dots * APU_CLOCK_HZ;
+        int apuCycles = (int) (scaledCycles / PPU_DOT_CLOCK_HZ);
+        apuClockRemainder = scaledCycles % PPU_DOT_CLOCK_HZ;
+        if (apuCycles > 0) {
+            apu.update(apuCycles);
         }
     }
 
