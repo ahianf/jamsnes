@@ -92,6 +92,8 @@ public class PPU extends AMemory {
     private boolean vCounterHighByte;
     private boolean counterLatchFlag;
     private boolean secondField;
+    private boolean fieldInterlace;
+    private boolean fieldOverscan;
     private boolean objectRangeOver;
     private boolean objectTimeOver;
     private int ppu1OpenBus;
@@ -169,6 +171,7 @@ public class PPU extends AMemory {
             case 0x21 -> ppuRegisters.setCgAddress(value);
             case 0x22 -> writeCgData(value);
             case 0x32 -> ppuRegisters.writeColdata(value);
+            case 0x33 -> latchFieldModeAtInitialFieldStart();
             default -> {
             }
         }
@@ -218,7 +221,7 @@ public class PPU extends AMemory {
         renderMainAndSubScreen();
         ColorMathState currentColorMathState = currentColorMathState();
         LayerState currentLayerState = currentLayerState();
-        boolean interlaced = ppuRegisters.setiniScreenInterlace();
+        boolean interlaced = fieldInterlace;
 
         for (int outputY = 0; outputY < screen.length; outputY++) {
             if (interlaced && (outputY & 1) != (secondField ? 1 : 0)) {
@@ -272,6 +275,8 @@ public class PPU extends AMemory {
         vCounterHighByte = false;
         counterLatchFlag = false;
         secondField = false;
+        fieldInterlace = false;
+        fieldOverscan = false;
     }
 
     public void resetRegisterState() {
@@ -573,14 +578,14 @@ public class PPU extends AMemory {
     }
 
     public int scanlineDotsAt(int scanline, boolean field) {
-        if (field && scanline == NTSC_SHORT_SCANLINE && !ppuRegisters.setiniScreenInterlace()) {
+        if (field && scanline == NTSC_SHORT_SCANLINE && !fieldInterlace) {
             return H_COUNTER_DOTS - 1;
         }
         return H_COUNTER_DOTS;
     }
 
     public int scanlinesInField(boolean field) {
-        if (!field && ppuRegisters.setiniScreenInterlace()) {
+        if (!field && fieldInterlace) {
             return V_COUNTER_SCANLINES + 1;
         }
         return V_COUNTER_SCANLINES;
@@ -595,7 +600,7 @@ public class PPU extends AMemory {
     }
 
     public int vBlankStartScanline() {
-        return ppuRegisters.setiniOverscanMode()
+        return fieldOverscan
                 ? OVERSCAN_V_BLANK_START_SCANLINE
                 : V_BLANK_START_SCANLINE;
     }
@@ -755,6 +760,7 @@ public class PPU extends AMemory {
                 vCounter = 0;
                 frameCounter++;
                 secondField = !secondField;
+                latchFieldMode();
                 objectRangeOver = false;
                 objectTimeOver = false;
             }
@@ -763,6 +769,17 @@ public class PPU extends AMemory {
             }
             scanlineDots = scanlineDotsAt(vCounter, secondField);
         }
+    }
+
+    private void latchFieldModeAtInitialFieldStart() {
+        if (frameCounter == 0 && vCounter == 0 && hCounter == 0) {
+            latchFieldMode();
+        }
+    }
+
+    private void latchFieldMode() {
+        fieldInterlace = ppuRegisters.setiniScreenInterlace();
+        fieldOverscan = ppuRegisters.setiniOverscanMode();
     }
 
     private void reloadOamAddressAtVBlankEntry() {

@@ -352,6 +352,43 @@ class PpuReadTest {
     }
 
     @Test
+    void enablingInterlaceAndOverscanMidFieldDefersThemUntilTheNextField() {
+        SNES snes = init();
+        snes.ppu.advanceCountersOnly(1);
+
+        snes.bus.write(0x2133, 0x05);
+
+        assertEquals(PPU.V_BLANK_START_SCANLINE, snes.ppu.vBlankStartScanline());
+
+        snes.ppu.advanceCountersOnly(PPU.H_COUNTER_DOTS * PPU.V_COUNTER_SCANLINES - 1);
+
+        assertEquals(0, snes.ppu.vCounter());
+        assertEquals(0, snes.ppu.hCounter());
+        assertEquals(0x80, snes.bus.read(0x213f) & 0x80);
+        assertEquals(PPU.OVERSCAN_V_BLANK_START_SCANLINE, snes.ppu.vBlankStartScanline());
+    }
+
+    @Test
+    void disablingInterlaceMidFieldDoesNotRemoveTheLatchedExtraScanline() {
+        SNES snes = init();
+        snes.bus.write(0x2133, 0x01);
+        snes.ppu.advanceCountersOnly(1);
+
+        snes.bus.write(0x2133, 0x00);
+        snes.ppu.advanceCountersOnly(PPU.H_COUNTER_DOTS * PPU.V_COUNTER_SCANLINES - 1);
+
+        assertEquals(262, snes.ppu.vCounter());
+        assertEquals(0, snes.ppu.hCounter());
+        assertEquals(0x00, snes.bus.read(0x213f) & 0x80);
+
+        snes.ppu.advanceCountersOnly(PPU.H_COUNTER_DOTS);
+
+        assertEquals(0, snes.ppu.vCounter());
+        assertEquals(0, snes.ppu.hCounter());
+        assertEquals(0x80, snes.bus.read(0x213f) & 0x80);
+    }
+
+    @Test
     void stat78ForcesAndRetainsExternalLatchFlagWhileWrioIsLow() {
         SNES snes = init();
 
