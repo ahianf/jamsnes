@@ -137,7 +137,8 @@ class MainTest {
 
             LwjglRenderer renderer = assertInstanceOf(LwjglRenderer.class, Main.defaultRenderer());
             assertEquals(224, renderer.displayHeight());
-            assertEquals(256, renderer.displayWidth());
+            assertEquals(512, renderer.displayWidth());
+            assertEquals(256, renderer.windowWidth());
             assertEquals(3, renderer.windowScale());
         } finally {
             if (previous == null) {

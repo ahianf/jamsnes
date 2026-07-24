@@ -56,12 +56,14 @@ import static org.lwjgl.glfw.GLFW.glfwWindowShouldClose;
 import static org.lwjgl.system.MemoryUtil.NULL;
 
 public class LwjglRenderer extends FrameBufferRenderer {
-    public static final int DEFAULT_DISPLAY_WIDTH = 256;
+    public static final int DEFAULT_DISPLAY_WIDTH = 512;
     public static final int DEFAULT_DISPLAY_HEIGHT = 224;
+    public static final int DEFAULT_WINDOW_WIDTH = 256;
     public static final int DEFAULT_WINDOW_SCALE = 3;
 
     private final int displayHeight;
     private final int displayWidth;
+    private final int windowWidth;
     private final int windowScale;
     private final Map<Integer, JoypadButton> keyBindings;
     private final LwjglAudioDevice audioDevice = new LwjglAudioDevice();
@@ -70,12 +72,14 @@ public class LwjglRenderer extends FrameBufferRenderer {
     private ByteBuffer pixelBuffer;
 
     public LwjglRenderer(int height, int width, int maxFPS) {
-        this(height, width, maxFPS, DEFAULT_DISPLAY_HEIGHT, DEFAULT_DISPLAY_WIDTH, DEFAULT_WINDOW_SCALE,
+        this(height, width, maxFPS, Math.min(DEFAULT_DISPLAY_HEIGHT, height), Math.min(DEFAULT_DISPLAY_WIDTH, width),
+                Math.min(DEFAULT_WINDOW_WIDTH, width),
+                DEFAULT_WINDOW_SCALE,
                 defaultKeyBindings());
     }
 
     public LwjglRenderer(int height, int width, int maxFPS, int windowScale, Map<Integer, JoypadButton> keyBindings) {
-        this(height, width, maxFPS, height, width, windowScale, keyBindings);
+        this(height, width, maxFPS, height, width, width, windowScale, keyBindings);
     }
 
     public LwjglRenderer(
@@ -84,6 +88,18 @@ public class LwjglRenderer extends FrameBufferRenderer {
             int maxFPS,
             int displayHeight,
             int displayWidth,
+            int windowScale,
+            Map<Integer, JoypadButton> keyBindings) {
+        this(height, width, maxFPS, displayHeight, displayWidth, displayWidth, windowScale, keyBindings);
+    }
+
+    private LwjglRenderer(
+            int height,
+            int width,
+            int maxFPS,
+            int displayHeight,
+            int displayWidth,
+            int windowWidth,
             int windowScale,
             Map<Integer, JoypadButton> keyBindings) {
         super(height, width, maxFPS);
@@ -95,6 +111,7 @@ public class LwjglRenderer extends FrameBufferRenderer {
         }
         this.displayHeight = displayHeight;
         this.displayWidth = displayWidth;
+        this.windowWidth = windowWidth;
         this.windowScale = windowScale;
         this.keyBindings = Map.copyOf(keyBindings);
     }
@@ -127,6 +144,10 @@ public class LwjglRenderer extends FrameBufferRenderer {
 
     public int displayWidth() {
         return displayWidth;
+    }
+
+    public int windowWidth() {
+        return windowWidth;
     }
 
     public int windowScale() {
@@ -184,7 +205,7 @@ public class LwjglRenderer extends FrameBufferRenderer {
         glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
-        window = glfwCreateWindow(displayWidth * windowScale, displayHeight * windowScale, windowTitle(), NULL, NULL);
+        window = glfwCreateWindow(windowWidth * windowScale, displayHeight * windowScale, windowTitle(), NULL, NULL);
         if (window == NULL) {
             throw new IllegalStateException("Could not create GLFW window");
         }

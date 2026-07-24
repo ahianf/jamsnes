@@ -22,6 +22,7 @@ public class Background {
             int mosaicSize,
             boolean[] windowMask,
             int horizontalScale,
+            int horizontalPhase,
             int[] palette,
             boolean directColor) {
         public ScanlineState(
@@ -30,8 +31,20 @@ public class Background {
                 int scrollY,
                 int mosaicSize,
                 boolean[] windowMask,
+                int horizontalScale,
+                int[] palette,
+                boolean directColor) {
+            this(enabled, scrollX, scrollY, mosaicSize, windowMask, horizontalScale, 0, palette, directColor);
+        }
+
+        public ScanlineState(
+                boolean enabled,
+                int scrollX,
+                int scrollY,
+                int mosaicSize,
+                boolean[] windowMask,
                 int horizontalScale) {
-            this(enabled, scrollX, scrollY, mosaicSize, windowMask, horizontalScale, null, false);
+            this(enabled, scrollX, scrollY, mosaicSize, windowMask, horizontalScale, 0, null, false);
         }
     }
 
@@ -259,7 +272,9 @@ public class Background {
                     sourceCoordinateX = offsetSourceX[x];
                     sourceScrollY = offsetScrollY[x];
                 }
-                int sourceX = Math.floorMod(sourceCoordinateX * state.horizontalScale(), sourceWidth);
+                int sourceX = Math.floorMod(
+                        sourceCoordinateX * state.horizontalScale() + state.horizontalPhase(),
+                        sourceWidth);
                 int sourceY = Math.floorMod(mosaicY + sourceScrollY, sourceHeight);
                 int pixel = backgroundSrc.resolvePixel(sourceX, sourceY, state);
                 if (Integer.compareUnsigned(pixel, 0xff) <= 0) {

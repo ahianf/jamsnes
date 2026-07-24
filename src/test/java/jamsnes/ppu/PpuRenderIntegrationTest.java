@@ -333,8 +333,8 @@ class PpuRenderIntegrationTest {
         snes.ppu.vram.write(0x0004, 0x02);
         snes.ppu.vram.write(0x0800, 0x08);
         snes.ppu.vram.write(0x0801, 0x20);
-        snes.ppu.vram.write(0x2000, 0x80);
-        snes.ppu.vram.write(0x2041, 0x80);
+        snes.ppu.vram.write(0x2000, 0x40);
+        snes.ppu.vram.write(0x2041, 0x40);
 
         snes.ppu.renderMainAndSubScreen();
 
@@ -355,8 +355,8 @@ class PpuRenderIntegrationTest {
         snes.ppu.vram.write(0x0042, 0x02);
         snes.ppu.vram.write(0x0840, 0x08);
         snes.ppu.vram.write(0x0841, 0x20);
-        snes.ppu.vram.write(0x2000, 0x80);
-        snes.ppu.vram.write(0x2041, 0x80);
+        snes.ppu.vram.write(0x2000, 0x40);
+        snes.ppu.vram.write(0x2041, 0x40);
 
         snes.ppu.renderMainAndSubScreen();
 
@@ -466,23 +466,31 @@ class PpuRenderIntegrationTest {
     }
 
     @Test
-    void modeFiveDownsamplesFullHighResolutionCharacterRow() {
-        SNES snes = init(new TestRenderer());
+    void modeFiveDeinterleavesEvenAndOddBackgroundDots() {
+        TestRenderer renderer = new TestRenderer();
+        SNES snes = init(renderer);
         writeColor(snes, 1, 0x001f);
         writeColor(snes, 2, 0x03e0);
+        snes.bus.write(0x2100, 0x0f);
         snes.bus.write(0x2105, 0x05);
         snes.bus.write(0x210b, 0x01);
         snes.bus.write(0x212c, 0x01);
+        snes.bus.write(0x212d, 0x01);
         snes.ppu.vram.write(0x0000, 0x00);
         snes.ppu.vram.write(0x0001, 0x00);
         snes.ppu.vram.write(0x2000, 0x80);
-        snes.ppu.vram.write(0x2021, 0x80);
+        snes.ppu.vram.write(0x2001, 0x40);
 
         snes.ppu.renderMainAndSubScreen();
 
         assertEquals(new Vector2<>(512, 256), snes.ppu.background(0).backgroundSize);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][0]);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), snes.ppu.mainScreen()[0][4]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.subScreen()[0][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), snes.ppu.mainScreen()[0][0]);
+
+        snes.ppu.renderFrame();
+
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.firstRowPixels[0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), renderer.firstRowPixels[1]);
     }
 
     @Test
@@ -999,6 +1007,84 @@ class PpuRenderIntegrationTest {
     }
 
     @Test
+    void pseudoHiresAlternatesSubscreenAndMainScreenDots() {
+        TestRenderer renderer = new TestRenderer();
+        SNES snes = init(renderer);
+        writeColor(snes, 1, 0x001f);
+        writeColor(snes, 33, 0x03e0);
+        snes.bus.write(0x2100, 0x0f);
+        snes.bus.write(0x2108, 0x04);
+        snes.bus.write(0x210b, 0x21);
+        snes.bus.write(0x212c, 0x01);
+        snes.bus.write(0x212d, 0x02);
+        snes.bus.write(0x2133, 0x08);
+        snes.ppu.vram.write(0x0000, 0x00);
+        snes.ppu.vram.write(0x0001, 0x00);
+        snes.ppu.vram.write(0x0800, 0x00);
+        snes.ppu.vram.write(0x0801, 0x00);
+        snes.ppu.vram.write(0x2000, 0xc0);
+        snes.ppu.vram.write(0x4000, 0xc0);
+
+        snes.ppu.update(1);
+
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), renderer.firstRowPixels[0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.firstRowPixels[1]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), renderer.firstRowPixels[2]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.firstRowPixels[3]);
+    }
+
+    @Test
+    void pseudoHiresUsesBackdropColorForEmptySubscreenDots() {
+        TestRenderer renderer = new TestRenderer();
+        SNES snes = init(renderer);
+        writeColor(snes, 0, 0x7c00);
+        writeColor(snes, 1, 0x001f);
+        snes.bus.write(0x2100, 0x0f);
+        snes.bus.write(0x210b, 0x01);
+        snes.bus.write(0x212c, 0x01);
+        snes.bus.write(0x2133, 0x08);
+        snes.ppu.vram.write(0x0000, 0x00);
+        snes.ppu.vram.write(0x0001, 0x00);
+        snes.ppu.vram.write(0x2000, 0x80);
+
+        snes.ppu.update(1);
+
+        assertEquals(PPUUtils.cgramColorToRGBA(0x7c00), renderer.firstRowPixels[0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.firstRowPixels[1]);
+    }
+
+    @Test
+    void pseudoHiresStateIsLatchedPerScanline() {
+        TestRenderer renderer = new TestRenderer();
+        SNES snes = init(renderer);
+        writeColor(snes, 1, 0x001f);
+        writeColor(snes, 33, 0x03e0);
+        snes.bus.write(0x2100, 0x0f);
+        snes.bus.write(0x2108, 0x04);
+        snes.bus.write(0x210b, 0x21);
+        snes.bus.write(0x212c, 0x01);
+        snes.bus.write(0x212d, 0x02);
+        snes.ppu.vram.write(0x0000, 0x00);
+        snes.ppu.vram.write(0x0001, 0x00);
+        snes.ppu.vram.write(0x0800, 0x00);
+        snes.ppu.vram.write(0x0801, 0x00);
+        snes.ppu.vram.write(0x2000, 0x80);
+        snes.ppu.vram.write(0x2002, 0x80);
+        snes.ppu.vram.write(0x4000, 0x80);
+        snes.ppu.vram.write(0x4002, 0x80);
+        snes.ppu.captureScanlineState(0);
+        snes.bus.write(0x2133, 0x08);
+        snes.ppu.captureScanlineState(1);
+
+        snes.ppu.renderFrame();
+
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.firstRowPixels[0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.firstRowPixels[1]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), renderer.secondRowPixels[0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.secondRowPixels[1]);
+    }
+
+    @Test
     void updateDrawsComposedScreenToRenderer() {
         TestRenderer renderer = new TestRenderer();
         SNES snes = init(renderer);
@@ -1385,6 +1471,8 @@ class PpuRenderIntegrationTest {
 
     private static final class TestRenderer implements IRenderer {
         private int firstPixel;
+        private final int[] firstRowPixels = new int[4];
+        private final int[] secondRowPixels = new int[4];
         private long putPixelCalls;
         private int drawScreenCalls;
 
@@ -1399,6 +1487,13 @@ class PpuRenderIntegrationTest {
 
         @Override
         public void putPixel(int y, int x, int rgba) {
+            if (x < firstRowPixels.length) {
+                if (y == 0) {
+                    firstRowPixels[x] = rgba;
+                } else if (y == 1) {
+                    secondRowPixels[x] = rgba;
+                }
+            }
             if (y == 0 && x == 0) {
                 firstPixel = rgba;
             }

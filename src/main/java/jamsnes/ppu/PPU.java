@@ -217,6 +217,7 @@ public class PPU extends AMemory {
     public void renderFrame() {
         renderMainAndSubScreen();
         ColorMathState currentColorMathState = currentColorMathState();
+        LayerState currentLayerState = currentLayerState();
 
         for (int y = 0; y < screen.length; y++) {
             int displayControl = scanlineDisplayControlCaptured[y]
@@ -225,8 +226,15 @@ public class PPU extends AMemory {
             ColorMathState colorMathState = scanlineDisplayControlCaptured[y]
                     ? scanlineColorMathStates[y]
                     : currentColorMathState;
+            LayerState layerState = scanlineDisplayControlCaptured[y]
+                    ? scanlineLayerStates[y]
+                    : currentLayerState;
+            boolean highResolution = highResolutionEnabled(layerState);
             for (int x = 0; x < screen[y].length; x++) {
-                screen[y][x] = composePixel(x, y, colorMathState);
+                int sourceX = x >>> 1;
+                screen[y][x] = highResolution && (x & 1) == 0
+                        ? composeSubscreenPixel(sourceX, y, colorMathState)
+                        : composePixel(sourceX, y, colorMathState);
                 renderer.putPixel(y, x, applyDisplayControl(screen[y][x], displayControl));
             }
         }
@@ -915,6 +923,7 @@ public class PPU extends AMemory {
                     mosaicSize,
                     windowMask,
                     mode == 5 || mode == 6 ? 2 : 1,
+                    mode == 5 || mode == 6 ? 1 - screenIndex : 0,
                     palette,
                     (colorMathState.selection() & 0x01) != 0);
         }
@@ -1509,6 +1518,18 @@ public class PPU extends AMemory {
             pixel = 0x000000ff;
         }
         return applyColorMath(pixel, source, x, y, clippedToBlack, colorMathState);
+    }
+
+    private int composeSubscreenPixel(int x, int y, ColorMathState colorMathState) {
+        if (subScreenSourceMap[y][x] == SOURCE_BACKDROP) {
+            return PPUUtils.cgramColorToRGBA(colorMathState.backdropColor());
+        }
+        return subScreen[y][x];
+    }
+
+    private boolean highResolutionEnabled(LayerState state) {
+        int mode = state.backgroundMode() & 0x07;
+        return (state.setini() & 0x08) != 0 || mode == 5 || mode == 6;
     }
 
     private int applyColorMath(
