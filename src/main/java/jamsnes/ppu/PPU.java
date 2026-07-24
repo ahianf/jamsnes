@@ -364,11 +364,13 @@ public class PPU extends AMemory {
                 registers[0x06],
                 registers[0x23],
                 registers[0x24],
+                registers[0x25],
                 registers[0x26],
                 registers[0x27],
                 registers[0x28],
                 registers[0x29],
                 registers[0x2a],
+                registers[0x2b],
                 registers[0x2c],
                 registers[0x2d],
                 registers[0x2e],
@@ -893,12 +895,8 @@ public class PPU extends AMemory {
 
     private void addObjectsToMainSubScreen() {
         evaluateObjectScanlines();
-        if (ppuRegisters.screenDesignationObj(0)) {
-            renderObjectsToBuffer(mainScreen, mainScreenLevelMap, mainScreenSourceMap, objectWindowMask(0));
-        }
-        if (ppuRegisters.screenDesignationObj(1)) {
-            renderObjectsToBuffer(subScreen, subScreenLevelMap, subScreenSourceMap, objectWindowMask(1));
-        }
+        renderObjectsToBuffer(mainScreen, mainScreenLevelMap, mainScreenSourceMap, 0);
+        renderObjectsToBuffer(subScreen, subScreenLevelMap, subScreenSourceMap, 1);
     }
 
     private void evaluateObjectScanlines() {
@@ -972,8 +970,22 @@ public class PPU extends AMemory {
         return sliverX < H_BLANK_START_DOT && sliverX + Tile.NB_PIXELS_WIDTH > 0;
     }
 
-    private void renderObjectsToBuffer(int[][] destination, int[][] levelMap, int[][] sourceMap, boolean[] windowMask) {
+    private void renderObjectsToBuffer(int[][] destination, int[][] levelMap, int[][] sourceMap, int screenIndex) {
+        LayerState currentState = currentLayerState();
+        boolean[] currentWindowMask = objectWindowMask(currentState, screenIndex);
         for (int screenY = 0; screenY < vBlankStartScanline(); screenY++) {
+            LayerState state = scanlineDisplayControlCaptured[screenY]
+                    ? scanlineLayerStates[screenY]
+                    : currentState;
+            int designation = screenIndex == 0
+                    ? state.mainScreenDesignation()
+                    : state.subScreenDesignation();
+            if ((designation & 0x10) == 0) {
+                continue;
+            }
+            boolean[] windowMask = state == currentState
+                    ? currentWindowMask
+                    : objectWindowMask(state, screenIndex);
             for (int objectSlot = evaluatedObjectCounts[screenY] - 1; objectSlot >= 0; objectSlot--) {
                 renderObjectScanlineToBuffer(
                         evaluatedObjectIndices[screenY][objectSlot],
@@ -1118,13 +1130,28 @@ public class PPU extends AMemory {
         return mask;
     }
 
-    private boolean[] objectWindowMask(int screenIndex) {
-        if (!ppuRegisters.windowMaskDesignationObj(screenIndex)) {
+    private boolean[] objectWindowMask(LayerState state, int screenIndex) {
+        int designation = screenIndex == 0
+                ? state.mainScreenWindowDesignation()
+                : state.subScreenWindowDesignation();
+        if ((designation & 0x10) == 0) {
             return null;
         }
+
+        int selection = state.objectWindowSelection();
         boolean[] mask = new boolean[Background.BUFFER_SIZE];
         for (int x = 0; x < mask.length; x++) {
-            mask[x] = isInsideObjectWindow(x);
+            mask[x] = isInsideWindowMask(
+                    (selection & 0x02) != 0,
+                    (selection & 0x01) != 0,
+                    (selection & 0x08) != 0,
+                    (selection & 0x04) != 0,
+                    state.objectWindowLogic() & 0x03,
+                    x,
+                    state.window1Left(),
+                    state.window1Right(),
+                    state.window2Left(),
+                    state.window2Right());
         }
         return mask;
     }
@@ -1146,16 +1173,6 @@ public class PPU extends AMemory {
                 : ppuRegisters.window2InversionForBg2Bg4Color(groupIndex);
         return isInsideWindowMask(window1Enabled, window1Inverted, window2Enabled, window2Inverted,
                 windowMaskLogic(backgroundIndex), x);
-    }
-
-    private boolean isInsideObjectWindow(int x) {
-        return isInsideWindowMask(
-                ppuRegisters.windowEnableWindow1ForBg1Bg3Obj(2),
-                ppuRegisters.window1InversionForBg1Bg3Obj(2),
-                ppuRegisters.windowEnableWindow2ForBg1Bg3Obj(2),
-                ppuRegisters.window2InversionForBg1Bg3Obj(2),
-                ppuRegisters.windowMaskLogicObj(),
-                x);
     }
 
     private int windowMaskLogic(int backgroundIndex) {
@@ -1309,11 +1326,13 @@ public class PPU extends AMemory {
             int mosaic,
             int windowSelection12,
             int windowSelection34,
+            int objectWindowSelection,
             int window1Left,
             int window1Right,
             int window2Left,
             int window2Right,
             int windowLogic,
+            int objectWindowLogic,
             int mainScreenDesignation,
             int subScreenDesignation,
             int mainScreenWindowDesignation,
