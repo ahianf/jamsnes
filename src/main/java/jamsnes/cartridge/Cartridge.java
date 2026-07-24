@@ -1,6 +1,5 @@
 package jamsnes.cartridge;
 
-import jamsnes.exceptions.InvalidAction;
 import jamsnes.exceptions.InvalidRom;
 import jamsnes.models.Component;
 import jamsnes.ram.Ram;
@@ -45,7 +44,8 @@ public class Cartridge extends Ram {
 
     @Override
     public void write(int address, int data) {
-        throw new InvalidAction("Witting to the ROM is not allowed.");
+        // Plain LoROM/HiROM cartridges contain mask ROM at these addresses.
+        // The CPU still drives the bus, but the cartridge does not store the value.
     }
 
     public Path getRomPath() {

@@ -2,7 +2,6 @@ package jamsnes.memory;
 
 import jamsnes.SNES;
 import jamsnes.cartridge.MappingMode;
-import jamsnes.exceptions.InvalidAction;
 import jamsnes.renderer.NoRenderer;
 import org.junit.jupiter.api.Test;
 
@@ -242,13 +241,26 @@ class MemoryBusTest {
         assertEquals(0x02, snes.bus.read(0x804300));
         assertEquals(0x02, snes.cpu.dmaChannels()[0].getControlRegister());
 
-        assertThrows(InvalidAction.class, () -> snes.bus.write(0x808005, 123));
+        int romValue = snes.bus.read(0x808005);
+        snes.bus.write(0x808005, 123);
+        assertEquals(romValue, snes.bus.read(0x808005));
 
         snes.bus.write(0x7e0002, 123);
         assertEquals(123, snes.wram.data()[2]);
 
         snes.bus.write(0x700009, 123);
         assertEquals(123, snes.sram.data()[9]);
+    }
+
+    @Test
+    void mappedRomWritesAreIgnoredWhileDrivingTheExternalBus() {
+        SNES snes = init();
+        snes.cartridge.data()[5] = 0x34;
+
+        snes.bus.write(0x808005, 0x5a);
+
+        assertEquals(0x34, snes.cartridge.data()[5]);
+        assertEquals(0x5a, snes.bus.getExternalOpenBus());
     }
 
     @Test

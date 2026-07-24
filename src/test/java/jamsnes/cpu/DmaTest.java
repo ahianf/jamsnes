@@ -1,6 +1,7 @@
 package jamsnes.cpu;
 
 import jamsnes.SNES;
+import jamsnes.cartridge.MappingMode;
 import jamsnes.ppu.PPU;
 import jamsnes.renderer.NoRenderer;
 import org.junit.jupiter.api.Test;
@@ -38,6 +39,32 @@ class DmaTest {
         snes.bus.write(0x420b, 0x01);
         assertTrue(dma.isEnabled());
         assertEquals(0x01, snes.cpu.internalRegisters()[0x0b]);
+    }
+
+    @Test
+    void reverseDmaToMappedRomIsIgnoredWithoutAbortingTheTransfer() {
+        SNES snes = init();
+        snes.cartridge.setSize(0x8000);
+        snes.cartridge.header.addMappingMode(MappingMode.LOROM);
+        snes.bus.mapComponents(snes);
+        DMA dma = snes.cpu.dmaChannels()[0];
+        snes.cartridge.data()[5] = 0x34;
+        snes.apu._internalWrite(0x00f4, 0x5a);
+        snes.bus.write(0x4300, 0x80 | DMA.ONE_TO_ONE);
+        snes.bus.write(0x4301, 0x40);
+        snes.bus.write(0x4302, 0x05);
+        snes.bus.write(0x4303, 0x80);
+        snes.bus.write(0x4304, 0x80);
+        snes.bus.write(0x4305, 0x01);
+        snes.bus.write(0x4306, 0x00);
+        snes.bus.write(0x420b, 0x01);
+
+        assertEquals(16, dma.run(16));
+
+        assertFalse(dma.isEnabled());
+        assertEquals(0x34, snes.cartridge.data()[5]);
+        assertEquals(0x808006, dma.getAAddress());
+        assertEquals(0, dma.getCount());
     }
 
     @Test
