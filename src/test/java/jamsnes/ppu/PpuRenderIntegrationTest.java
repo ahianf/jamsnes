@@ -787,6 +787,47 @@ class PpuRenderIntegrationTest {
     }
 
     @Test
+    void lowerObjectIndexWinsRegardlessOfObjectPriorityBits() {
+        SNES snes = init(new TestRenderer());
+        hideAllObjects(snes);
+        writeColor(snes, 129, 0x001f);
+        writeColor(snes, 145, 0x03e0);
+        writeObject(snes, 0, 0x00, 0x00, 0x00, 0x00);
+        writeObject(snes, 1, 0x00, 0x00, 0x01, 0x32);
+        snes.ppu.vram.write(0x0000, 0x80);
+        snes.ppu.vram.write(0x0020, 0x80);
+        snes.bus.write(0x212c, 0x10);
+
+        snes.ppu.renderMainAndSubScreen();
+
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][0]);
+    }
+
+    @Test
+    void higherOamObjectBehindBackgroundBlocksLowerOamObject() {
+        SNES snes = init(new TestRenderer());
+        hideAllObjects(snes);
+        writeColor(snes, 33, 0x7c00);
+        writeColor(snes, 129, 0x001f);
+        writeColor(snes, 145, 0x03e0);
+        snes.bus.write(0x2105, 0x00);
+        snes.bus.write(0x2108, 0x04);
+        snes.bus.write(0x210b, 0x10);
+        snes.bus.write(0x212c, 0x12);
+        snes.ppu.vram.write(0x0800, 0x00);
+        snes.ppu.vram.write(0x0801, 0x00);
+        snes.ppu.vram.write(0x2000, 0x80);
+        writeObject(snes, 0, 0x00, 0x00, 0x00, 0x00);
+        writeObject(snes, 1, 0x00, 0x00, 0x01, 0x32);
+        snes.ppu.vram.write(0x0000, 0x80);
+        snes.ppu.vram.write(0x0020, 0x80);
+
+        snes.ppu.renderMainAndSubScreen();
+
+        assertEquals(PPUUtils.cgramColorToRGBA(0x7c00), snes.ppu.mainScreen()[0][0]);
+    }
+
+    @Test
     void oamPriorityRotationSelectsConfiguredObjectAsHighestPriority() {
         SNES snes = init(new TestRenderer());
         setupOverlappingObjectPixels(snes);

@@ -1098,7 +1098,8 @@ public class PPU extends AMemory {
             boolean[] windowMask = state == currentState
                     ? currentWindowMask
                     : objectWindowMask(state, screenIndex);
-            for (int objectSlot = evaluatedObjectCounts[screenY] - 1; objectSlot >= 0; objectSlot--) {
+            boolean[] claimedPixels = new boolean[destination[screenY].length];
+            for (int objectSlot = 0; objectSlot < evaluatedObjectCounts[screenY]; objectSlot++) {
                 renderObjectScanlineToBuffer(
                         evaluatedObjectIndices[screenY][objectSlot],
                         evaluatedObjectSliverMasks[screenY][objectSlot],
@@ -1106,6 +1107,7 @@ public class PPU extends AMemory {
                         destination,
                         levelMap,
                         sourceMap,
+                        claimedPixels,
                         windowMask,
                         palette,
                         state.objectSelection(),
@@ -1121,6 +1123,7 @@ public class PPU extends AMemory {
             int[][] destination,
             int[][] levelMap,
             int[][] sourceMap,
+            boolean[] claimedPixels,
             boolean[] windowMask,
             int[] paletteColors,
             int objectSelection,
@@ -1153,12 +1156,19 @@ public class PPU extends AMemory {
             if (screenX < 0 || screenX >= destination[screenY].length) {
                 continue;
             }
+            if (claimedPixels[screenX]) {
+                continue;
+            }
             if (windowMask != null && screenX < windowMask.length && windowMask[screenX]) {
                 continue;
             }
             int sourceX = horizontalFlip ? dimensions.width() - 1 - pixelX : pixelX;
             int color = readObjectPixel(baseAddress, tile, palette, sourceX, sourceY, paletteColors);
-            if (Integer.compareUnsigned(color, 0xff) <= 0 || level < levelMap[screenY][screenX]) {
+            if (Integer.compareUnsigned(color, 0xff) <= 0) {
+                continue;
+            }
+            claimedPixels[screenX] = true;
+            if (level < levelMap[screenY][screenX]) {
                 continue;
             }
             destination[screenY][screenX] = color;
