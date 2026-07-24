@@ -94,12 +94,12 @@ class OpcodeDispatchTest {
     }
 
     @Test
-    void executesDirectDbnzOpcodeUsingOffsetThenDirectOperandOrder() {
+    void executesDirectDbnzOpcodeUsingDirectThenOffsetOperandOrder() {
         SNES snes = init();
         snes.apu.internalRegisters().pc = 0x200;
         snes.apu._internalWrite(0x200, 0x6e);
-        snes.apu._internalWrite(0x201, 0x03);
-        snes.apu._internalWrite(0x202, 0x42);
+        snes.apu._internalWrite(0x201, 0x42);
+        snes.apu._internalWrite(0x202, 0x03);
         snes.apu._internalWrite(0x42, 2);
 
         assertEquals(7, snes.apu.executeInstruction());

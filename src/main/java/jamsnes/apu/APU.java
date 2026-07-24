@@ -521,8 +521,11 @@ public class APU extends AMemory {
                 return ROR(_getAbsoluteAddr(), 5);
             case 0x6d:
                 return PUSH(internalRegisters.y);
-            case 0x6e:
-                return DBNZ(_getImmediateData(), true);
+            case 0x6e: {
+                int address = _getDirectAddr();
+                int offset = _getImmediateData();
+                return DBNZ(address, offset);
+            }
             case 0x6f:
                 return RET();
             case 0x70:
@@ -1784,21 +1787,28 @@ public class APU extends AMemory {
         return DBNZ(offset, false);
     }
 
-    public int DBNZ(int offset, boolean directAddress) {
-        int data;
-        if (directAddress) {
-            int address = _getDirectAddr();
-            data = u8(_internalRead(address) - 1);
-            _internalWrite(address, data);
-        } else {
-            data = u8(internalRegisters.y - 1);
-            internalRegisters.y = data;
-        }
+    public int DBNZ(int address, int offset) {
+        int data = u8(_internalRead(address) - 1);
+        _internalWrite(address, data);
         if (data == 0) {
-            return 4 + (directAddress ? 1 : 0);
+            return 5;
         }
         BRA(offset);
-        return 6 + (directAddress ? 1 : 0);
+        return 7;
+    }
+
+    public int DBNZ(int offset, boolean directAddress) {
+        if (directAddress) {
+            return DBNZ(_getDirectAddr(), offset);
+        }
+
+        int data = u8(internalRegisters.y - 1);
+        internalRegisters.y = data;
+        if (data == 0) {
+            return 4;
+        }
+        BRA(offset);
+        return 6;
     }
 
     public int JMP(int address) {
