@@ -298,6 +298,31 @@ class DmaTest {
     }
 
     @Test
+    void allHdmaChannelsTransferBeforeAnyChannelReloadsItsDescriptor() {
+        SNES snes = init();
+
+        snes.wram.data()[0x0200] = 0x01;
+        snes.wram.data()[0x0201] = 0x5a;
+        snes.wram.data()[0x0202] = 0x00;
+        snes.wram.data()[0x0300] = 0x01;
+        snes.wram.data()[0x0301] = 0x00;
+        snes.wram.data()[0x0302] = 0x21;
+        snes.wram.data()[0x0303] = 0x00;
+
+        setupHdmaChannel(snes, 0, DMA.ONE_TO_ONE, 0x25, 0x7e0200);
+        setupHdmaChannel(snes, 1, 0x40 | DMA.ONE_TO_ONE, 0x26, 0x7e0300);
+        snes.bus.write(0x4317, 0x00);
+        snes.bus.write(0x420c, 0x03);
+
+        assertEquals(32, snes.cpu.initializeHDMA());
+        assertEquals(32, snes.cpu.runHDMALine());
+
+        assertEquals(0x5a, snes.ppu.registers()[0x25]);
+        assertEquals(0x5a, snes.ppu.registers()[0x26],
+                "Later channels should see the transfer bus value before descriptor reloads");
+    }
+
+    @Test
     void hdmaModeFiveTransfersFourBytesToAlternatingRegisters() {
         SNES snes = init();
         DMA dma = snes.cpu.dmaChannels()[0];

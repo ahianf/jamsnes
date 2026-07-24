@@ -344,7 +344,10 @@ public class CPU extends AMemory {
     public int runHDMALine() {
         int cycles = 0;
         for (DMA dmaChannel : dmaChannels) {
-            cycles += dmaChannel.runHDMALine();
+            cycles += dmaChannel.transferHDMALine();
+        }
+        for (DMA dmaChannel : dmaChannels) {
+            cycles += dmaChannel.completeHDMALine();
         }
         advanceMathUnit(cycles);
         return cycles;

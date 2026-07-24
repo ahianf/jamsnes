@@ -131,13 +131,24 @@ public class DMA {
     }
 
     public int runHDMALine() {
+        return transferHDMALine() + completeHDMALine();
+    }
+
+    int transferHDMALine() {
+        if (!hdmaEnabled || !hdmaActive) {
+            return 0;
+        }
+        if (hdmaDoTransfer) {
+            return transferHdmaBytes();
+        }
+        return 0;
+    }
+
+    int completeHDMALine() {
         if (!hdmaEnabled || !hdmaActive) {
             return 0;
         }
         int cycles = 0;
-        if (hdmaDoTransfer) {
-            cycles += transferHdmaBytes();
-        }
         int repeatFlag = lineCounter > 0x80 ? 0x80 : 0;
         int linesRemaining = lineCounter & 0x7f;
         if (linesRemaining == 0) {
