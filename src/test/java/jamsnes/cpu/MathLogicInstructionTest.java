@@ -68,6 +68,40 @@ class MathLogicInstructionTest {
     }
 
     @Test
+    void adcIncludesCarryInputWithoutChangingOperandSignForOverflow() {
+        SNES snes = init();
+        snes.cpu.registers().p.m = true;
+        snes.cpu.registers().p.c = true;
+        snes.cpu.registers().a = 0xab00;
+        snes.wram.data()[0] = 0x7f;
+
+        snes.cpu.ADC(0);
+
+        assertEquals(0xab80, snes.cpu.registers().a);
+        assertTrue(snes.cpu.registers().p.v);
+
+        snes.cpu.registers().p.c = true;
+        snes.cpu.registers().a = 0xab80;
+        snes.wram.data()[0] = 0x7f;
+
+        snes.cpu.ADC(0);
+
+        assertEquals(0xab00, snes.cpu.registers().a);
+        assertFalse(snes.cpu.registers().p.v);
+
+        snes.cpu.registers().p.m = false;
+        snes.cpu.registers().p.c = true;
+        snes.cpu.registers().a = 0x0000;
+        snes.wram.data()[0] = 0xff;
+        snes.wram.data()[1] = 0x7f;
+
+        snes.cpu.ADC(0);
+
+        assertEquals(0x8000, snes.cpu.registers().a);
+        assertTrue(snes.cpu.registers().p.v);
+    }
+
+    @Test
     void adcUsesBcdArithmeticWhenDecimalFlagIsSet() {
         SNES snes = init();
         snes.cpu.registers().p.d = true;

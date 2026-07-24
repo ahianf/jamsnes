@@ -1468,18 +1468,14 @@ public class CPU extends AMemory {
         if (registers.p.d) {
             return decimalAdd(value);
         }
-        value += registers.p.c ? 1 : 0;
+        int carryIn = registers.p.c ? 1 : 0;
         int negativeMask = registers.p.m ? 0x80 : 0x8000;
         int maxValue = registers.p.m ? 0xff : 0xffff;
         int oldA = accumulatorValue();
-        int result = oldA + value;
+        int result = oldA + value + carryIn;
 
         registers.p.c = result > maxValue;
-        if ((oldA & negativeMask) == (value & negativeMask)) {
-            registers.p.v = (oldA & negativeMask) != (result & negativeMask);
-        } else {
-            registers.p.v = false;
-        }
+        registers.p.v = (~(oldA ^ value) & (oldA ^ result) & negativeMask) != 0;
         setAccumulatorValue(result);
         setZNAccumulator(registers.a);
         return registers.p.m ? 0 : 1;
