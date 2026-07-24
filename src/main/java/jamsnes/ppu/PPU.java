@@ -620,7 +620,7 @@ public class PPU extends AMemory {
         int address = ppuRegisters.cgByteAddress();
         int value = cgram.read(address);
         if (!ppuRegisters.isCgLowByte()) {
-            value &= 0x7f;
+            value = (value & 0x7f) | (ppu2OpenBus & 0x80);
             ppuRegisters.incrementCgAddress();
         }
         ppuRegisters.toggleCgLowByte();
