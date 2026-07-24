@@ -22,6 +22,7 @@ public class SNES {
     private static final int NMITIMEN_H_IRQ_ENABLE = 0x10;
     private static final int NMITIMEN_V_IRQ_ENABLE = 0x20;
     private static final int MASTER_CLOCKS_PER_PPU_DOT = 4;
+    static final int HDMA_INITIALIZE_DOT = 16 / MASTER_CLOCKS_PER_PPU_DOT;
     static final int DRAM_REFRESH_START_DOT = 536 / MASTER_CLOCKS_PER_PPU_DOT;
     static final int HDMA_START_DOT = 1104 / MASTER_CLOCKS_PER_PPU_DOT;
     private static final int AUTO_JOYPAD_READ_DOTS = 4224 / MASTER_CLOCKS_PER_PPU_DOT;
@@ -39,7 +40,7 @@ public class SNES {
     private int lastTimerIrqHCounter = -1;
     private int lastTimerIrqVCounter = -1;
     private int lastTimerEnableGeneration;
-    private boolean hdmaInitializedThisFrame;
+    private long hdmaInitializationFrame = -1;
     private boolean wasInVBlank;
     private boolean wasNmiEnabled;
     private int autoJoypadReadCyclesRemaining;
@@ -94,7 +95,7 @@ public class SNES {
         lastTimerIrqHCounter = -1;
         lastTimerIrqVCounter = -1;
         lastTimerEnableGeneration = cpu.timerEnableGeneration();
-        hdmaInitializedThisFrame = false;
+        hdmaInitializationFrame = -1;
         wasInVBlank = ppu.isInVBlank();
         wasNmiEnabled = nmiEnabled();
         autoJoypadReadCyclesRemaining = 0;
@@ -118,29 +119,19 @@ public class SNES {
         int timerStartHCounter = ppu.hCounter();
         int timerStartVCounter = ppu.vCounter();
         boolean timerStartSecondField = ppu.isSecondField();
-        long startFrameCounter = ppu.frameCounter();
-        int hdmaInitMasterClocks = initializeHdmaAtFrameStart();
-        int hdmaInitDots = advancePpuForMasterClocks(hdmaInitMasterClocks);
-        if (hdmaInitMasterClocks > 0) {
-            advanceApuForMasterClocks(hdmaInitMasterClocks);
-        }
-
         cpu.update(0x0c);
         int cpuMasterClocks = cpu.elapsedMasterClocks();
         int cpuDots = ppuDotsForMasterClocks(cpuMasterClocks);
         ScanlineEventTiming eventTiming = advanceCpuDotsThroughScanlineEvents(cpuDots);
-        if (ppu.frameCounter() != startFrameCounter) {
-            hdmaInitializedThisFrame = false;
-        }
         boolean enteredVBlank = requestFrameNmi();
         if (enteredVBlank) {
             ppu.renderFrame();
         }
         updateAutoJoypadBusy(enteredVBlank, timerStartHCounter, timerStartVCounter,
-                hdmaInitDots + cpuDots + eventTiming.stallDots());
+                cpuDots + eventTiming.stallDots());
         updateVideoStatusRegisters();
         updateTimerIrq(timerStartHCounter, timerStartVCounter, timerStartSecondField,
-                hdmaInitDots + cpuDots + eventTiming.stallDots());
+                cpuDots + eventTiming.stallDots());
         advanceApuForMasterClocks(cpuMasterClocks);
         if (eventTiming.stallMasterClocks() > 0) {
             advanceApuForMasterClocks(eventTiming.stallMasterClocks());
@@ -154,6 +145,13 @@ public class SNES {
         markEventsPassedOutsideScheduler();
 
         while (remainingCpuDots > 0 || hasDueScanlineEvent()) {
+            if (isHdmaInitializationPending() && ppu.hCounter() == HDMA_INITIALIZE_DOT) {
+                markHdmaInitializationHandled();
+                int hdmaInitializationMasterClocks = cpu.initializeHDMA();
+                stallMasterClocks += hdmaInitializationMasterClocks;
+                stallDots += advancePpuForMasterClocks(hdmaInitializationMasterClocks);
+                continue;
+            }
             if (isDramRefreshPending() && ppu.hCounter() == DRAM_REFRESH_START_DOT) {
                 markDramRefreshHandled();
                 int refreshMasterClocks = cpu.runDramRefresh();
@@ -173,6 +171,9 @@ public class SNES {
             int currentHCounter = ppu.hCounter();
             int dotsToLineEnd = ppu.scanlineDotsAt(ppu.vCounter(), ppu.isSecondField()) - currentHCounter;
             int dotsToEvent = dotsToLineEnd;
+            if (isHdmaInitializationPending() && currentHCounter < HDMA_INITIALIZE_DOT) {
+                dotsToEvent = Math.min(dotsToEvent, HDMA_INITIALIZE_DOT - currentHCounter);
+            }
             if (isDramRefreshPending() && currentHCounter < DRAM_REFRESH_START_DOT) {
                 dotsToEvent = Math.min(dotsToEvent, DRAM_REFRESH_START_DOT - currentHCounter);
             }
@@ -188,17 +189,29 @@ public class SNES {
     }
 
     private boolean hasDueScanlineEvent() {
-        return (isDramRefreshPending() && ppu.hCounter() == DRAM_REFRESH_START_DOT)
+        return (isHdmaInitializationPending() && ppu.hCounter() == HDMA_INITIALIZE_DOT)
+                || (isDramRefreshPending() && ppu.hCounter() == DRAM_REFRESH_START_DOT)
                 || (isHdmaPending() && ppu.hCounter() == HDMA_START_DOT);
     }
 
     private void markEventsPassedOutsideScheduler() {
+        if (isHdmaInitializationPending() && ppu.hCounter() > HDMA_INITIALIZE_DOT) {
+            markHdmaInitializationHandled();
+        }
         if (isDramRefreshPending() && ppu.hCounter() > DRAM_REFRESH_START_DOT) {
             markDramRefreshHandled();
         }
         if (isHdmaPending() && ppu.hCounter() > HDMA_START_DOT) {
             markHdmaHandled();
         }
+    }
+
+    private boolean isHdmaInitializationPending() {
+        return ppu.vCounter() == 0 && hdmaInitializationFrame != ppu.frameCounter();
+    }
+
+    private void markHdmaInitializationHandled() {
+        hdmaInitializationFrame = ppu.frameCounter();
     }
 
     private boolean isDramRefreshPending() {
@@ -246,14 +259,6 @@ public class SNES {
         if (apuCycles > 0) {
             apu.update(apuCycles);
         }
-    }
-
-    private int initializeHdmaAtFrameStart() {
-        if (hdmaInitializedThisFrame || ppu.vCounter() != 0) {
-            return 0;
-        }
-        hdmaInitializedThisFrame = true;
-        return cpu.initializeHDMA();
     }
 
     private boolean requestFrameNmi() {

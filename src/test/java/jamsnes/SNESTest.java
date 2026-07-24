@@ -836,7 +836,8 @@ class SNESTest {
         snes.bus.write(0x2121, 0x20);
         setupHdma(snes, DMA.TWO_TO_ONE, 0x22, 0x7e0200);
         snes.bus.write(0x420c, 0x01);
-        snes.ppu.advanceCountersOnly(252);
+        assertEquals(16, snes.cpu.initializeHDMA());
+        snes.ppu.advanceCountersOnly(256);
 
         snes.update();
 
@@ -854,6 +855,39 @@ class SNESTest {
         assertEquals(0, snes.cpu.internalRegisters()[0x0b]);
         assertEquals(0x01, snes.cpu.internalRegisters()[0x0c]);
         assertEquals(0x40, snes.bus.read(0x4212));
+    }
+
+    @Test
+    void updateDefersLateHdmaEnableUntilInitializationAfterFrameRollover() {
+        SNES snes = new SNES(new TestRenderer());
+        snes.bus.mapComponents(snes);
+        snes.cpu.STP(0);
+        snes.apu.isDisabled = true;
+        snes.wram.data()[0x0200] = 0x01;
+        snes.wram.data()[0x0201] = 0x12;
+        snes.wram.data()[0x0202] = 0x00;
+        setupHdma(snes, DMA.ONE_TO_ONE, 0x26, 0x7e0200);
+
+        snes.ppu.advanceCountersOnly(10);
+        snes.bus.write(0x420c, 0x01);
+        snes.update();
+
+        DMA dma = snes.cpu.dmaChannels()[0];
+        assertFalse(dma.isHdmaActive());
+        assertEquals(0, dma.getLineCounter());
+
+        int frameDots = PPU.H_COUNTER_DOTS * PPU.V_COUNTER_SCANLINES;
+        int currentFrameDot = snes.ppu.vCounter() * PPU.H_COUNTER_DOTS + snes.ppu.hCounter();
+        snes.ppu.advanceCountersOnly(frameDots - 10 - currentFrameDot);
+
+        snes.update();
+
+        assertEquals(1, snes.ppu.frameCounter());
+        assertEquals(0, snes.ppu.vCounter());
+        assertEquals(12, snes.ppu.hCounter());
+        assertTrue(dma.isHdmaActive());
+        assertEquals(0x01, dma.getLineCounter());
+        assertEquals(0x0201, dma.getTableAddress());
     }
 
     @Test
