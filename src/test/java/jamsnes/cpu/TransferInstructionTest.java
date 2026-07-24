@@ -48,10 +48,11 @@ class TransferInstructionTest {
 
         snes.cpu.registers().x = 0xabcd;
         snes.cpu.TXS(0);
-        assertEquals(0x00cd, snes.cpu.registers().s);
+        assertEquals(0x01cd, snes.cpu.registers().s);
         assertFalse(snes.cpu.registers().p.n);
         assertTrue(snes.cpu.registers().p.z);
 
+        snes.cpu.setEmulationMode(false);
         snes.cpu.registers().p.x_b = false;
         snes.cpu.registers().p.n = true;
         snes.cpu.registers().p.z = false;
@@ -71,11 +72,15 @@ class TransferInstructionTest {
         snes.cpu.registers().p.z = true;
         snes.cpu.registers().x = 0x0080;
         snes.wram.data()[0x0200] = 0x9a;
+        snes.wram.data()[0x0201] = 0x3b;
 
         assertEquals(2, snes.cpu.executeInstruction());
-        assertEquals(0x0080, snes.cpu.registers().s);
+        assertEquals(0x0180, snes.cpu.registers().s);
         assertFalse(snes.cpu.registers().p.n);
         assertTrue(snes.cpu.registers().p.z);
+
+        assertEquals(2, snes.cpu.executeInstruction());
+        assertEquals(0x0180, snes.cpu.registers().a);
     }
 
     @Test

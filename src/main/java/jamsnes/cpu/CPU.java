@@ -1131,6 +1131,9 @@ public class CPU extends AMemory {
         } else {
             registers.s = u16(registers.x);
         }
+        if (emulationMode) {
+            registers.s = 0x0100 | registers.sl();
+        }
         return 0;
     }
 
