@@ -499,6 +499,25 @@ class PpuRenderIntegrationTest {
     }
 
     @Test
+    void modeSevenBackgroundOneHonorsMainScreenWindowMask() {
+        SNES snes = init(new TestRenderer());
+        writeColor(snes, 5, 0x001f);
+        setupMode7Identity(snes);
+        snes.bus.write(0x2123, 0x02);
+        snes.bus.write(0x2126, 0x00);
+        snes.bus.write(0x2127, 0x00);
+        snes.bus.write(0x212e, 0x01);
+        writeMode7Map(snes, 0, 0, 1);
+        writeMode7Pixel(snes, 1, 0, 0, 5);
+        writeMode7Pixel(snes, 1, 1, 0, 5);
+
+        snes.ppu.renderMainAndSubScreen();
+
+        assertEquals(0, snes.ppu.mainScreen()[0][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][1]);
+    }
+
+    @Test
     void modeSevenAppliesBackgroundOneMosaicBeforeTransformingCoordinates() {
         SNES snes = init(new TestRenderer());
         writeColor(snes, 5, 0x001f);
@@ -617,6 +636,27 @@ class PpuRenderIntegrationTest {
         snes.ppu.renderMainAndSubScreen();
 
         assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][0]);
+    }
+
+    @Test
+    void modeSevenExtBgHonorsBackgroundTwoMainScreenWindowMask() {
+        SNES snes = init(new TestRenderer());
+        writeColor(snes, 5, 0x001f);
+        setupMode7Identity(snes);
+        snes.bus.write(0x2133, 0x40);
+        snes.bus.write(0x2123, 0x20);
+        snes.bus.write(0x2126, 0x00);
+        snes.bus.write(0x2127, 0x00);
+        snes.bus.write(0x212c, 0x02);
+        snes.bus.write(0x212e, 0x02);
+        writeMode7Map(snes, 0, 0, 1);
+        writeMode7Pixel(snes, 1, 0, 0, 5);
+        writeMode7Pixel(snes, 1, 1, 0, 5);
+
+        snes.ppu.renderMainAndSubScreen();
+
+        assertEquals(0, snes.ppu.mainScreen()[0][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][1]);
     }
 
     @Test

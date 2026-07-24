@@ -732,17 +732,25 @@ public class PPU extends AMemory {
 
     private void addMode7ToMainSubScreen() {
         if ((registers[0x2c] & 0x01) != 0) {
-            renderMode7ToBuffer(mainScreen, mainScreenLevelMap, mainScreenSourceMap, 1, 20, 20, false);
+            renderMode7ToBuffer(
+                    mainScreen, mainScreenLevelMap, mainScreenSourceMap, 1, 20, 20, false,
+                    layerWindowMask(0, 0));
         }
         if ((registers[0x2d] & 0x01) != 0) {
-            renderMode7ToBuffer(subScreen, subScreenLevelMap, subScreenSourceMap, 1, 20, 20, false);
+            renderMode7ToBuffer(
+                    subScreen, subScreenLevelMap, subScreenSourceMap, 1, 20, 20, false,
+                    layerWindowMask(0, 1));
         }
         if (ppuRegisters.setiniMode7ExtBg()) {
             if ((registers[0x2c] & 0x02) != 0) {
-                renderMode7ToBuffer(mainScreen, mainScreenLevelMap, mainScreenSourceMap, 2, 10, 30, true);
+                renderMode7ToBuffer(
+                        mainScreen, mainScreenLevelMap, mainScreenSourceMap, 2, 10, 30, true,
+                        layerWindowMask(1, 0));
             }
             if ((registers[0x2d] & 0x02) != 0) {
-                renderMode7ToBuffer(subScreen, subScreenLevelMap, subScreenSourceMap, 2, 10, 30, true);
+                renderMode7ToBuffer(
+                        subScreen, subScreenLevelMap, subScreenSourceMap, 2, 10, 30, true,
+                        layerWindowMask(1, 1));
             }
         }
     }
@@ -1031,7 +1039,8 @@ public class PPU extends AMemory {
             int source,
             int levelLow,
             int levelHigh,
-            boolean extBg) {
+            boolean extBg,
+            boolean[] windowMask) {
         int a = signed16(ppuRegisters.m7Matrix(0));
         int b = signed16(ppuRegisters.m7Matrix(1));
         int c = signed16(ppuRegisters.m7Matrix(2));
@@ -1060,6 +1069,9 @@ public class PPU extends AMemory {
                     + (d * screenY & ~63)
                     + (centerY << 8);
             for (int x = 0; x < destination[y].length; x++) {
+                if (windowMask != null && windowMask[x]) {
+                    continue;
+                }
                 int screenX = horizontalMosaic ? (x / mosaicSize) * mosaicSize : x;
                 if (ppuRegisters.m7HorizontalMirroring()) {
                     screenX = 255 - screenX;
