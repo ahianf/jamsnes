@@ -69,6 +69,27 @@ class SyntheticRomBootTest {
     }
 
     @Test
+    void loadedLoRomWakesFromWaiForTimerIrqAndPresentsItsDisplayUpdate() throws IOException {
+        FrameBufferRenderer renderer =
+                new FrameBufferRenderer(Background.BUFFER_SIZE, Background.BUFFER_SIZE, 60);
+        SNES snes = new SNES(writeTimerIrqRom().toString(), renderer);
+
+        for (int updates = 0; renderer.drawScreenCalls() == 0 && updates < 10_000; updates++) {
+            snes.update();
+        }
+
+        assertEquals(1, renderer.drawScreenCalls(), "Synthetic ROM should present after its first timer IRQ");
+        assertEquals(1, snes.wram.data()[0], "The timer IRQ handler should run exactly once");
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.pixel(0, 0));
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.pixel(1, 0));
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.pixel(2, 0));
+        assertEquals(PPUUtils.cgramColorToRGBA(0x0010), renderer.pixel(4, 0));
+        assertEquals(0, snes.cpu.internalRegisters()[0x11] & 0x80,
+                "The handler should acknowledge TIMEUP");
+        assertEquals(0x8030, snes.cpu.registers().pc, "RTI should return execution to the idle loop");
+    }
+
+    @Test
     void loadedLoRomRunsDmaFromCartridgeIntoCgramBeforePresenting() throws IOException {
         FrameBufferRenderer renderer =
                 new FrameBufferRenderer(Background.BUFFER_SIZE, Background.BUFFER_SIZE, 60);
@@ -259,6 +280,58 @@ class SyntheticRomBootTest {
         rom[0x7ffc] = 0x00;
         rom[0x7ffd] = (byte) 0x80;
         Path path = tempDir.resolve("synthetic-nmi.sfc");
+        Files.write(path, rom);
+        return path;
+    }
+
+    private Path writeTimerIrqRom() throws IOException {
+        byte[] rom = new byte[0x8000];
+        byte[] program = {
+                (byte) 0x78,                         // SEI
+                (byte) 0xa9, 0x00,                   // LDA #$00
+                (byte) 0x8d, 0x21, 0x21,             // STA $2121 (CGADD)
+                (byte) 0xa9, 0x1f,                   // LDA #$1f
+                (byte) 0x8d, 0x22, 0x21,             // STA $2122 (CGDATA low)
+                (byte) 0xa9, 0x00,                   // LDA #$00
+                (byte) 0x8d, 0x22, 0x21,             // STA $2122 (CGDATA high)
+                (byte) 0xa9, 0x0f,                   // LDA #$0f
+                (byte) 0x8d, 0x00, 0x21,             // STA $2100 (INIDISP)
+                (byte) 0xa9, 0x0e,                   // LDA #$0e
+                (byte) 0x8d, 0x07, 0x42,             // STA $4207 (HTIME low)
+                (byte) 0xa9, 0x01,                   // LDA #$01
+                (byte) 0x8d, 0x08, 0x42,             // STA $4208 (HTIME high)
+                (byte) 0xa9, 0x01,                   // LDA #$01
+                (byte) 0x8d, 0x09, 0x42,             // STA $4209 (VTIME low)
+                (byte) 0xa9, 0x00,                   // LDA #$00
+                (byte) 0x8d, 0x0a, 0x42,             // STA $420a (VTIME high)
+                (byte) 0xa9, 0x30,                   // LDA #$30
+                (byte) 0x8d, 0x00, 0x42,             // STA $4200 (H/V timer IRQ enable)
+                (byte) 0x58,                         // CLI
+                (byte) 0xcb,                         // WAI
+                (byte) 0x80, (byte) 0xfe             // BRA *
+        };
+        byte[] irqHandler = {
+                (byte) 0xa9, 0x08,                   // LDA #$08
+                (byte) 0x8d, 0x00, 0x21,             // STA $2100 (half brightness)
+                (byte) 0xad, 0x11, 0x42,             // LDA $4211 (TIMEUP acknowledge)
+                (byte) 0xee, 0x00, 0x00,             // INC $0000
+                (byte) 0xa9, 0x00,                   // LDA #$00
+                (byte) 0x8d, 0x00, 0x42,             // STA $4200 (disable timer IRQ)
+                (byte) 0x40                          // RTI
+        };
+        System.arraycopy(program, 0, rom, 0, program.length);
+        System.arraycopy(irqHandler, 0, rom, 0x100, irqHandler.length);
+        byte[] title = "JAMSNES IRQ PROBE".getBytes(StandardCharsets.ISO_8859_1);
+        System.arraycopy(title, 0, rom, 0x7fc0, title.length);
+        rom[0x7fd5] = 0x20;
+        rom[0x7fd6] = 0x00;
+        rom[0x7fd7] = 0x05;
+        rom[0x7fd8] = 0x00;
+        rom[0x7ffc] = 0x00;
+        rom[0x7ffd] = (byte) 0x80;
+        rom[0x7ffe] = 0x00;
+        rom[0x7fff] = (byte) 0x81;
+        Path path = tempDir.resolve("synthetic-timer-irq.sfc");
         Files.write(path, rom);
         return path;
     }
