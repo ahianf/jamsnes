@@ -541,6 +541,32 @@ class CpuOpcodeDispatchTest {
     }
 
     @Test
+    void oraAbsoluteUsesFourBaseCycles() {
+        SNES snes = init();
+        snes.cpu.registers().setPc(0x0200);
+        snes.cpu.registers().a = 0x0f;
+        snes.wram.data()[0x0400] = 0xf0;
+        writeProgram(snes, 0x0200, 0x0d, 0x00, 0x04);
+
+        assertEquals(4, snes.cpu.executeInstruction());
+        assertEquals(0xff, snes.cpu.registers().a);
+        assertEquals(0x0203, snes.cpu.registers().pc);
+    }
+
+    @Test
+    void ldyAbsoluteIndexedXAddsPageCrossCycle() {
+        SNES snes = init();
+        snes.cpu.registers().setPc(0x0200);
+        snes.cpu.registers().x = 1;
+        snes.wram.data()[0x0500] = 0x42;
+        writeProgram(snes, 0x0200, 0xbc, 0xff, 0x04);
+
+        assertEquals(5, snes.cpu.executeInstruction());
+        assertEquals(0x42, snes.cpu.registers().y);
+        assertEquals(0x0203, snes.cpu.registers().pc);
+    }
+
+    @Test
     void executesDirectAndAbsoluteMathOpcodes() {
         SNES snes = init();
         snes.cpu.registers().setPc(0x0200);

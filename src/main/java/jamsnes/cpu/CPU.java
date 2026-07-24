@@ -334,7 +334,7 @@ public class CPU extends AMemory {
             case 0x0a -> 2 + ASL(0, AddressingMode.IMPLIED);
             case 0x0b -> 4 + PHD(0);
             case 0x0c -> 6 + TSB(_getAbsoluteAddr());
-            case 0x0d -> 3 + ORA(_getAbsoluteAddr());
+            case 0x0d -> 4 + ORA(_getAbsoluteAddr());
             case 0x0e -> 6 + ASL(_getAbsoluteAddr(), AddressingMode.ABSOLUTE);
             case 0x0f -> 5 + ORA(_getAbsoluteLongAddr());
             case 0x10 -> 2 + BPL(_getImmediateAddr8Bits());
@@ -509,7 +509,7 @@ public class CPU extends AMemory {
             case 0xb9 -> 4 + LDA(_getAbsoluteIndexedByYAddr()) + indexBoundaryExtraCycle();
             case 0xba -> 2 + TSX(0);
             case 0xbb -> 2 + TYX(0);
-            case 0xbc -> 4 + LDY(_getAbsoluteIndexedByXAddr());
+            case 0xbc -> 4 + LDY(_getAbsoluteIndexedByXAddr()) + indexBoundaryExtraCycle();
             case 0xbd -> 4 + LDA(_getAbsoluteIndexedByXAddr()) + indexBoundaryExtraCycle();
             case 0xbe -> 4 + LDX(_getAbsoluteIndexedByYAddr()) + indexBoundaryExtraCycle();
             case 0xbf -> 5 + LDA(_getAbsoluteIndexedByXLongAddr());
