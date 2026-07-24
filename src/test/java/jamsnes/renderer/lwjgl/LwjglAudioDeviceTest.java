@@ -5,6 +5,8 @@ import org.junit.jupiter.api.Test;
 import java.nio.ByteBuffer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class LwjglAudioDeviceTest {
     @Test
@@ -24,5 +26,12 @@ class LwjglAudioDeviceTest {
     @Test
     void usesSnesAudioSampleRateFromOriginalRenderer() {
         assertEquals(32_040, LwjglAudioDevice.SAMPLE_RATE);
+    }
+
+    @Test
+    void queueLimitAllowsLowLatencyHeadroomBeforeBackpressure() {
+        assertFalse(LwjglAudioDevice.queueIsFull(LwjglAudioDevice.MAX_QUEUED_BUFFERS - 1));
+        assertTrue(LwjglAudioDevice.queueIsFull(LwjglAudioDevice.MAX_QUEUED_BUFFERS));
+        assertTrue(LwjglAudioDevice.queueIsFull(LwjglAudioDevice.MAX_QUEUED_BUFFERS + 1));
     }
 }

@@ -173,6 +173,9 @@ public class LwjglRenderer extends FrameBufferRenderer {
     @Override
     public void playAudio(short[] samples) {
         super.playAudio(samples);
+        if (window != NULL) {
+            glfwPollEvents();
+        }
         audioDevice.queueSamples(samples);
     }
 
