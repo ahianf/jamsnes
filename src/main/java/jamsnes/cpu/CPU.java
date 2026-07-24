@@ -345,8 +345,8 @@ public class CPU extends AMemory {
 
     public int initializeHDMA() {
         int cycles = hasEnabledHdmaChannel() ? DMA_SHARED_OVERHEAD_CYCLES : 0;
-        for (DMA dmaChannel : dmaChannels) {
-            cycles += dmaChannel.initializeHDMA();
+        for (int i = 0; i < dmaChannels.length; i++) {
+            cycles += dmaChannels[i].initializeHDMA(!hasEnabledHdmaChannelAfter(i));
         }
         advanceMathUnit(cycles);
         return cycles;
@@ -357,8 +357,8 @@ public class CPU extends AMemory {
         for (DMA dmaChannel : dmaChannels) {
             cycles += dmaChannel.transferHDMALine();
         }
-        for (DMA dmaChannel : dmaChannels) {
-            cycles += dmaChannel.completeHDMALine();
+        for (int i = 0; i < dmaChannels.length; i++) {
+            cycles += dmaChannels[i].completeHDMALine(!hasActiveHdmaChannelAfter(i));
         }
         advanceMathUnit(cycles);
         return cycles;
@@ -376,6 +376,24 @@ public class CPU extends AMemory {
     private boolean hasActiveHdmaChannel() {
         for (DMA dmaChannel : dmaChannels) {
             if (dmaChannel.isHdmaActive()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean hasEnabledHdmaChannelAfter(int channelIndex) {
+        for (int i = channelIndex + 1; i < dmaChannels.length; i++) {
+            if (dmaChannels[i].isHdmaEnabled()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean hasActiveHdmaChannelAfter(int channelIndex) {
+        for (int i = channelIndex + 1; i < dmaChannels.length; i++) {
+            if (dmaChannels[i].isHdmaActive()) {
                 return true;
             }
         }

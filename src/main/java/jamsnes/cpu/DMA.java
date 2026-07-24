@@ -119,17 +119,21 @@ public class DMA {
     }
 
     public int initializeHDMA() {
+        return initializeHDMA(true);
+    }
+
+    int initializeHDMA(boolean lastActiveChannel) {
         if (!hdmaEnabled) {
             hdmaActive = false;
             return 0;
         }
         hdmaActive = true;
         tableAddress = getAddressPage();
-        return loadNextHdmaLine();
+        return loadNextHdmaLine(lastActiveChannel);
     }
 
     public int runHDMALine() {
-        return transferHDMALine() + completeHDMALine();
+        return transferHDMALine() + completeHDMALine(true);
     }
 
     int transferHDMALine() {
@@ -143,6 +147,10 @@ public class DMA {
     }
 
     int completeHDMALine() {
+        return completeHDMALine(true);
+    }
+
+    int completeHDMALine(boolean lastActiveChannel) {
         if (!hdmaEnabled || !hdmaActive) {
             return 0;
         }
@@ -154,7 +162,7 @@ public class DMA {
         }
         linesRemaining--;
         if (linesRemaining == 0) {
-            cycles += loadNextHdmaLine();
+            cycles += loadNextHdmaLine(lastActiveChannel);
         } else {
             lineCounter = repeatFlag | (linesRemaining & 0x7f);
             hdmaDoTransfer = repeatFlag != 0;
@@ -162,26 +170,34 @@ public class DMA {
         return cycles;
     }
 
-    private int loadNextHdmaLine() {
+    private int loadNextHdmaLine(boolean lastActiveChannel) {
         int tableBank = aAddress & 0xff0000;
         lineCounter = bus.read(tableBank | tableAddress);
         tableAddress = u16(tableAddress + 1);
+        int cycles = 8;
+
         if (lineCounter == 0) {
             hdmaActive = false;
             hdmaDoTransfer = false;
-            return 8;
+            if (!isHdmaIndirect()) {
+                return cycles;
+            }
         }
 
-        int cycles = 8;
-        hdmaDoTransfer = true;
         if (isHdmaIndirect()) {
             int low = bus.read(tableBank | tableAddress);
             tableAddress = u16(tableAddress + 1);
+            cycles += 8;
+            if (!hdmaActive && lastActiveChannel) {
+                count = u16(low << 8);
+                return cycles;
+            }
             int high = bus.read(tableBank | tableAddress);
             tableAddress = u16(tableAddress + 1);
             count = u16(low | (high << 8));
-            cycles += 16;
+            cycles += 8;
         }
+        hdmaDoTransfer = hdmaActive;
         return cycles;
     }
 
