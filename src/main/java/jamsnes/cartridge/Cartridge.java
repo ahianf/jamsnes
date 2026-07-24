@@ -108,7 +108,8 @@ public class Cartridge extends Ram {
         result.romType = data()[base + 0xd6];
         result.romSize = 0x400 << data()[base + 0xd7];
         int sramSizeByte = data()[base + 0xd8];
-        result.sramSize = sramSizeByte == 0 ? 0 : 0x400 << sramSizeByte;
+        int mappedSramLimit = result.hasMappingMode(MappingMode.HIROM) ? 0x40000 : 0x80000;
+        result.sramSize = decodeSramSize(sramSizeByte, mappedSramLimit);
         result.setCreatorBytes(data()[base + 0xd9], data()[base + 0xda]);
         result.version = data()[base + 0xdb];
         result.setChecksumComplementBytes(data()[base + 0xdc], data()[base + 0xdd]);
@@ -128,6 +129,17 @@ public class Cartridge extends Ram {
         result.emulationInterrupts.setBrkBytes(data()[base + 0xfe], data()[base + 0xff]);
         result.emulationInterrupts.setIrqBytes(data()[base + 0xfe], data()[base + 0xff]);
         return result;
+    }
+
+    private static int decodeSramSize(int exponent, int mappedLimit) {
+        if (exponent == 0) {
+            return 0;
+        }
+        int maximumExponent = Integer.numberOfTrailingZeros(mappedLimit) - 10;
+        if (exponent >= maximumExponent) {
+            return mappedLimit;
+        }
+        return 0x400 << exponent;
     }
 
     private int getHeaderAddress() {

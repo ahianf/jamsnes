@@ -95,6 +95,31 @@ class CartridgeTest {
         assertEquals(0x33, cartridge.read(0x37ffff));
     }
 
+    @Test
+    void oversizedSramDeclarationsAreCappedToMappedAddressSpace() throws IOException {
+        byte[] loRom = new byte[0x8000];
+        loRom[0] = 0x78;
+        writeLoRomHeader(loRom, 0x7f00, "JAMSNES LARGE SRAM");
+        loRom[0x7fd8] = (byte) 0xff;
+        Path loRomPath = tempDir.resolve("oversized-lorom-sram.sfc");
+        Files.write(loRomPath, loRom);
+
+        Cartridge loRomCartridge = new Cartridge(loRomPath.toString());
+
+        assertEquals(0x80000, loRomCartridge.header.sramSize);
+
+        byte[] hiRom = new byte[0x10000];
+        hiRom[0x8000] = 0x78;
+        writeHeader(hiRom, 0xff00, "JAMSNES LARGE SRAM", 0x21);
+        hiRom[0xffd8] = (byte) 0xff;
+        Path hiRomPath = tempDir.resolve("oversized-hirom-sram.sfc");
+        Files.write(hiRomPath, hiRom);
+
+        Cartridge hiRomCartridge = new Cartridge(hiRomPath.toString());
+
+        assertEquals(0x40000, hiRomCartridge.header.sramSize);
+    }
+
     private static void writeLoRomHeader(byte[] rom, int base, String title) {
         writeHeader(rom, base, title, 0x20);
     }
