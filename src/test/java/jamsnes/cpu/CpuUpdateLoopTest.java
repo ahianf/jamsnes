@@ -17,8 +17,54 @@ class CpuUpdateLoopTest {
         writeProgram(snes, 0x0200, 0xea, 0xea, 0xea);
 
         assertEquals(4, snes.cpu.update(4));
-        assertEquals(24, snes.cpu.elapsedMasterClocks());
+        assertEquals(28, snes.cpu.elapsedMasterClocks());
         assertEquals(0x0202, snes.cpu.registers().pc);
+    }
+
+    @Test
+    void updateAppliesMemselOnlyToEligibleFastRomBanks() {
+        SNES snes = init();
+        snes.cartridge.data()[0] = 0xea;
+        snes.cartridge.data()[1] = 0xea;
+        snes.cpu.registers().setPac(0x808000);
+
+        assertEquals(2, snes.cpu.update(2));
+        assertEquals(14, snes.cpu.elapsedMasterClocks());
+
+        snes.bus.write(0x420d, 0x01);
+        assertEquals(2, snes.cpu.update(2));
+        assertEquals(12, snes.cpu.elapsedMasterClocks());
+
+        snes.cpu.registers().setPac(0x008000);
+        assertEquals(2, snes.cpu.update(2));
+        assertEquals(14, snes.cpu.elapsedMasterClocks());
+    }
+
+    @Test
+    void updateAccountsForSixEightAndTwelveClockBusRegions() {
+        SNES snes = init();
+        snes.bus.write(0x420d, 0x01);
+        snes.cartridge.data()[0] = 0xad;
+        snes.cartridge.data()[1] = 0x16;
+        snes.cartridge.data()[2] = 0x40;
+        snes.cartridge.data()[3] = 0xad;
+        snes.cartridge.data()[4] = 0x00;
+        snes.cartridge.data()[5] = 0x02;
+        snes.cartridge.data()[6] = 0x8d;
+        snes.cartridge.data()[7] = 0x16;
+        snes.cartridge.data()[8] = 0x40;
+        snes.wram.data()[0x0200] = 0x5a;
+        snes.cpu.registers().setPac(0x808000);
+
+        assertEquals(4, snes.cpu.update(4));
+        assertEquals(30, snes.cpu.elapsedMasterClocks());
+
+        assertEquals(4, snes.cpu.update(4));
+        assertEquals(26, snes.cpu.elapsedMasterClocks());
+        assertEquals(0x5a, snes.cpu.registers().al());
+
+        assertEquals(4, snes.cpu.update(4));
+        assertEquals(30, snes.cpu.elapsedMasterClocks());
     }
 
     @Test
@@ -39,7 +85,7 @@ class CpuUpdateLoopTest {
         snes.wram.data()[0x0200] = 0xcb;
 
         assertEquals(10, snes.cpu.update(10));
-        assertEquals(60, snes.cpu.elapsedMasterClocks());
+        assertEquals(62, snes.cpu.elapsedMasterClocks());
         assertTrue(snes.cpu.isWaitingForInterrupt());
         assertEquals(0x0201, snes.cpu.registers().pc);
 

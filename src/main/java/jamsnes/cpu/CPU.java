@@ -4,8 +4,11 @@ import jamsnes.cartridge.Header;
 import jamsnes.exceptions.InvalidAddress;
 import jamsnes.exceptions.InvalidOpcode;
 import jamsnes.memory.AMemory;
+import jamsnes.memory.IMemory;
 import jamsnes.memory.IMemoryBus;
 import jamsnes.models.Component;
+
+import java.util.OptionalInt;
 
 import static jamsnes.models.Unsigned.u16;
 import static jamsnes.models.Unsigned.u24;
@@ -37,6 +40,8 @@ public class CPU extends AMemory {
     private int pendingQuotient;
     private int pendingProductOrRemainder;
     private int elapsedMasterClocks;
+    private int busMasterClockSurcharge;
+    private IMemoryBus rawBus;
     private Runnable ioPortLatchListener = () -> {
     };
     public boolean isNMIRequested;
@@ -45,7 +50,8 @@ public class CPU extends AMemory {
     public boolean isDisabled;
 
     public CPU(IMemoryBus bus, Header cartridgeHeader) {
-        this.bus = bus;
+        rawBus = bus;
+        this.bus = new CpuTimingBus(bus);
         this.cartridgeHeader = cartridgeHeader;
         for (int i = 0; i < dmaChannels.length; i++) {
             dmaChannels[i] = new DMA(bus);
@@ -59,14 +65,15 @@ public class CPU extends AMemory {
     }
 
     public void setBus(IMemoryBus bus) {
-        this.bus = bus;
+        rawBus = bus;
+        this.bus = new CpuTimingBus(bus);
         for (DMA dmaChannel : dmaChannels) {
             dmaChannel.setBus(bus);
         }
     }
 
     public IMemoryBus getBus() {
-        return bus;
+        return rawBus;
     }
 
     public void setIoPortLatchListener(Runnable ioPortLatchListener) {
@@ -311,18 +318,20 @@ public class CPU extends AMemory {
                 continue;
             }
 
+            busMasterClockSurcharge = 0;
             int interruptCycles = checkInterrupts();
             cycles += interruptCycles;
-            elapsedMasterClocks += interruptCycles * MASTER_CLOCKS_PER_CPU_CYCLE;
+            elapsedMasterClocks += interruptCycles * MASTER_CLOCKS_PER_CPU_CYCLE + busMasterClockSurcharge;
             advanceMathUnit(interruptCycles);
             if (cycles >= maxCycles) {
                 continue;
             }
 
             if (!waitingForInterrupt) {
+                busMasterClockSurcharge = 0;
                 int instructionCycles = executeInstruction();
                 cycles += instructionCycles;
-                elapsedMasterClocks += instructionCycles * MASTER_CLOCKS_PER_CPU_CYCLE;
+                elapsedMasterClocks += instructionCycles * MASTER_CLOCKS_PER_CPU_CYCLE + busMasterClockSurcharge;
                 advanceMathUnit(instructionCycles);
             } else {
                 int idleCycles = maxCycles - cycles;
@@ -332,6 +341,21 @@ public class CPU extends AMemory {
             }
         }
         return cycles;
+    }
+
+    private int busAccessMasterClocks(int address) {
+        int normalized = u24(address);
+        if ((normalized & 0x408000) != 0) {
+            boolean fastRom = (normalized & 0x800000) != 0 && (internalRegisters[0x0d] & 0x01) != 0;
+            return fastRom ? 6 : 8;
+        }
+        if (((normalized + 0x6000) & 0x4000) != 0) {
+            return 8;
+        }
+        if (((normalized - 0x4000) & 0x7e00) != 0) {
+            return 6;
+        }
+        return 12;
     }
 
     public int runDMA(int maxCycles) {
@@ -1254,6 +1278,7 @@ public class CPU extends AMemory {
         mathOperation = MATH_OPERATION_NONE;
         mathCyclesRemaining = 0;
         elapsedMasterClocks = 0;
+        busMasterClockSurcharge = 0;
         dmaStartupPending = false;
         internalRegisters[0x10] &= 0x7f;
         internalRegisters[0x11] &= 0x7f;
@@ -2062,6 +2087,51 @@ public class CPU extends AMemory {
     @Override
     public String getName() {
         return "CPU";
+    }
+
+    private final class CpuTimingBus implements IMemoryBus {
+        private final IMemoryBus delegate;
+
+        private CpuTimingBus(IMemoryBus delegate) {
+            this.delegate = delegate;
+        }
+
+        @Override
+        public int read(int address) {
+            busMasterClockSurcharge += busAccessMasterClocks(address) - MASTER_CLOCKS_PER_CPU_CYCLE;
+            return delegate.read(address);
+        }
+
+        @Override
+        public OptionalInt peek(int address) {
+            return delegate.peek(address);
+        }
+
+        @Override
+        public int peekValue(int address) {
+            return delegate.peekValue(address);
+        }
+
+        @Override
+        public int getOpenBus() {
+            return delegate.getOpenBus();
+        }
+
+        @Override
+        public int getExternalOpenBus() {
+            return delegate.getExternalOpenBus();
+        }
+
+        @Override
+        public void write(int address, int data) {
+            busMasterClockSurcharge += busAccessMasterClocks(address) - MASTER_CLOCKS_PER_CPU_CYCLE;
+            delegate.write(address, data);
+        }
+
+        @Override
+        public IMemory getAccessor(int address) {
+            return delegate.getAccessor(address);
+        }
     }
 
     @Override

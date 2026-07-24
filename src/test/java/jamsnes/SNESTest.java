@@ -310,7 +310,7 @@ class SNESTest {
         snes.update();
         snes.update();
 
-        int expectedCycles = (int) ((144L * SNES.APU_CLOCK_HZ) / SNES.MASTER_CLOCK_HZ);
+        int expectedCycles = (int) ((146L * SNES.APU_CLOCK_HZ) / SNES.MASTER_CLOCK_HZ);
         assertEquals(expectedCycles % 32, snes.apu.dsp().voicePhase());
     }
 
@@ -349,13 +349,13 @@ class SNESTest {
 
         snes.update();
 
-        assertEquals(19, snes.ppu.hCounter());
+        assertEquals(22, snes.ppu.hCounter());
         assertEquals(0x0303, snes.cpu.registers().pc);
 
         snes.cpu.requestNMI();
         snes.update();
 
-        assertEquals(39, snes.ppu.hCounter());
+        assertEquals(45, snes.ppu.hCounter());
         assertEquals(0x0303, snes.cpu.registers().pc);
     }
 
