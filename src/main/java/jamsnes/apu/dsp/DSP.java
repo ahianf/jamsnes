@@ -653,6 +653,26 @@ public class DSP {
         return voices[voiceIndex].endx;
     }
 
+    int voiceKonDelay(int voiceIndex) {
+        return voices[voiceIndex].konDelay;
+    }
+
+    boolean voiceKeyOffLatched(int voiceIndex) {
+        return voices[voiceIndex].tempKof;
+    }
+
+    boolean voicePitchModulationLatched(int voiceIndex) {
+        return voices[voiceIndex].prevPmon;
+    }
+
+    boolean voiceNoiseLatched(int voiceIndex) {
+        return voices[voiceIndex].tempNon;
+    }
+
+    boolean voiceEchoLatched(int voiceIndex) {
+        return voices[voiceIndex].echo;
+    }
+
     void voice1(int voiceIndex) {
         voice1(voices[voiceIndex]);
     }
@@ -726,14 +746,15 @@ public class DSP {
     }
 
     private void misc27() {
-        for (Voice voice : voices) {
-            voice.prevPmon = voice.pmon;
+        for (int i = 0; i < voices.length; i++) {
+            voices[i].prevPmon = i != 0 && voices[i].pmon;
         }
     }
 
     private void misc28() {
         for (Voice voice : voices) {
             voice.tempNon = voice.non;
+            voice.echo = voice.eon;
         }
         brr.offsetAddress = brr.offset;
     }
@@ -742,7 +763,7 @@ public class DSP {
         timer.sample = !timer.sample;
         if (timer.sample) {
             for (Voice voice : voices) {
-                voice.kon = false;
+                voice.kon &= !voice.tempKon;
             }
         }
     }
@@ -750,7 +771,8 @@ public class DSP {
     private void misc30() {
         if (timer.sample) {
             for (Voice voice : voices) {
-                voice.kof = false;
+                voice.tempKon = voice.kon;
+                voice.tempKof = voice.kof;
             }
         }
 
@@ -842,14 +864,12 @@ public class DSP {
             voice.envelopeMode = EnvelopeMode.RELEASE;
         }
 
-        if (timer.sample) {
-            if (voice.tempKof) {
-                voice.envelopeMode = EnvelopeMode.RELEASE;
-            }
-            if (voice.tempKon) {
-                voice.konDelay = 5;
-                voice.envelopeMode = EnvelopeMode.ATTACK;
-            }
+        if (voice.tempKof) {
+            voice.envelopeMode = EnvelopeMode.RELEASE;
+        }
+        if (voice.tempKon) {
+            voice.konDelay = 5;
+            voice.envelopeMode = EnvelopeMode.ATTACK;
         }
 
         if (voice.konDelay == 0) {

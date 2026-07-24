@@ -70,6 +70,69 @@ class DSPTest {
     }
 
     @Test
+    void keyOnRegisterIsLatchedOnTheEveryOtherSamplePoll() {
+        DSP dsp = new DSP();
+        dsp.write(0x4c, 0x01);
+
+        for (int i = 0; i < 63; i++) {
+            dsp.update();
+        }
+
+        assertEquals(5, dsp.voiceKonDelay(0));
+        assertEquals(DSP.EnvelopeMode.ATTACK, dsp.voiceEnvelopeMode(0));
+
+        for (int i = 0; i < 32; i++) {
+            dsp.update();
+        }
+        assertEquals(5, dsp.voiceKonDelay(0));
+
+        for (int i = 0; i < 32; i++) {
+            dsp.update();
+        }
+        assertEquals(4, dsp.voiceKonDelay(0));
+        assertEquals(0, dsp.read(0x4c));
+    }
+
+    @Test
+    void keyOffRegisterRemainsAssertedUntilSoftwareClearsIt() {
+        DSP dsp = new DSP();
+        dsp.setVoiceEnvelopeState(0, 0x400, 0x400, DSP.EnvelopeMode.SUSTAIN);
+        dsp.write(0x5c, 0x01);
+
+        for (int i = 0; i < 63; i++) {
+            dsp.update();
+        }
+
+        assertEquals(DSP.EnvelopeMode.RELEASE, dsp.voiceEnvelopeMode(0));
+        assertEquals(0x01, dsp.read(0x5c));
+
+        dsp.write(0x5c, 0x00);
+        for (int i = 0; i < 64; i++) {
+            dsp.update();
+        }
+
+        assertEquals(0x00, dsp.read(0x5c));
+        assertFalse(dsp.voiceKeyOffLatched(0));
+    }
+
+    @Test
+    void noiseEchoAndPitchModulationFlagsLatchAtTheirPipelinePhases() {
+        DSP dsp = new DSP();
+        dsp.write(0x2d, 0x03);
+        dsp.write(0x3d, 0x01);
+        dsp.write(0x4d, 0x01);
+
+        for (int i = 0; i < 29; i++) {
+            dsp.update();
+        }
+
+        assertFalse(dsp.voicePitchModulationLatched(0));
+        assertTrue(dsp.voicePitchModulationLatched(1));
+        assertTrue(dsp.voiceNoiseLatched(0));
+        assertTrue(dsp.voiceEchoLatched(0));
+    }
+
+    @Test
     void zeroCycleApuUpdateDoesNotTickDsp() {
         SNES snes = new SNES(new NoRenderer(0, 0, 0));
 
