@@ -119,7 +119,45 @@ class CpuUpdateLoopTest {
         assertEquals(0, snes.cpu.registers().pbr);
         assertEquals(pushedStatus, snes.cpu._pop());
         assertEquals(0x0200, snes.cpu._pop16());
+        assertTrue(snes.cpu.isIRQRequested);
+    }
+
+    @Test
+    void acceptedIrqRetriggersUntilItsSourceIsAcknowledged() {
+        SNES snes = init();
+        snes.cpu.registers().setPc(0x0200);
+        snes.cpu.registers().s = 0x01ff;
+        snes.cpu.registers().p.i = false;
+        snes.cartridge.header.emulationInterrupts.irq = 0x0300;
+        writeProgram(snes, 0x0200, 0xea);
+        writeProgram(snes, 0x0300, 0x40);
+        snes.cpu.requestIRQ();
+
+        assertEquals(13, snes.cpu.update(13));
+        assertEquals(0x0200, snes.cpu.registers().pc);
+        assertTrue(snes.cpu.isIRQRequested);
+
+        assertEquals(7, snes.cpu.update(7));
+        assertEquals(0x0300, snes.cpu.registers().pc);
+    }
+
+    @Test
+    void timeupReadInIrqHandlerPreventsRetriggeringAfterRti() {
+        SNES snes = init();
+        snes.cpu.registers().setPc(0x0200);
+        snes.cpu.registers().s = 0x01ff;
+        snes.cpu.registers().p.i = false;
+        snes.cartridge.header.emulationInterrupts.irq = 0x0300;
+        writeProgram(snes, 0x0200, 0xea);
+        writeProgram(snes, 0x0300, 0xad, 0x11, 0x42, 0x40);
+        snes.cpu.requestIRQ();
+
+        assertEquals(17, snes.cpu.update(17));
+        assertEquals(0x0200, snes.cpu.registers().pc);
         assertFalse(snes.cpu.isIRQRequested);
+
+        assertEquals(2, snes.cpu.update(2));
+        assertEquals(0x0201, snes.cpu.registers().pc);
     }
 
     @Test

@@ -1641,7 +1641,6 @@ public class CPU extends AMemory {
             return interruptEntryCycles();
         }
         if (isIRQRequested && !registers.p.i) {
-            isIRQRequested = false;
             runInterrupt(cartridgeHeader.nativeInterrupts.irq, cartridgeHeader.emulationInterrupts.irq, false);
             return interruptEntryCycles();
         }
