@@ -796,6 +796,40 @@ class SNESTest {
     }
 
     @Test
+    void updateTimerIrqRejectsHorizontalCounter340() {
+        SNES snes = new SNES(new TestRenderer());
+        snes.bus.mapComponents(snes);
+        snes.cpu.isDisabled = true;
+        snes.apu.isDisabled = true;
+        snes.bus.write(0x4200, 0x10);
+        snes.bus.write(0x4207, 0x54);
+        snes.bus.write(0x4208, 0x01);
+
+        snes.ppu.advanceCountersOnly(340);
+        snes.updateTimerIrq();
+        assertEquals(0x00, snes.bus.read(0x4211) & 0x80);
+
+        snes.ppu.advanceCountersOnly(PPU.H_COUNTER_DOTS - 340 + 330);
+        snes.update();
+
+        assertEquals(0x00, snes.bus.read(0x4211) & 0x80);
+    }
+
+    @Test
+    void updateTimerIrqAcceptsHorizontalCounter339() {
+        SNES snes = new SNES(new TestRenderer());
+        snes.bus.mapComponents(snes);
+        snes.bus.write(0x4200, 0x10);
+        snes.bus.write(0x4207, 0x53);
+        snes.bus.write(0x4208, 0x01);
+
+        snes.ppu.advanceCountersOnly(339);
+        snes.updateTimerIrq();
+
+        assertEquals(0x80, snes.bus.read(0x4211) & 0x80);
+    }
+
+    @Test
     void updateTimerIrqMatchesExtraInterlaceScanline() {
         SNES snes = new SNES(new TestRenderer());
         snes.bus.mapComponents(snes);

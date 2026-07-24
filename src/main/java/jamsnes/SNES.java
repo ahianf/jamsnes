@@ -21,6 +21,7 @@ public class SNES {
     private static final int NMITIMEN_AUTO_JOYPAD_ENABLE = 0x01;
     private static final int NMITIMEN_H_IRQ_ENABLE = 0x10;
     private static final int NMITIMEN_V_IRQ_ENABLE = 0x20;
+    private static final int H_TIMER_MAX_DOT = 339;
     private static final int MASTER_CLOCKS_PER_PPU_DOT = 4;
     static final int HDMA_INITIALIZE_DOT = 16 / MASTER_CLOCKS_PER_PPU_DOT;
     static final int DRAM_REFRESH_START_DOT = 536 / MASTER_CLOCKS_PER_PPU_DOT;
@@ -418,6 +419,14 @@ public class SNES {
 
     private int[] timerMatchPosition(boolean hTimerEnabled, boolean vTimerEnabled,
                                      int startHCounter, int startVCounter, boolean startSecondField, int cycles) {
+        int hTarget = cpu.internalRegisters()[0x07] | ((cpu.internalRegisters()[0x08] & 1) << 8);
+        int vTarget = cpu.internalRegisters()[0x09] | ((cpu.internalRegisters()[0x0a] & 1) << 8);
+        if (hTimerEnabled && hTarget > H_TIMER_MAX_DOT) {
+            return null;
+        }
+        if (vTimerEnabled && vTarget > PPU.V_COUNTER_SCANLINES) {
+            return null;
+        }
         if (cycles <= 0) {
             int hCounter = ppu.hCounter();
             int vCounter = ppu.vCounter();
@@ -426,14 +435,6 @@ public class SNES {
                     : null;
         }
 
-        int hTarget = cpu.internalRegisters()[0x07] | ((cpu.internalRegisters()[0x08] & 1) << 8);
-        int vTarget = cpu.internalRegisters()[0x09] | ((cpu.internalRegisters()[0x0a] & 1) << 8);
-        if (hTimerEnabled && hTarget >= PPU.H_COUNTER_DOTS) {
-            return null;
-        }
-        if (vTimerEnabled && vTarget > PPU.V_COUNTER_SCANLINES) {
-            return null;
-        }
         int targetH = hTimerEnabled ? hTarget : 0;
         int hCounter = startHCounter;
         int vCounter = startVCounter;
