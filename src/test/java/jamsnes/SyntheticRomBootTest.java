@@ -49,6 +49,23 @@ class SyntheticRomBootTest {
         assertEquals(0x801a, snes.cpu.registers().pc, "RTI should return execution to the idle loop");
     }
 
+    @Test
+    void loadedLoRomRunsDmaFromCartridgeIntoCgramBeforePresenting() throws IOException {
+        FrameBufferRenderer renderer =
+                new FrameBufferRenderer(Background.BUFFER_SIZE, Background.BUFFER_SIZE, 60);
+        SNES snes = new SNES(writeDmaRom().toString(), renderer);
+
+        for (int updates = 0; renderer.drawScreenCalls() == 0 && updates < 10_000; updates++) {
+            snes.update();
+        }
+
+        assertTrue(renderer.drawScreenCalls() > 0, "Synthetic ROM should present its DMA-loaded palette");
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.pixel(0, 0));
+        assertEquals(0, snes.cpu.dmaChannels()[0].getCount());
+        assertEquals(0x008102, snes.cpu.dmaChannels()[0].getAAddress());
+        assertEquals(0x8038, snes.cpu.registers().pc);
+    }
+
     private Path writeBootRom() throws IOException {
         byte[] rom = new byte[0x8000];
         byte[] program = {
@@ -116,6 +133,50 @@ class SyntheticRomBootTest {
         rom[0x7ffc] = 0x00;
         rom[0x7ffd] = (byte) 0x80;
         Path path = tempDir.resolve("synthetic-nmi.sfc");
+        Files.write(path, rom);
+        return path;
+    }
+
+    private Path writeDmaRom() throws IOException {
+        byte[] rom = new byte[0x8000];
+        byte[] program = {
+                (byte) 0x78,                         // SEI
+                (byte) 0xa9, (byte) 0x80,            // LDA #$80
+                (byte) 0x8d, 0x00, 0x21,             // STA $2100 (forced blank)
+                (byte) 0xa9, 0x00,                   // LDA #$00
+                (byte) 0x8d, 0x21, 0x21,             // STA $2121 (CGADD)
+                (byte) 0xa9, 0x02,                   // LDA #$02
+                (byte) 0x8d, 0x00, 0x43,             // STA $4300 (two bytes to one register)
+                (byte) 0xa9, 0x22,                   // LDA #$22
+                (byte) 0x8d, 0x01, 0x43,             // STA $4301 (CGDATA)
+                (byte) 0xa9, 0x00,                   // LDA #$00
+                (byte) 0x8d, 0x02, 0x43,             // STA $4302 (A1T low)
+                (byte) 0xa9, (byte) 0x81,            // LDA #$81
+                (byte) 0x8d, 0x03, 0x43,             // STA $4303 (A1T high)
+                (byte) 0xa9, 0x00,                   // LDA #$00
+                (byte) 0x8d, 0x04, 0x43,             // STA $4304 (A1 bank)
+                (byte) 0xa9, 0x02,                   // LDA #$02
+                (byte) 0x8d, 0x05, 0x43,             // STA $4305 (transfer size low)
+                (byte) 0xa9, 0x00,                   // LDA #$00
+                (byte) 0x8d, 0x06, 0x43,             // STA $4306 (transfer size high)
+                (byte) 0xa9, 0x01,                   // LDA #$01
+                (byte) 0x8d, 0x0b, 0x42,             // STA $420b (start DMA)
+                (byte) 0xa9, 0x0f,                   // LDA #$0f
+                (byte) 0x8d, 0x00, 0x21,             // STA $2100 (display on)
+                (byte) 0x80, (byte) 0xfe             // BRA *
+        };
+        System.arraycopy(program, 0, rom, 0, program.length);
+        rom[0x100] = 0x1f;
+        rom[0x101] = 0x00;
+        byte[] title = "JAMSNES DMA PROBE".getBytes(StandardCharsets.ISO_8859_1);
+        System.arraycopy(title, 0, rom, 0x7fc0, title.length);
+        rom[0x7fd5] = 0x20;
+        rom[0x7fd6] = 0x00;
+        rom[0x7fd7] = 0x05;
+        rom[0x7fd8] = 0x00;
+        rom[0x7ffc] = 0x00;
+        rom[0x7ffd] = (byte) 0x80;
+        Path path = tempDir.resolve("synthetic-dma.sfc");
         Files.write(path, rom);
         return path;
     }
