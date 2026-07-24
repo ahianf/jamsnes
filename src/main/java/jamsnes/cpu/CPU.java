@@ -573,7 +573,7 @@ public class CPU extends AMemory {
             case 0xf9 -> 4 + SBC(_getAbsoluteIndexedByYAddr()) + indexBoundaryExtraCycle();
             case 0xfa -> 4 + PLX(0);
             case 0xfb -> 2 + XCE(0);
-            case 0xfc -> 8 + JSR(_getAbsoluteIndirectIndexedByXAddr());
+            case 0xfc -> 8 + JSRIndexedIndirect(_getAbsoluteIndirectIndexedByXAddr());
             case 0xfd -> 4 + SBC(_getAbsoluteIndexedByXAddr()) + indexBoundaryExtraCycle();
             case 0xfe -> 7 + INC(_getAbsoluteIndexedByXAddr());
             case 0xff -> 5 + SBC(_getAbsoluteIndexedByXLongAddr());
@@ -786,6 +786,49 @@ public class CPU extends AMemory {
         return emulationMode ? (0x0100 | u8(address + 1)) : u16(address + 1);
     }
 
+    private void pushWordAcrossEmulationStackBoundary(int value) {
+        int address = stackAddress();
+        bus.write(address, value >>> 8);
+        address = u16(address - 1);
+        bus.write(address, value);
+        adjustStackPointer(-2);
+    }
+
+    private void pushLongAcrossEmulationStackBoundary(int value) {
+        int address = stackAddress();
+        bus.write(address, value >>> 16);
+        address = u16(address - 1);
+        bus.write(address, value >>> 8);
+        address = u16(address - 1);
+        bus.write(address, value);
+        adjustStackPointer(-3);
+    }
+
+    private int popWordAcrossEmulationStackBoundary() {
+        int address = u16(stackAddress() + 1);
+        int value = bus.read(address);
+        address = u16(address + 1);
+        value |= bus.read(address) << 8;
+        adjustStackPointer(2);
+        return u16(value);
+    }
+
+    private int popLongAcrossEmulationStackBoundary() {
+        int address = u16(stackAddress() + 1);
+        int value = bus.read(address);
+        address = u16(address + 1);
+        value |= bus.read(address) << 8;
+        address = u16(address + 1);
+        value |= bus.read(address) << 16;
+        adjustStackPointer(3);
+        return u24(value);
+    }
+
+    private void adjustStackPointer(int amount) {
+        int adjusted = u16(registers.s + amount);
+        registers.s = emulationMode ? (0x0100 | u8(adjusted)) : adjusted;
+    }
+
     private void decrementStackPointer() {
         registers.s = emulationMode ? (0x0100 | u8(registers.s - 1)) : u16(registers.s - 1);
     }
@@ -848,10 +891,16 @@ public class CPU extends AMemory {
         return 0;
     }
 
+    public int JSRIndexedIndirect(int valueAddr) {
+        registers.setPc(registers.pc - 1);
+        pushWordAcrossEmulationStackBoundary(registers.pc);
+        registers.setPc(valueAddr);
+        return 0;
+    }
+
     public int JSL(int valueAddr) {
-        registers.setPac(registers.pac - 1);
-        _push8(registers.pbr);
-        _push16(registers.pc);
+        registers.setPc(registers.pc - 1);
+        pushLongAcrossEmulationStackBoundary(registers.pac);
         registers.setPac(valueAddr);
         return 0;
     }
@@ -871,7 +920,7 @@ public class CPU extends AMemory {
     }
 
     public int PHD(int valueAddr) {
-        _push16(registers.d);
+        pushWordAcrossEmulationStackBoundary(registers.d);
         return 0;
     }
 
@@ -921,7 +970,7 @@ public class CPU extends AMemory {
     }
 
     public int PLD(int valueAddr) {
-        registers.d = _pop16();
+        registers.d = popWordAcrossEmulationStackBoundary();
         setZN16(registers.d);
         return 0;
     }
@@ -955,18 +1004,18 @@ public class CPU extends AMemory {
     public int PER(int valueAddr) {
         int value = readProgramWord(valueAddr);
         value = u16(value + registers.pc);
-        _push16(value);
+        pushWordAcrossEmulationStackBoundary(value);
         return 0;
     }
 
     public int PEA(int valueAddr) {
-        _push16(readProgramWord(valueAddr));
+        pushWordAcrossEmulationStackBoundary(readProgramWord(valueAddr));
         return 0;
     }
 
     public int PEI(int value) {
         int effective = bus.read(value) | (bus.read(u16(value + 1)) << 8);
-        _push16(effective);
+        pushWordAcrossEmulationStackBoundary(effective);
         return 0;
     }
 
@@ -1049,8 +1098,9 @@ public class CPU extends AMemory {
     }
 
     public int RTL(int valueAddr) {
-        registers.setPc(_pop16() + 1);
-        registers.setPbr(_pop());
+        int returnAddress = popLongAcrossEmulationStackBoundary();
+        registers.setPc(returnAddress + 1);
+        registers.setPbr(returnAddress >>> 16);
         return 0;
     }
 

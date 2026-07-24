@@ -100,6 +100,73 @@ class InternalInstructionTest {
     }
 
     @Test
+    void emulationJslStackFrameCanCrossBelowPageOne() {
+        SNES snes = init();
+        snes.cpu.setEmulationMode(true);
+        snes.cpu.registers().setPac(0x561234);
+        snes.cpu.registers().s = 0x0101;
+        snes.wram.data()[0x00ff] = 0;
+        snes.wram.data()[0x01ff] = 0x7e;
+
+        snes.cpu.JSL(0xabcdef);
+
+        assertEquals(0xabcdef, snes.cpu.registers().pac);
+        assertEquals(0x01fe, snes.cpu.registers().s);
+        assertEquals(0x56, snes.wram.data()[0x0101]);
+        assertEquals(0x12, snes.wram.data()[0x0100]);
+        assertEquals(0x33, snes.wram.data()[0x00ff]);
+        assertEquals(0x7e, snes.wram.data()[0x01ff]);
+    }
+
+    @Test
+    void jslReturnAddressWrapsWithinProgramBank() {
+        SNES snes = init();
+        snes.cpu.setEmulationMode(true);
+        snes.cpu.registers().setPac(0x560000);
+        snes.cpu.registers().s = 0x0123;
+
+        snes.cpu.JSL(0xabcdef);
+
+        int pushed = snes.cpu._pop16() | (snes.cpu._pop() << 16);
+        assertEquals(0x56ffff, pushed);
+    }
+
+    @Test
+    void emulationIndexedIndirectJsrCanCrossBelowPageOne() {
+        SNES snes = init();
+        snes.cpu.setEmulationMode(true);
+        snes.cpu.registers().setPc(0x0200);
+        snes.cpu.registers().s = 0x0100;
+        snes.wram.data()[0x0200] = 0xfc;
+        snes.wram.data()[0x0201] = 0x00;
+        snes.wram.data()[0x0202] = 0x04;
+        snes.wram.data()[0x0400] = 0x78;
+        snes.wram.data()[0x0401] = 0x56;
+        snes.wram.data()[0x00ff] = 0;
+        snes.wram.data()[0x01ff] = 0x7e;
+
+        assertEquals(8, snes.cpu.executeInstruction());
+
+        assertEquals(0x5678, snes.cpu.registers().pc);
+        assertEquals(0x01fe, snes.cpu.registers().s);
+        assertEquals(0x02, snes.wram.data()[0x0100]);
+        assertEquals(0x02, snes.wram.data()[0x00ff]);
+        assertEquals(0x7e, snes.wram.data()[0x01ff]);
+
+        snes.cpu.registers().setPc(0x0203);
+        snes.cpu.registers().s = 0x0100;
+        snes.wram.data()[0x00ff] = 0x6b;
+        snes.wram.data()[0x01ff] = 0;
+
+        snes.cpu.JSR(0x1234);
+
+        assertEquals(0x1234, snes.cpu.registers().pc);
+        assertEquals(0x02, snes.wram.data()[0x0100]);
+        assertEquals(0x02, snes.wram.data()[0x01ff]);
+        assertEquals(0x6b, snes.wram.data()[0x00ff]);
+    }
+
+    @Test
     void pushesAccumulatorAndRegisters() {
         SNES snes = init();
         snes.cpu.registers().s = 0x0010;
@@ -265,6 +332,7 @@ class InternalInstructionTest {
     @Test
     void rtlRestoresProgramBankAndLeavesDataBankUnchanged() {
         SNES snes = init();
+        snes.cpu.setEmulationMode(false);
         snes.cpu.registers().s = 0x0100;
         snes.cpu.registers().dbr = 0xef;
         snes.cpu._push8(0x12);
@@ -302,6 +370,74 @@ class InternalInstructionTest {
         snes.wram.data()[0x31] = 0x12;
         snes.cpu.PEA(0x30);
         assertEquals(0x1234, snes.cpu._pop16());
+    }
+
+    @Test
+    void emulationWordStackExceptionsCanCrossBelowPageOne() {
+        SNES snes = init();
+        snes.cpu.setEmulationMode(true);
+
+        snes.cpu.registers().s = 0x0100;
+        snes.cpu.registers().d = 0xabcd;
+        snes.wram.data()[0x01ff] = 0x7e;
+        snes.cpu.PHD(0);
+        assertWordPushedBelowPageOne(snes, 0xabcd);
+
+        snes.cpu.registers().s = 0x0100;
+        snes.wram.data()[0x0020] = 0x34;
+        snes.wram.data()[0x0021] = 0x12;
+        snes.wram.data()[0x01ff] = 0x7e;
+        snes.cpu.PEA(0x0020);
+        assertWordPushedBelowPageOne(snes, 0x1234);
+
+        snes.cpu.registers().s = 0x0100;
+        snes.wram.data()[0x0030] = 0x78;
+        snes.wram.data()[0x0031] = 0x56;
+        snes.wram.data()[0x01ff] = 0x7e;
+        snes.cpu.PEI(0x0030);
+        assertWordPushedBelowPageOne(snes, 0x5678);
+
+        snes.cpu.registers().s = 0x0100;
+        snes.cpu.registers().setPc(0x1000);
+        snes.wram.data()[0x0040] = 0x34;
+        snes.wram.data()[0x0041] = 0x12;
+        snes.wram.data()[0x01ff] = 0x7e;
+        snes.cpu.PER(0x0040);
+        assertWordPushedBelowPageOne(snes, 0x2234);
+    }
+
+    @Test
+    void emulationPldAndRtlCanPullAcrossAbovePageOne() {
+        SNES snes = init();
+        snes.cpu.setEmulationMode(true);
+        snes.cpu.registers().s = 0x01ff;
+        snes.wram.data()[0x0100] = 0x7e;
+        snes.wram.data()[0x0200] = 0xcd;
+        snes.wram.data()[0x0201] = 0xab;
+
+        snes.cpu.PLD(0);
+
+        assertEquals(0xabcd, snes.cpu.registers().d);
+        assertEquals(0x0101, snes.cpu.registers().s);
+
+        snes.cpu.registers().s = 0x01fe;
+        snes.wram.data()[0x01ff] = 0x34;
+        snes.wram.data()[0x0200] = 0x12;
+        snes.wram.data()[0x0201] = 0x56;
+        snes.wram.data()[0x0100] = 0x7e;
+        snes.wram.data()[0x0101] = 0x6b;
+
+        snes.cpu.RTL(0);
+
+        assertEquals(0x561235, snes.cpu.registers().pac);
+        assertEquals(0x0101, snes.cpu.registers().s);
+    }
+
+    private static void assertWordPushedBelowPageOne(SNES snes, int expected) {
+        assertEquals(0x01fe, snes.cpu.registers().s);
+        assertEquals(expected >>> 8, snes.wram.data()[0x0100]);
+        assertEquals(expected & 0xff, snes.wram.data()[0x00ff]);
+        assertEquals(0x7e, snes.wram.data()[0x01ff]);
     }
 
     private static SNES init() {
