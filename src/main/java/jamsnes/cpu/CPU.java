@@ -705,8 +705,9 @@ public class CPU extends AMemory {
         int abs = readPC();
         abs = u16(abs + (readPC() << 8));
         abs = u16(abs + indexXValue());
-        int effective = bus.read(abs);
-        effective += bus.read(abs + 1) << 8;
+        int programBank = registers.pbr << 16;
+        int effective = bus.read(programBank | abs);
+        effective += bus.read(programBank | u16(abs + 1)) << 8;
         return u24(effective);
     }
 

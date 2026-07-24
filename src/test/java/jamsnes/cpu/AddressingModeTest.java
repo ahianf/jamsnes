@@ -337,15 +337,28 @@ class AddressingModeTest {
     @Test
     void absoluteIndexedIndirect() {
         SNES snes = init();
-        snes.cpu.registers().setPac(0x808000);
-        snes.cartridge.data()[0] = 0xab;
-        snes.cartridge.data()[1] = 0x01;
+        snes.cpu.registers().setPac(0x7f0200);
+        snes.wram.data()[0x10200] = 0xab;
+        snes.wram.data()[0x10201] = 0x01;
         snes.cpu.registers().x = 2;
-        snes.wram.data()[0x01ad] = 0xef;
-        snes.wram.data()[0x01ae] = 0x01;
+        snes.wram.data()[0x101ad] = 0xef;
+        snes.wram.data()[0x101ae] = 0x01;
 
         assertEquals(0x01ef, snes.cpu._getAbsoluteIndirectIndexedByXAddr());
-        assertEquals(0x808002, snes.cpu.registers().pac);
+        assertEquals(0x7f0202, snes.cpu.registers().pac);
+    }
+
+    @Test
+    void absoluteIndexedIndirectWrapsPointerWithinProgramBank() {
+        SNES snes = init();
+        snes.cpu.registers().setPac(0x7f0200);
+        snes.wram.data()[0x10200] = 0xff;
+        snes.wram.data()[0x10201] = 0xff;
+        snes.wram.data()[0x1ffff] = 0xef;
+        snes.wram.data()[0x10000] = 0x01;
+
+        assertEquals(0x01ef, snes.cpu._getAbsoluteIndirectIndexedByXAddr());
+        assertEquals(0x7f0202, snes.cpu.registers().pac);
     }
 
     @Test

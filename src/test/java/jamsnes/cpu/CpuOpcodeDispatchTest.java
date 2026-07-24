@@ -87,6 +87,27 @@ class CpuOpcodeDispatchTest {
     }
 
     @Test
+    void executesProgramBankIndexedIndirectJumpAndSubroutineOpcodes() {
+        SNES snes = init();
+        snes.cpu.registers().setPac(0x7f0200);
+        snes.cpu.registers().x = 2;
+        writeWramBank7f(snes, 0x0200, 0x7c, 0x00, 0x40);
+        writeWramBank7f(snes, 0x4002, 0x78, 0x56);
+
+        assertEquals(6, snes.cpu.executeInstruction());
+        assertEquals(0x7f5678, snes.cpu.registers().pac);
+
+        snes.cpu.registers().setPac(0x7f0210);
+        snes.cpu.registers().s = 0x01ff;
+        writeWramBank7f(snes, 0x0210, 0xfc, 0x00, 0x41);
+        writeWramBank7f(snes, 0x4102, 0xbc, 0x9a);
+
+        assertEquals(8, snes.cpu.executeInstruction());
+        assertEquals(0x7f9abc, snes.cpu.registers().pac);
+        assertEquals(0x0212, snes.cpu._pop16());
+    }
+
+    @Test
     void executesLongBranchAndJumpOpcodes() {
         SNES snes = init();
         snes.cpu.registers().setPc(0x0200);
@@ -845,6 +866,12 @@ class CpuOpcodeDispatchTest {
     private static void writeProgram(SNES snes, int start, int... opcodes) {
         for (int i = 0; i < opcodes.length; i++) {
             snes.wram.data()[start + i] = opcodes[i];
+        }
+    }
+
+    private static void writeWramBank7f(SNES snes, int start, int... values) {
+        for (int i = 0; i < values.length; i++) {
+            snes.wram.data()[0x10000 + start + i] = values[i];
         }
     }
 
