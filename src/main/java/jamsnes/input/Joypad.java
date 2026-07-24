@@ -39,19 +39,26 @@ public class Joypad extends AMemory {
     @Override
     public int read(int address) {
         validatePort(address, "Joypad read");
-        if (strobe) {
-            latchControllers();
-        }
-
-        int value = shiftRegister[address] & 1;
-        if (!strobe) {
-            shiftRegister[address] = u16((shiftRegister[address] >>> 1) | 0x8000);
-        }
+        int value = readSerialBit(address);
         int openBus = bus == null ? 0 : bus.getOpenBus();
         if (address == 0) {
             return (openBus & 0xfc) | value;
         }
         return (openBus & 0xe0) | 0x1c | value;
+    }
+
+    public int[] autoRead() {
+        strobe = true;
+        latchControllers();
+        strobe = false;
+
+        int[] reports = new int[controllerState.length];
+        for (int bit = 0; bit < 16; bit++) {
+            for (int controller = 0; controller < reports.length; controller++) {
+                reports[controller] = (reports[controller] << 1) | readSerialBit(controller);
+            }
+        }
+        return reports;
     }
 
     @Override
@@ -130,6 +137,18 @@ public class Joypad extends AMemory {
     private void latchControllers() {
         shiftRegister[0] = controllerState[0];
         shiftRegister[1] = controllerState[1];
+    }
+
+    private int readSerialBit(int controller) {
+        if (strobe) {
+            latchControllers();
+        }
+
+        int value = shiftRegister[controller] & 1;
+        if (!strobe) {
+            shiftRegister[controller] = u16((shiftRegister[controller] >>> 1) | 0x8000);
+        }
+        return value;
     }
 
     private void validatePort(int address, String where) {

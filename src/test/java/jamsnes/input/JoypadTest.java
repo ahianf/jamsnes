@@ -66,6 +66,21 @@ class JoypadTest {
     }
 
     @Test
+    void automaticReadClocksCompleteReportsAndLeavesSerialPositionAfterSignature() {
+        SNES snes = init();
+        snes.joypad.setControllerState(0, Joypad.BUTTON_B | Joypad.BUTTON_START | Joypad.BUTTON_A);
+        snes.joypad.setControllerState(1, Joypad.BUTTON_Y | Joypad.BUTTON_L | Joypad.BUTTON_R);
+
+        int[] reports = snes.joypad.autoRead();
+
+        assertEquals(0x9080, reports[0]);
+        assertEquals(0x4030, reports[1]);
+        assertFalse(snes.joypad.isStrobe());
+        assertEquals(1, snes.bus.read(0x4016) & 1);
+        assertEquals(1, snes.bus.read(0x4017) & 1);
+    }
+
+    @Test
     void strobeHighRefreshesLatchedState() {
         SNES snes = init();
 
