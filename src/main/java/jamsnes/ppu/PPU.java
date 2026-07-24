@@ -674,6 +674,9 @@ public class PPU extends AMemory {
     private void writeBgHorizontalOffset(int address, int value) {
         int offset = ((value << 8) | (hvSharedScrollPreviousValue & ~7) | (hScrollPreviousValue & 7)) & 0x3ff;
         ppuRegisters.setBgOffset(address - 0x0d, offset);
+        if (address == 0x0d) {
+            ppuRegisters.writeM7Offset(0, value);
+        }
         hScrollPreviousValue = value;
         hvSharedScrollPreviousValue = value;
     }
@@ -681,6 +684,9 @@ public class PPU extends AMemory {
     private void writeBgVerticalOffset(int address, int value) {
         int offset = ((value << 8) | hvSharedScrollPreviousValue) & 0x3ff;
         ppuRegisters.setBgOffset(address - 0x0e, offset);
+        if (address == 0x0e) {
+            ppuRegisters.writeM7Offset(1, value);
+        }
         hvSharedScrollPreviousValue = value;
     }
 
@@ -1031,25 +1037,34 @@ public class PPU extends AMemory {
         int d = signed16(ppuRegisters.m7Matrix(3));
         int centerX = signed13(ppuRegisters.m7CenterValue(0));
         int centerY = signed13(ppuRegisters.m7CenterValue(1));
-        Vector2<Integer> scroll = getBgScroll(1);
+        int scrollX = signed13(ppuRegisters.m7OffsetValue(0));
+        int scrollY = signed13(ppuRegisters.m7OffsetValue(1));
+        int clippedScrollX = clipMode7Offset(scrollX - centerX);
+        int clippedScrollY = clipMode7Offset(scrollY - centerY);
         int mosaicSize = ppuRegisters.mosaicPixelSize() + 1;
         boolean horizontalMosaic = ppuRegisters.mosaicAffectsBackground(source - 1);
         boolean verticalMosaic = ppuRegisters.mosaicAffectsBackground(0);
 
         for (int y = 0; y < destination.length; y++) {
             int screenY = verticalMosaic ? (y / mosaicSize) * mosaicSize : y;
+            if (ppuRegisters.m7VerticalMirroring()) {
+                screenY = 255 - screenY;
+            }
+            int originX = (a * clippedScrollX & ~63)
+                    + (b * clippedScrollY & ~63)
+                    + (b * screenY & ~63)
+                    + (centerX << 8);
+            int originY = (c * clippedScrollX & ~63)
+                    + (d * clippedScrollY & ~63)
+                    + (d * screenY & ~63)
+                    + (centerY << 8);
             for (int x = 0; x < destination[y].length; x++) {
                 int screenX = horizontalMosaic ? (x / mosaicSize) * mosaicSize : x;
-                int sourceX = (((a * (screenX - centerX)) + (b * (screenY - centerY))) >> 8)
-                        + centerX + scroll.x;
-                int sourceY = (((c * (screenX - centerX)) + (d * (screenY - centerY))) >> 8)
-                        + centerY + scroll.y;
                 if (ppuRegisters.m7HorizontalMirroring()) {
-                    sourceX = MODE7_SIZE - 1 - sourceX;
+                    screenX = 255 - screenX;
                 }
-                if (ppuRegisters.m7VerticalMirroring()) {
-                    sourceY = MODE7_SIZE - 1 - sourceY;
-                }
+                int sourceX = (originX + a * screenX) >> 8;
+                int sourceY = (originY + c * screenX) >> 8;
                 Mode7Pixel pixel = readMode7Pixel(sourceX, sourceY, extBg);
                 int level = pixel.priority ? levelHigh : levelLow;
                 if (Integer.compareUnsigned(pixel.color, 0xff) <= 0 || level < levelMap[y][x]) {
@@ -1115,6 +1130,10 @@ public class PPU extends AMemory {
     private int signed13(int value) {
         int normalized = value & 0x1fff;
         return (normalized & 0x1000) != 0 ? normalized - 0x2000 : normalized;
+    }
+
+    private int clipMode7Offset(int value) {
+        return (value & 0x2000) != 0 ? value | ~0x3ff : value & 0x3ff;
     }
 
     private record Mode7Pixel(int color, boolean priority) {

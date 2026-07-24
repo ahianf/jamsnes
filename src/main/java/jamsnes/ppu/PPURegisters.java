@@ -8,8 +8,10 @@ import static jamsnes.models.Unsigned.u8;
 public class PPURegisters {
     private final int[] raw;
     private final int[] m7 = new int[4];
+    private final int[] m7Offsets = new int[2];
     private final int[] m7Center = new int[2];
     private final int[] bgOffsets = new int[8];
+    private int m7PreviousValue;
     private int fixedColorRed;
     private int fixedColorGreen;
     private int fixedColorBlue;
@@ -24,8 +26,10 @@ public class PPURegisters {
 
     void reset() {
         Arrays.fill(m7, 0);
+        Arrays.fill(m7Offsets, 0);
         Arrays.fill(m7Center, 0);
         Arrays.fill(bgOffsets, 0);
+        m7PreviousValue = 0;
         fixedColorRed = 0;
         fixedColorGreen = 0;
         fixedColorBlue = 0;
@@ -180,7 +184,15 @@ public class PPURegisters {
     }
 
     public int m7CenterValue(int index) {
-        return (m7Center[index] >>> 3) & 0x1fff;
+        return m7Center[index] & 0x1fff;
+    }
+
+    public int m7OffsetRaw(int index) {
+        return m7Offsets[index];
+    }
+
+    public int m7OffsetValue(int index) {
+        return m7Offsets[index] & 0x1fff;
     }
 
     public boolean windowEnableWindow2ForBg2Bg4Color(int index) {
@@ -381,11 +393,15 @@ public class PPURegisters {
     }
 
     void writeM7Matrix(int index, int value) {
-        m7[index] = u16((m7[index] << 8) | u8(value));
+        m7[index] = writeM7Value(value);
     }
 
     void writeM7Center(int index, int value) {
-        m7Center[index] = u16((m7Center[index] << 8) | u8(value));
+        m7Center[index] = writeM7Value(value);
+    }
+
+    void writeM7Offset(int index, int value) {
+        m7Offsets[index] = writeM7Value(value);
     }
 
     void writeColdata(int value) {
@@ -412,6 +428,13 @@ public class PPURegisters {
 
     void setBgOffset(int index, int value) {
         bgOffsets[index] = value & 0x3ff;
+    }
+
+    private int writeM7Value(int value) {
+        int current = u8(value);
+        int result = u16((current << 8) | m7PreviousValue);
+        m7PreviousValue = current;
+        return result;
     }
 
     private boolean bit(int value, int bit) {

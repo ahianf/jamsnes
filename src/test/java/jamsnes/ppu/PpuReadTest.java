@@ -343,8 +343,8 @@ class PpuReadTest {
     }
 
     private static void writeMode7Register(SNES snes, int address, int value) {
-        snes.bus.write(address, value >>> 8);
         snes.bus.write(address, value);
+        snes.bus.write(address, value >>> 8);
     }
 
     private static SNES init() {

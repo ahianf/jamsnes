@@ -395,21 +395,35 @@ class PpuRegisterWriteTest {
         assertTrue(snes.ppu.ppuRegisters().m7HorizontalMirroring());
         assertFalse(snes.ppu.ppuRegisters().m7VerticalMirroring());
 
-        snes.bus.write(0x211b, 0b1011_1001);
+        writeMode7Register(snes, 0x211b, 0b1111_1111_1011_1001);
         assertEquals(0b1011_1001, snes.ppu.ppuRegisters().m7MatrixLow(0));
-        snes.bus.write(0x211d, 0b1011_1001);
-        snes.bus.write(0x211d, 0b1111_1111);
-        assertEquals(0b1011_1001_1111_1111, snes.ppu.ppuRegisters().m7Matrix(2));
+        writeMode7Register(snes, 0x211d, 0b1111_1111_1011_1001);
+        assertEquals(0b1111_1111_1011_1001, snes.ppu.ppuRegisters().m7Matrix(2));
 
-        snes.bus.write(0x211f, 0b0001_1001);
-        snes.bus.write(0x211f, 0b1010_0101);
+        writeMode7Register(snes, 0x211f, 0b0001_1001_1010_0101);
         assertEquals(0b0001_1001_1010_0101, snes.ppu.ppuRegisters().m7CenterRaw(0));
-        assertEquals(0b0000_0011_0011_0100, snes.ppu.ppuRegisters().m7CenterValue(0));
+        assertEquals(0b0001_1001_1010_0101, snes.ppu.ppuRegisters().m7CenterValue(0));
 
-        snes.bus.write(0x2120, 0b0110_1001);
-        snes.bus.write(0x2120, 0b0101_1010);
+        writeMode7Register(snes, 0x2120, 0b0110_1001_0101_1010);
         assertEquals(0b0110_1001_0101_1010, snes.ppu.ppuRegisters().m7CenterRaw(1));
-        assertEquals(0b0000_1101_0010_1011, snes.ppu.ppuRegisters().m7CenterValue(1));
+        assertEquals(0b0000_1001_0101_1010, snes.ppu.ppuRegisters().m7CenterValue(1));
+    }
+
+    @Test
+    void modeSevenRegistersShareThePreviousByteLatch() {
+        SNES snes = init();
+
+        snes.bus.write(0x211b, 0x34);
+        snes.bus.write(0x211c, 0x12);
+        snes.bus.write(0x210d, 0x56);
+        snes.bus.write(0x210e, 0x78);
+
+        assertEquals(0x3400, snes.ppu.ppuRegisters().m7Matrix(0));
+        assertEquals(0x1234, snes.ppu.ppuRegisters().m7Matrix(1));
+        assertEquals(0x5612, snes.ppu.ppuRegisters().m7OffsetRaw(0));
+        assertEquals(0x7856, snes.ppu.ppuRegisters().m7OffsetRaw(1));
+        assertEquals(0x1612, snes.ppu.ppuRegisters().m7OffsetValue(0));
+        assertEquals(0x1856, snes.ppu.ppuRegisters().m7OffsetValue(1));
     }
 
     @Test
@@ -553,8 +567,8 @@ class PpuRegisterWriteTest {
     }
 
     private static void writeMode7Register(SNES snes, int address, int value) {
-        snes.bus.write(address, value >>> 8);
         snes.bus.write(address, value);
+        snes.bus.write(address, value >>> 8);
     }
 
     private static SNES init() {

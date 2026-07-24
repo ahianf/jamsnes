@@ -537,8 +537,7 @@ class PpuRenderIntegrationTest {
         SNES snes = init(new TestRenderer());
         setupMode7Identity(snes);
         snes.bus.write(0x211a, 0x80);
-        snes.bus.write(0x210d, 0xff);
-        snes.bus.write(0x210d, 0xff);
+        writeMode7Register(snes, 0x210d, 0x03ff);
         snes.ppu.vram.write(0x4000, 0x05);
 
         snes.ppu.renderMainAndSubScreen();
@@ -552,8 +551,7 @@ class PpuRenderIntegrationTest {
         writeColor(snes, 5, 0x001f);
         setupMode7Identity(snes);
         snes.bus.write(0x211a, 0xc0);
-        snes.bus.write(0x210d, 0xff);
-        snes.bus.write(0x210d, 0xff);
+        writeMode7Register(snes, 0x210d, 0x03ff);
         snes.ppu.vram.write(0x4000, 0x05);
 
         snes.ppu.renderMainAndSubScreen();
@@ -567,7 +565,7 @@ class PpuRenderIntegrationTest {
         writeColor(snes, 5, 0x001f);
         setupMode7Identity(snes);
         snes.bus.write(0x211a, 0x01);
-        snes.ppu.vram.write(0x007f, 0x01);
+        snes.ppu.vram.write(0x001f, 0x01);
         snes.ppu.vram.write(0x4047, 0x05);
 
         snes.ppu.renderMainAndSubScreen();
@@ -581,8 +579,25 @@ class PpuRenderIntegrationTest {
         writeColor(snes, 5, 0x001f);
         setupMode7Identity(snes);
         snes.bus.write(0x211a, 0x02);
-        snes.ppu.vram.write(0x3f80, 0x01);
+        snes.ppu.vram.write(0x0f80, 0x01);
         snes.ppu.vram.write(0x4078, 0x05);
+
+        snes.ppu.renderMainAndSubScreen();
+
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][0]);
+    }
+
+    @Test
+    void modeSevenTransformsScrollOffsetWithTheAffineMatrix() {
+        SNES snes = init(new TestRenderer());
+        writeColor(snes, 5, 0x001f);
+        writeColor(snes, 6, 0x03e0);
+        setupMode7Identity(snes);
+        writeMode7Register(snes, 0x211b, 0x0200);
+        writeMode7Register(snes, 0x210d, 0x0001);
+        snes.ppu.vram.write(0x0000, 0x01);
+        snes.ppu.vram.write(0x4041, 0x06);
+        snes.ppu.vram.write(0x4042, 0x05);
 
         snes.ppu.renderMainAndSubScreen();
 
@@ -1237,8 +1252,8 @@ class PpuRenderIntegrationTest {
     }
 
     private static void writeMode7Register(SNES snes, int address, int value) {
-        snes.bus.write(address, value >>> 8);
         snes.bus.write(address, value);
+        snes.bus.write(address, value >>> 8);
     }
 
     private static void setupMode7Identity(SNES snes) {
