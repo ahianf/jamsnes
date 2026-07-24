@@ -185,7 +185,7 @@ public class SNES {
         }
 
         for (int controller = 0; controller < 2; controller++) {
-            int state = joypad.controllerState(controller);
+            int state = Integer.reverse(joypad.controllerState(controller)) >>> 16;
             cpu.internalRegisters()[0x18 + controller * 2] = state & 0xff;
             cpu.internalRegisters()[0x19 + controller * 2] = (state >>> 8) & 0xff;
         }

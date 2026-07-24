@@ -403,7 +403,7 @@ class SNESTest {
     }
 
     @Test
-    void updateCopiesJoypadStateToAutoReadRegistersOnVBlankEntry() {
+    void updateEncodesJoypadSerialStateInAutoReadRegisterOrderOnVBlankEntry() {
         SNES snes = new SNES(new TestRenderer());
         snes.cpu.isDisabled = true;
         snes.apu.isDisabled = true;
@@ -414,10 +414,10 @@ class SNESTest {
 
         snes.update();
 
-        assertEquals(0x09, snes.cpu.internalRegisters()[0x18]);
-        assertEquals(0x01, snes.cpu.internalRegisters()[0x19]);
-        assertEquals(0x02, snes.cpu.internalRegisters()[0x1a]);
-        assertEquals(0x0c, snes.cpu.internalRegisters()[0x1b]);
+        assertEquals(0x80, snes.cpu.internalRegisters()[0x18]);
+        assertEquals(0x90, snes.cpu.internalRegisters()[0x19]);
+        assertEquals(0x30, snes.cpu.internalRegisters()[0x1a]);
+        assertEquals(0x40, snes.cpu.internalRegisters()[0x1b]);
         assertEquals(0x00, snes.cpu.internalRegisters()[0x1c]);
         assertEquals(0x00, snes.cpu.internalRegisters()[0x1d]);
         assertEquals(0x00, snes.cpu.internalRegisters()[0x1e]);
