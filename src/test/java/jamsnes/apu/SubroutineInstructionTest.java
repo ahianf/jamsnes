@@ -54,7 +54,7 @@ class SubroutineInstructionTest {
     void brkPushesProgramCounterAndPswThenLoadsVector() {
         SNES snes = init();
         snes.apu.internalRegisters().pc = 0xffee;
-        snes.apu.internalRegisters().setPsw(0xdd);
+        snes.apu.internalRegisters().setPsw(0xcd);
         snes.apu._internalWrite(0x00f1, 0x00);
         snes.apu._internalWrite(0xffdf, 0xaa);
         snes.apu._internalWrite(0xffde, 0xbb);
@@ -67,7 +67,7 @@ class SubroutineInstructionTest {
         assertEquals(0xec, snes.apu.internalRegisters().sp);
         assertEquals(0xff, snes.apu._internalRead(0x01ef));
         assertEquals(0xee, snes.apu._internalRead(0x01ee));
-        assertEquals(0xdd, snes.apu._internalRead(0x01ed));
+        assertEquals(0xcd, snes.apu._internalRead(0x01ed));
     }
 
     @Test
@@ -121,7 +121,7 @@ class SubroutineInstructionTest {
         assertEquals(6, snes.apu.RETI());
 
         assertEquals(0x2468, snes.apu.internalRegisters().pc);
-        assertEquals(0x55, snes.apu.internalRegisters().psw());
+        assertEquals(0x45, snes.apu.internalRegisters().psw());
         assertEquals(0xef, snes.apu.internalRegisters().sp);
     }
 

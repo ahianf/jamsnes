@@ -59,7 +59,7 @@ class SubroutineOpcodeDispatchTest {
         assertEquals(0xec, snes.apu.internalRegisters().sp);
         assertEquals(0x02, snes.apu._internalRead(0x01ef));
         assertEquals(0x01, snes.apu._internalRead(0x01ee));
-        assertEquals(0xd5, snes.apu._internalRead(0x01ed));
+        assertEquals(0xc5, snes.apu._internalRead(0x01ed));
     }
 
     @Test

@@ -1658,10 +1658,10 @@ public class APU extends AMemory {
     }
 
     public int BRK() {
-        internalRegisters.b = true;
         PUSH(internalRegisters.pcHigh());
         PUSH(internalRegisters.pcLow());
         PUSH(internalRegisters.psw());
+        internalRegisters.b = true;
         internalRegisters.i = false;
         internalRegisters.setPcHigh(_internalRead(0xffdf));
         internalRegisters.setPcLow(_internalRead(0xffde));
