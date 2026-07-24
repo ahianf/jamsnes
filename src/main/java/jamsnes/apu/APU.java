@@ -781,7 +781,7 @@ public class APU extends AMemory {
             case 0xe4:
                 return MOVmemToReg(_getDirectAddr(), "a", 3);
             case 0xe5:
-                return MOVmemToReg(_getAbsoluteAddrByX(), "a", 5);
+                return MOVmemToReg(_getAbsoluteAddr(), "a", 4);
             case 0xe6:
                 return MOVmemToReg(_getIndexXAddr(), "a", 3);
             case 0xe7:

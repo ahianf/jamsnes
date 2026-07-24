@@ -183,7 +183,8 @@ class DataTransmissionOpcodeDispatchTest {
         snes.apu.internalRegisters().x = 0x03;
         snes.apu.internalRegisters().y = 0x04;
         snes.apu._internalWrite(0x03, 0xc5);
-        snes.apu._internalWrite(0x0343, 0xee);
+        snes.apu._internalWrite(0x0340, 0xee);
+        snes.apu._internalWrite(0x0343, 0x11);
         snes.apu._internalWrite(0x13, 0x9a);
         snes.apu._internalWrite(0x14, 0x02);
         snes.apu._internalWrite(0x029a, 0xdd);
@@ -195,7 +196,7 @@ class DataTransmissionOpcodeDispatchTest {
                 0xe8, 0x80,
                 0xe9, 0x21, 0x04);
 
-        assertEquals(5, snes.apu.executeInstruction());
+        assertEquals(4, snes.apu.executeInstruction());
         assertEquals(0xee, snes.apu.internalRegisters().a);
 
         assertEquals(3, snes.apu.executeInstruction());
