@@ -697,6 +697,26 @@ class DmaTest {
     }
 
     @Test
+    void wramConflictUsesTransferModeAdjustedBBusAddress() {
+        SNES snes = init();
+        snes.wram.data()[0x60] = 0x44;
+        snes.wram.data()[0x61] = 0x55;
+        snes.wram.data()[0x20] = 0x7e;
+        snes.bus.write(0x2181, 0x20);
+        setupDma(snes, DMA.TWO_TO_TWO, 0x7f, 0x7e0060, 0x0002);
+        snes.bus.write(0x420b, 0x01);
+
+        DMA dma = snes.cpu.dmaChannels()[0];
+        assertEquals(8 + 8 * 2, dma.run(1_000_000));
+
+        assertEquals(0x7e, snes.wram.data()[0x20]);
+        assertEquals(0x20, snes.wramPort.address());
+        assertEquals(0x7e0062, dma.getAAddress());
+        assertEquals(0, dma.getCount());
+        assertFalse(dma.isEnabled());
+    }
+
+    @Test
     void dmaReadsExternalOpenBusInsteadOfPpuRegisterThroughABus() {
         SNES snes = init();
         snes.bus.write(0x2100, 0x80);

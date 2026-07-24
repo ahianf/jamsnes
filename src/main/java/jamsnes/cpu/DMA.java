@@ -221,7 +221,7 @@ public class DMA {
             }
             return 8;
         }
-        if (port == 0x80) {
+        if (bAddress == 0x2180) {
             IMemory accessor = bus.getAccessor(aAddress);
             if (accessor != null && accessor.getComponent() == Component.WRAM) {
                 if (direction == 0) {
