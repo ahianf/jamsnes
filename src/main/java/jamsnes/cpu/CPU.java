@@ -13,6 +13,11 @@ import static jamsnes.models.Unsigned.u8;
 
 public class CPU extends AMemory {
     private static final int CPU_VERSION = 2;
+    private static final int MULTIPLICATION_CYCLES = 8;
+    private static final int DIVISION_CYCLES = 16;
+    private static final int MATH_OPERATION_NONE = 0;
+    private static final int MATH_OPERATION_MULTIPLY = 1;
+    private static final int MATH_OPERATION_DIVIDE = 2;
     private final Registers registers = new Registers();
     private final int[] internalRegisters = new int[0x300];
     private final DMA[] dmaChannels = new DMA[8];
@@ -24,6 +29,10 @@ public class CPU extends AMemory {
     private boolean emulationMode = true;
     private boolean stopped;
     private boolean waitingForInterrupt;
+    private int mathOperation;
+    private int mathCyclesRemaining;
+    private int pendingQuotient;
+    private int pendingProductOrRemainder;
     private Runnable ioPortLatchListener = () -> {
     };
     public boolean isNMIRequested;
@@ -164,9 +173,9 @@ public class CPU extends AMemory {
         }
         internalRegisters[address] = value;
         if (address == 0x03) {
-            runMultiplication();
+            startMultiplication();
         } else if (address == 0x06) {
-            runDivision();
+            startDivision();
         }
     }
 
@@ -182,28 +191,44 @@ public class CPU extends AMemory {
         return address >= 0x00 && address <= 0x0d;
     }
 
-    private void runMultiplication() {
-        int result = internalRegisters[0x02] * internalRegisters[0x03];
-        internalRegisters[0x16] = u8(result);
-        internalRegisters[0x17] = u8(result >>> 8);
+    private void startMultiplication() {
+        pendingProductOrRemainder = internalRegisters[0x02] * internalRegisters[0x03];
+        mathOperation = MATH_OPERATION_MULTIPLY;
+        mathCyclesRemaining = MULTIPLICATION_CYCLES;
     }
 
-    private void runDivision() {
+    private void startDivision() {
         int dividend = internalRegisters[0x04] | (internalRegisters[0x05] << 8);
         int divisor = internalRegisters[0x06];
-        int quotient;
-        int remainder;
         if (divisor == 0) {
-            quotient = 0xffff;
-            remainder = dividend;
+            pendingQuotient = 0xffff;
+            pendingProductOrRemainder = dividend;
         } else {
-            quotient = dividend / divisor;
-            remainder = dividend % divisor;
+            pendingQuotient = dividend / divisor;
+            pendingProductOrRemainder = dividend % divisor;
         }
-        internalRegisters[0x14] = u8(quotient);
-        internalRegisters[0x15] = u8(quotient >>> 8);
-        internalRegisters[0x16] = u8(remainder);
-        internalRegisters[0x17] = u8(remainder >>> 8);
+        mathOperation = MATH_OPERATION_DIVIDE;
+        mathCyclesRemaining = DIVISION_CYCLES;
+    }
+
+    private void advanceMathUnit(int cycles) {
+        if (mathOperation == MATH_OPERATION_NONE || cycles <= 0) {
+            return;
+        }
+
+        mathCyclesRemaining -= cycles;
+        if (mathCyclesRemaining > 0) {
+            return;
+        }
+
+        if (mathOperation == MATH_OPERATION_DIVIDE) {
+            internalRegisters[0x14] = u8(pendingQuotient);
+            internalRegisters[0x15] = u8(pendingQuotient >>> 8);
+        }
+        internalRegisters[0x16] = u8(pendingProductOrRemainder);
+        internalRegisters[0x17] = u8(pendingProductOrRemainder >>> 8);
+        mathOperation = MATH_OPERATION_NONE;
+        mathCyclesRemaining = 0;
     }
 
     private int readNmiStatus() {
@@ -263,17 +288,23 @@ public class CPU extends AMemory {
         while (cycles < maxCycles) {
             if (stopped) {
                 cycles++;
+                advanceMathUnit(1);
                 continue;
             }
 
-            cycles += checkInterrupts();
+            int interruptCycles = checkInterrupts();
+            cycles += interruptCycles;
+            advanceMathUnit(interruptCycles);
             if (cycles >= maxCycles) {
                 continue;
             }
 
             if (!waitingForInterrupt) {
-                cycles += executeInstruction();
+                int instructionCycles = executeInstruction();
+                cycles += instructionCycles;
+                advanceMathUnit(instructionCycles);
             } else {
+                advanceMathUnit(maxCycles - cycles);
                 return maxCycles;
             }
         }
@@ -297,6 +328,7 @@ public class CPU extends AMemory {
                 break;
             }
         }
+        advanceMathUnit(cycles);
         return cycles;
     }
 
@@ -305,6 +337,7 @@ public class CPU extends AMemory {
         for (DMA dmaChannel : dmaChannels) {
             cycles += dmaChannel.initializeHDMA();
         }
+        advanceMathUnit(cycles);
         return cycles;
     }
 
@@ -313,6 +346,7 @@ public class CPU extends AMemory {
         for (DMA dmaChannel : dmaChannels) {
             cycles += dmaChannel.runHDMALine();
         }
+        advanceMathUnit(cycles);
         return cycles;
     }
 
@@ -1134,6 +1168,8 @@ public class CPU extends AMemory {
         isNMIRequested = false;
         isIRQRequested = false;
         isAbortRequested = false;
+        mathOperation = MATH_OPERATION_NONE;
+        mathCyclesRemaining = 0;
         internalRegisters[0x10] &= 0x7f;
         internalRegisters[0x11] &= 0x7f;
         internalRegisters[0x00] = 0;

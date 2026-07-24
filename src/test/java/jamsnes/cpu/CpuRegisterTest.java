@@ -14,24 +14,44 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class CpuRegisterTest {
     @Test
-    void multiplyRegistersUpdateResultWhenMultiplierBIsWritten() {
+    void multiplyRegistersUpdateAfterEightCycles() {
         SNES snes = init();
+        snes.cpu.internalRegisters()[0x16] = 0x5a;
+        snes.cpu.internalRegisters()[0x17] = 0xa5;
 
         snes.bus.write(0x4202, 0x12);
         snes.bus.write(0x4203, 0x34);
 
+        assertEquals(0x5a, snes.bus.read(0x4216));
+        assertEquals(0xa5, snes.bus.read(0x4217));
+        snes.cpu.STP(0);
+        assertEquals(7, snes.cpu.update(7));
+        assertEquals(0x5a, snes.bus.read(0x4216));
+        assertEquals(0xa5, snes.bus.read(0x4217));
+        assertEquals(1, snes.cpu.update(1));
         assertEquals(0xa8, snes.bus.read(0x4216));
         assertEquals(0x03, snes.bus.read(0x4217));
     }
 
     @Test
-    void divideRegistersUpdateQuotientAndRemainderWhenDivisorIsWritten() {
+    void divideRegistersUpdateQuotientAndRemainderAfterSixteenCycles() {
         SNES snes = init();
+        snes.cpu.internalRegisters()[0x14] = 0x5a;
+        snes.cpu.internalRegisters()[0x15] = 0xa5;
+        snes.cpu.internalRegisters()[0x16] = 0x3c;
+        snes.cpu.internalRegisters()[0x17] = 0xc3;
 
         snes.bus.write(0x4204, 0x34);
         snes.bus.write(0x4205, 0x12);
         snes.bus.write(0x4206, 0x11);
 
+        snes.cpu.STP(0);
+        assertEquals(15, snes.cpu.update(15));
+        assertEquals(0x5a, snes.bus.read(0x4214));
+        assertEquals(0xa5, snes.bus.read(0x4215));
+        assertEquals(0x3c, snes.bus.read(0x4216));
+        assertEquals(0xc3, snes.bus.read(0x4217));
+        assertEquals(1, snes.cpu.update(1));
         assertEquals(0x12, snes.bus.read(0x4214));
         assertEquals(0x01, snes.bus.read(0x4215));
         assertEquals(0x02, snes.bus.read(0x4216));
@@ -47,11 +67,67 @@ class CpuRegisterTest {
         snes.bus.write(0x4204, 0xcd);
         snes.bus.write(0x4205, 0xab);
         snes.bus.write(0x4206, 0x00);
+        snes.cpu.STP(0);
+        snes.cpu.update(16);
 
         assertEquals(0xff, snes.bus.read(0x4214));
         assertEquals(0xff, snes.bus.read(0x4215));
         assertEquals(0xcd, snes.bus.read(0x4216));
         assertEquals(0xab, snes.bus.read(0x4217));
+    }
+
+    @Test
+    void mathUnitAdvancesWhileDmaOwnsTheBus() {
+        SNES snes = init();
+        snes.wram.data()[0] = 0x80;
+        snes.bus.write(0x4301, 0x00);
+        snes.bus.write(0x4304, 0x7e);
+        snes.bus.write(0x4303, 0x00);
+        snes.bus.write(0x4302, 0x00);
+        snes.bus.write(0x4306, 0x00);
+        snes.bus.write(0x4305, 0x01);
+        snes.bus.write(0x4300, DMA.ONE_TO_ONE);
+        snes.bus.write(0x4202, 0x12);
+        snes.bus.write(0x4203, 0x34);
+        snes.bus.write(0x420b, 0x01);
+
+        assertEquals(16, snes.cpu.runDMA(16));
+
+        assertEquals(0xa8, snes.bus.read(0x4216));
+        assertEquals(0x03, snes.bus.read(0x4217));
+    }
+
+    @Test
+    void mathUnitAdvancesDuringHdmaInitialization() {
+        SNES snes = init();
+        snes.wram.data()[0x0200] = 0x00;
+        snes.bus.write(0x4304, 0x7e);
+        snes.bus.write(0x4303, 0x02);
+        snes.bus.write(0x4302, 0x00);
+        snes.bus.write(0x420c, 0x01);
+        snes.bus.write(0x4202, 0x12);
+        snes.bus.write(0x4203, 0x34);
+
+        assertEquals(8, snes.cpu.initializeHDMA());
+
+        assertEquals(0xa8, snes.bus.read(0x4216));
+        assertEquals(0x03, snes.bus.read(0x4217));
+    }
+
+    @Test
+    void resetCancelsPendingMathOperation() {
+        SNES snes = init();
+        snes.cpu.internalRegisters()[0x16] = 0x5a;
+        snes.cpu.internalRegisters()[0x17] = 0xa5;
+        snes.bus.write(0x4202, 0x12);
+        snes.bus.write(0x4203, 0x34);
+
+        snes.cpu.RESB();
+        snes.cpu.STP(0);
+        snes.cpu.update(8);
+
+        assertEquals(0x5a, snes.bus.read(0x4216));
+        assertEquals(0xa5, snes.bus.read(0x4217));
     }
 
     @Test
@@ -165,6 +241,8 @@ class CpuRegisterTest {
         snes.cpu.requestIRQ();
         snes.bus.write(0x4202, 0x12);
         snes.bus.write(0x4203, 0x34);
+        snes.cpu.STP(0);
+        snes.cpu.update(8);
         snes.cpu.internalRegisters()[0x18] = 0x56;
 
         snes.bus.write(0x4210, 0x00);
