@@ -1704,7 +1704,7 @@ public class CPU extends AMemory {
     }
 
     private int indexBoundaryExtraCycle() {
-        return hasIndexCrossedPageBoundary ? 1 : 0;
+        return !registers.p.x_b || hasIndexCrossedPageBoundary ? 1 : 0;
     }
 
     private int directPageIndexedYExtraCycle() {

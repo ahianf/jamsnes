@@ -567,6 +567,27 @@ class CpuOpcodeDispatchTest {
     }
 
     @Test
+    void sixteenBitIndexesChargeIndexedReadCycleWithoutPageCrossing() {
+        SNES snes = init();
+        snes.cpu.setEmulationMode(false);
+        snes.cpu.registers().p.x_b = false;
+        snes.cpu.registers().setPc(0x0200);
+        snes.cpu.registers().x = 1;
+        snes.cpu.registers().y = 1;
+        snes.wram.data()[0x0010] = 0x00;
+        snes.wram.data()[0x0011] = 0x04;
+        snes.wram.data()[0x0401] = 0x42;
+        writeProgram(snes, 0x0200, 0xbd, 0x00, 0x04, 0xb1, 0x10);
+
+        assertEquals(5, snes.cpu.executeInstruction());
+        assertEquals(0x42, snes.cpu.registers().a);
+
+        assertEquals(6, snes.cpu.executeInstruction());
+        assertEquals(0x42, snes.cpu.registers().a);
+        assertEquals(0x0205, snes.cpu.registers().pc);
+    }
+
+    @Test
     void executesDirectAndAbsoluteMathOpcodes() {
         SNES snes = init();
         snes.cpu.registers().setPc(0x0200);
