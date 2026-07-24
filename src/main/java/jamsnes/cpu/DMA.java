@@ -191,7 +191,7 @@ public class DMA {
         int cycles = 0;
         for (int i = 0; i < getHdmaTransferLength(); i++) {
             int source = hdmaSourceAddress();
-            cycles += writeOneByte(source, 0x2100 | u8(port + getModeOffset(i)), 0);
+            cycles += writeOneByte(source, 0x2100 | u8(port + getModeOffset(i)), getDirection());
             incrementHdmaSourceAddress();
         }
         return cycles;

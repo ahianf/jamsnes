@@ -349,23 +349,26 @@ class DmaTest {
     }
 
     @Test
-    void hdmaIgnoresDmaDirectionBitAndAlwaysCopiesFromAToBBus() {
+    void hdmaDirectionBitCopiesFromBBusToATable() {
         SNES snes = init();
         DMA dma = snes.cpu.dmaChannels()[0];
 
         snes.wram.data()[0x0200] = 0x01;
         snes.wram.data()[0x0201] = 0x5a;
         snes.wram.data()[0x0202] = 0x00;
+        snes.bus.write(0x211b, 0x08);
+        snes.bus.write(0x211b, 0x00);
+        snes.bus.write(0x211c, 0x00);
+        snes.bus.write(0x211c, 0x02);
 
-        setupHdma(snes, 0x80 | DMA.ONE_TO_ONE, 0x26, 0x7e0200);
+        setupHdma(snes, 0x80 | DMA.ONE_TO_ONE, 0x34, 0x7e0200);
         snes.bus.write(0x420c, 0x01);
 
         assertEquals(8, snes.cpu.initializeHDMA());
         enterHBlank(snes);
         assertEquals(16, snes.cpu.runHDMALine());
 
-        assertEquals(0x5a, snes.ppu.registers()[0x26]);
-        assertEquals(0x5a, snes.wram.data()[0x0201]);
+        assertEquals(0x10, snes.wram.data()[0x0201]);
         assertEquals(0x0203, dma.getTableAddress());
         assertTrue(dma.isHdmaEnabled());
         assertFalse(dma.isHdmaActive());
