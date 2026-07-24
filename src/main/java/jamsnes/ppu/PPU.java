@@ -70,6 +70,7 @@ public class PPU extends AMemory {
     private final int[] scanlineDisplayControl = new int[Background.BUFFER_SIZE];
     private final ColorMathState[] scanlineColorMathStates = new ColorMathState[Background.BUFFER_SIZE];
     private final LayerState[] scanlineLayerStates = new LayerState[Background.BUFFER_SIZE];
+    private final Mode7State[] scanlineMode7States = new Mode7State[Background.BUFFER_SIZE];
     private final boolean[] scanlineDisplayControlCaptured = new boolean[Background.BUFFER_SIZE];
     private int vramAddress;
     private int vmain;
@@ -228,6 +229,7 @@ public class PPU extends AMemory {
         renderer.drawScreen();
         Arrays.fill(scanlineColorMathStates, null);
         Arrays.fill(scanlineLayerStates, null);
+        Arrays.fill(scanlineMode7States, null);
         Arrays.fill(scanlineDisplayControlCaptured, false);
         clearBuffer(mainScreen);
         clearBuffer(subScreen);
@@ -267,6 +269,7 @@ public class PPU extends AMemory {
         Arrays.fill(scanlineDisplayControl, 0);
         Arrays.fill(scanlineColorMathStates, null);
         Arrays.fill(scanlineLayerStates, null);
+        Arrays.fill(scanlineMode7States, null);
         Arrays.fill(scanlineDisplayControlCaptured, false);
         updateBackgroundModes();
         for (int i = 0; i < backgrounds.length; i++) {
@@ -337,6 +340,7 @@ public class PPU extends AMemory {
         scanlineDisplayControl[scanline] = registers[0x00];
         scanlineColorMathStates[scanline] = currentColorMathState();
         scanlineLayerStates[scanline] = currentLayerState();
+        scanlineMode7States[scanline] = currentMode7State();
         scanlineDisplayControlCaptured[scanline] = true;
     }
 
@@ -376,6 +380,20 @@ public class PPU extends AMemory {
                 registers[0x2e],
                 registers[0x2f],
                 offsets);
+    }
+
+    private Mode7State currentMode7State() {
+        int[] matrix = new int[4];
+        for (int i = 0; i < matrix.length; i++) {
+            matrix[i] = ppuRegisters.m7Matrix(i);
+        }
+        int[] offsets = new int[2];
+        int[] centers = new int[2];
+        for (int i = 0; i < offsets.length; i++) {
+            offsets[i] = ppuRegisters.m7OffsetValue(i);
+            centers[i] = ppuRegisters.m7CenterValue(i);
+        }
+        return new Mode7State(registers[0x1a], registers[0x33], matrix, offsets, centers);
     }
 
     public int getBpp(int backgroundNumber) {
@@ -869,28 +887,10 @@ public class PPU extends AMemory {
     }
 
     private void addMode7ToMainSubScreen() {
-        if ((registers[0x2c] & 0x01) != 0) {
-            renderMode7ToBuffer(
-                    mainScreen, mainScreenLevelMap, mainScreenSourceMap, 1, 20, 20, false,
-                    layerWindowMask(0, 0));
-        }
-        if ((registers[0x2d] & 0x01) != 0) {
-            renderMode7ToBuffer(
-                    subScreen, subScreenLevelMap, subScreenSourceMap, 1, 20, 20, false,
-                    layerWindowMask(0, 1));
-        }
-        if (ppuRegisters.setiniMode7ExtBg()) {
-            if ((registers[0x2c] & 0x02) != 0) {
-                renderMode7ToBuffer(
-                        mainScreen, mainScreenLevelMap, mainScreenSourceMap, 2, 10, 30, true,
-                        layerWindowMask(1, 0));
-            }
-            if ((registers[0x2d] & 0x02) != 0) {
-                renderMode7ToBuffer(
-                        subScreen, subScreenLevelMap, subScreenSourceMap, 2, 10, 30, true,
-                        layerWindowMask(1, 1));
-            }
-        }
+        renderMode7ToBuffer(mainScreen, mainScreenLevelMap, mainScreenSourceMap, 1, 20, 20, false, 0);
+        renderMode7ToBuffer(subScreen, subScreenLevelMap, subScreenSourceMap, 1, 20, 20, false, 1);
+        renderMode7ToBuffer(mainScreen, mainScreenLevelMap, mainScreenSourceMap, 2, 10, 30, true, 0);
+        renderMode7ToBuffer(subScreen, subScreenLevelMap, subScreenSourceMap, 2, 10, 30, true, 1);
     }
 
     private void addObjectsToMainSubScreen() {
@@ -1193,24 +1193,46 @@ public class PPU extends AMemory {
             int levelLow,
             int levelHigh,
             boolean extBg,
-            boolean[] windowMask) {
-        int a = signed16(ppuRegisters.m7Matrix(0));
-        int b = signed16(ppuRegisters.m7Matrix(1));
-        int c = signed16(ppuRegisters.m7Matrix(2));
-        int d = signed16(ppuRegisters.m7Matrix(3));
-        int centerX = signed13(ppuRegisters.m7CenterValue(0));
-        int centerY = signed13(ppuRegisters.m7CenterValue(1));
-        int scrollX = signed13(ppuRegisters.m7OffsetValue(0));
-        int scrollY = signed13(ppuRegisters.m7OffsetValue(1));
-        int clippedScrollX = clipMode7Offset(scrollX - centerX);
-        int clippedScrollY = clipMode7Offset(scrollY - centerY);
-        int mosaicSize = ppuRegisters.mosaicPixelSize() + 1;
-        boolean horizontalMosaic = ppuRegisters.mosaicAffectsBackground(source - 1);
-        boolean verticalMosaic = ppuRegisters.mosaicAffectsBackground(0);
+            int screenIndex) {
+        int backgroundIndex = source - 1;
+        int backgroundBit = 1 << backgroundIndex;
+        LayerState currentLayerState = currentLayerState();
+        Mode7State currentMode7State = currentMode7State();
+        ColorMathState currentColorMathState = currentColorMathState();
+        boolean[] currentWindowMask = backgroundWindowMask(currentLayerState, backgroundIndex, screenIndex);
 
         for (int y = 0; y < destination.length; y++) {
+            boolean captured = scanlineDisplayControlCaptured[y];
+            LayerState layerState = captured ? scanlineLayerStates[y] : currentLayerState;
+            Mode7State mode7State = captured ? scanlineMode7States[y] : currentMode7State;
+            ColorMathState colorMathState = captured ? scanlineColorMathStates[y] : currentColorMathState;
+            int designation = screenIndex == 0
+                    ? layerState.mainScreenDesignation()
+                    : layerState.subScreenDesignation();
+            if ((layerState.backgroundMode() & 0x07) != 7
+                    || (designation & backgroundBit) == 0
+                    || (extBg && (mode7State.setini() & 0x40) == 0)) {
+                continue;
+            }
+
+            int a = signed16(mode7State.matrix()[0]);
+            int b = signed16(mode7State.matrix()[1]);
+            int c = signed16(mode7State.matrix()[2]);
+            int d = signed16(mode7State.matrix()[3]);
+            int centerX = signed13(mode7State.centers()[0]);
+            int centerY = signed13(mode7State.centers()[1]);
+            int scrollX = signed13(mode7State.offsets()[0]);
+            int scrollY = signed13(mode7State.offsets()[1]);
+            int clippedScrollX = clipMode7Offset(scrollX - centerX);
+            int clippedScrollY = clipMode7Offset(scrollY - centerY);
+            int mosaicSize = ((layerState.mosaic() >>> 4) & 0x0f) + 1;
+            boolean horizontalMosaic = (layerState.mosaic() & backgroundBit) != 0;
+            boolean verticalMosaic = (layerState.mosaic() & 0x01) != 0;
+            boolean[] windowMask = captured
+                    ? backgroundWindowMask(layerState, backgroundIndex, screenIndex)
+                    : currentWindowMask;
             int screenY = verticalMosaic ? (y / mosaicSize) * mosaicSize : y;
-            if (ppuRegisters.m7VerticalMirroring()) {
+            if ((mode7State.settings() & 0x02) != 0) {
                 screenY = 255 - screenY;
             }
             int originX = (a * clippedScrollX & ~63)
@@ -1226,12 +1248,17 @@ public class PPU extends AMemory {
                     continue;
                 }
                 int screenX = horizontalMosaic ? (x / mosaicSize) * mosaicSize : x;
-                if (ppuRegisters.m7HorizontalMirroring()) {
+                if ((mode7State.settings() & 0x01) != 0) {
                     screenX = 255 - screenX;
                 }
                 int sourceX = (originX + a * screenX) >> 8;
                 int sourceY = (originY + c * screenX) >> 8;
-                Mode7Pixel pixel = readMode7Pixel(sourceX, sourceY, extBg);
+                Mode7Pixel pixel = readMode7Pixel(
+                        sourceX,
+                        sourceY,
+                        extBg,
+                        mode7State.settings(),
+                        (colorMathState.selection() & 0x01) != 0);
                 int level = pixel.priority ? levelHigh : levelLow;
                 if (Integer.compareUnsigned(pixel.color, 0xff) <= 0 || level < levelMap[y][x]) {
                     continue;
@@ -1243,9 +1270,15 @@ public class PPU extends AMemory {
         }
     }
 
-    private Mode7Pixel readMode7Pixel(int sourceX, int sourceY, boolean extBg) {
+    private Mode7Pixel readMode7Pixel(
+            int sourceX,
+            int sourceY,
+            boolean extBg,
+            int settings,
+            boolean directColor) {
         boolean outsidePlayingField = sourceX < 0 || sourceX >= MODE7_SIZE || sourceY < 0 || sourceY >= MODE7_SIZE;
-        if (outsidePlayingField && ppuRegisters.m7PlayingFieldSize() && !ppuRegisters.m7EmptySpaceFill()) {
+        boolean largePlayingField = (settings & 0x80) != 0;
+        if (outsidePlayingField && largePlayingField && (settings & 0x40) == 0) {
             return Mode7Pixel.TRANSPARENT;
         }
 
@@ -1254,7 +1287,7 @@ public class PPU extends AMemory {
         int pixelX = wrappedX % MODE7_TILE_SIZE;
         int pixelY = wrappedY % MODE7_TILE_SIZE;
         int tile;
-        if (outsidePlayingField && ppuRegisters.m7PlayingFieldSize()) {
+        if (outsidePlayingField && largePlayingField) {
             tile = 0;
         } else {
             int tileX = wrappedX / MODE7_TILE_SIZE;
@@ -1272,7 +1305,7 @@ public class PPU extends AMemory {
         if (colorIndex == 0) {
             return Mode7Pixel.TRANSPARENT;
         }
-        if (!extBg && ppuRegisters.cgwselDirectColorMode()) {
+        if (!extBg && directColor) {
             return new Mode7Pixel(PPUUtils.directColorToRGBA(0, colorIndex), priority);
         }
         int colorAddress = colorIndex * 2;
@@ -1338,6 +1371,14 @@ public class PPU extends AMemory {
             int mainScreenWindowDesignation,
             int subScreenWindowDesignation,
             int[] backgroundOffsets) {
+    }
+
+    private record Mode7State(
+            int settings,
+            int setini,
+            int[] matrix,
+            int[] offsets,
+            int[] centers) {
     }
 
     private record ObjectDimensions(int width, int height) {

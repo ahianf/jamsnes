@@ -774,6 +774,44 @@ class SNESTest {
     }
 
     @Test
+    void updatePreservesModeSevenScrollFromBeforeEachScanlineHdmaTransfer() {
+        TestRenderer renderer = new TestRenderer();
+        SNES snes = new SNES(renderer);
+        snes.bus.mapComponents(snes);
+        snes.cpu.isDisabled = true;
+        snes.apu.isDisabled = true;
+        snes.bus.write(0x2100, 0x0f);
+        snes.bus.write(0x2105, 0x07);
+        snes.bus.write(0x212c, 0x01);
+        writeMode7Register(snes, 0x211b, 0x0100);
+        writeMode7Register(snes, 0x211c, 0x0000);
+        writeMode7Register(snes, 0x211d, 0x0000);
+        writeMode7Register(snes, 0x211e, 0x0100);
+        snes.ppu.cgram.write(0x0a, 0x1f);
+        snes.ppu.cgram.write(0x0b, 0x00);
+        snes.ppu.cgram.write(0x0c, 0xe0);
+        snes.ppu.cgram.write(0x0d, 0x03);
+        snes.ppu.vram.write(0x0000, 0x01);
+        snes.ppu.vram.write(0x0081, 0x05);
+        snes.ppu.vram.write(0x0083, 0x06);
+        snes.ppu.vram.write(0x0093, 0x06);
+        snes.wram.data()[0x0200] = 0x01;
+        snes.wram.data()[0x0201] = 0x01;
+        snes.wram.data()[0x0202] = 0x00;
+        snes.wram.data()[0x0203] = 0x00;
+        setupHdma(snes, DMA.TWO_TO_ONE, 0x0d, 0x7e0200);
+        snes.bus.write(0x420c, 0x01);
+
+        for (int updates = 0; renderer.drawScreenCalls == 0 && updates < 400; updates++) {
+            snes.update();
+        }
+
+        assertEquals(1, renderer.drawScreenCalls);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.firstScanlinePixel);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), renderer.secondScanlinePixel);
+    }
+
+    @Test
     void updatePreservesObjectDesignationFromBeforeEachScanlineHdmaTransfer() {
         TestRenderer renderer = new TestRenderer();
         SNES snes = new SNES(renderer);
@@ -991,6 +1029,11 @@ class SNESTest {
         setupHdma(snes, control, port, address);
         snes.bus.write(0x4305, count);
         snes.bus.write(0x4306, count >>> 8);
+    }
+
+    private static void writeMode7Register(SNES snes, int address, int value) {
+        snes.bus.write(address, value);
+        snes.bus.write(address, value >>> 8);
     }
 
     private static final class TestRenderer implements IRenderer {
