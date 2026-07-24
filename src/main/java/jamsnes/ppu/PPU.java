@@ -336,7 +336,8 @@ public class PPU extends AMemory {
                 registers[0x2b],
                 registers[0x30],
                 registers[0x31],
-                ppuRegisters.fixedColor());
+                ppuRegisters.fixedColor(),
+                cgram.read(0) | (cgram.read(1) << 8));
     }
 
     public int getBpp(int backgroundNumber) {
@@ -1201,7 +1202,8 @@ public class PPU extends AMemory {
             int windowLogic,
             int selection,
             int designation,
-            int fixedColor) {
+            int fixedColor,
+            int backdropColor) {
     }
 
     private record ObjectDimensions(int width, int height) {
@@ -1221,8 +1223,7 @@ public class PPU extends AMemory {
         int pixel = mainScreen[y][x];
         int source = mainScreenSourceMap[y][x];
         if (source == SOURCE_NONE) {
-            int backdrop = cgram.read(0) | (cgram.read(1) << 8);
-            pixel = PPUUtils.cgramColorToRGBA(backdrop);
+            pixel = PPUUtils.cgramColorToRGBA(colorMathState.backdropColor());
             source = SOURCE_BACKDROP;
         }
         boolean clippedToBlack = isColorClippedToBlack(x, colorMathState);
