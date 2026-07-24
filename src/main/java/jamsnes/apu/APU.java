@@ -1877,6 +1877,7 @@ public class APU extends AMemory {
         internalRegisters.a = 0;
         internalRegisters.y = 0;
         internalRegisters.x = 0;
+        internalRegisters.setPsw(0);
         internalRegisters.sp = 0xef;
         internalRegisters.pc = 0xffc0;
         paddingCycles = 0;

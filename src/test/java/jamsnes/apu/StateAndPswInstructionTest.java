@@ -10,6 +10,18 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class StateAndPswInstructionTest {
     @Test
+    void resetClearsPriorProgramStatus() {
+        SNES snes = init();
+        snes.apu.internalRegisters().setPsw(0xff);
+
+        snes.apu.reset();
+
+        assertEquals(0x00, snes.apu.internalRegisters().psw());
+        assertEquals(0xffc0, snes.apu.internalRegisters().pc);
+        assertEquals(0xef, snes.apu.internalRegisters().sp);
+    }
+
+    @Test
     void standbyInstructionsReturnCyclesAndSetState() {
         SNES snes = init();
 
