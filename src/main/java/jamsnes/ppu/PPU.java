@@ -768,8 +768,8 @@ public class PPU extends AMemory {
         int baseAddress = objectTileBaseAddress(attributes);
 
         for (int pixelY = 0; pixelY < dimensions.height(); pixelY++) {
-            int screenY = y + pixelY;
-            if (screenY < 0 || screenY >= destination.length) {
+            int screenY = u8(y + pixelY);
+            if (screenY >= destination.length) {
                 continue;
             }
             int sourceY = verticalFlip ? verticallyFlippedObjectY(pixelY, dimensions) : pixelY;
