@@ -15,6 +15,15 @@ public class Background {
     public static final int BUFFER_SIZE = 1024;
     public static final int PRIORITY_SIZE = 64;
 
+    public record ScanlineState(
+            boolean enabled,
+            int scrollX,
+            int scrollY,
+            int mosaicSize,
+            boolean[] windowMask,
+            int horizontalScale) {
+    }
+
     private final PPU ppu;
     private final int backgroundNumber;
     private final Ram vram;
@@ -172,6 +181,30 @@ public class Background {
             int mosaicSize,
             boolean[] windowMask,
             int horizontalScale) {
+        ScanlineState commonState = new ScanlineState(
+                true, scrollX, scrollY, mosaicSize, windowMask, horizontalScale);
+        ScanlineState[] scanlineStates = new ScanlineState[bufferDest.length];
+        Arrays.fill(scanlineStates, commonState);
+        mergeBackgroundBuffer(
+                bufferDest,
+                pixelDestinationLevelMap,
+                sourceDestinationMap,
+                source,
+                backgroundSrc,
+                levelLow,
+                levelHigh,
+                scanlineStates);
+    }
+
+    public static void mergeBackgroundBuffer(
+            int[][] bufferDest,
+            int[][] pixelDestinationLevelMap,
+            int[][] sourceDestinationMap,
+            int source,
+            Background backgroundSrc,
+            int levelLow,
+            int levelHigh,
+            ScanlineState[] scanlineStates) {
         int height = Math.min(bufferDest.length, backgroundSrc.buffer.length);
         int sourceHeight = backgroundSrc.backgroundSize.y > 0
                 ? Math.min(backgroundSrc.backgroundSize.y, backgroundSrc.buffer.length)
@@ -179,37 +212,41 @@ public class Background {
         int sourceWidth = backgroundSrc.backgroundSize.x > 0
                 ? Math.min(backgroundSrc.backgroundSize.x, backgroundSrc.buffer[0].length)
                 : backgroundSrc.buffer[0].length;
-        int pixelSize = Math.max(1, mosaicSize);
-        boolean offsetPerTile = backgroundSrc.ppu.usesOffsetPerTile(backgroundSrc.backgroundNumber);
-        int[] offsetSourceX = null;
-        int[] offsetScrollY = null;
-        if (offsetPerTile && bufferDest.length > 0) {
-            int width = Math.min(bufferDest[0].length, backgroundSrc.buffer[0].length);
-            offsetSourceX = new int[width];
-            offsetScrollY = new int[width];
-            for (int x = 0; x < width; x++) {
-                int mosaicX = (x / pixelSize) * pixelSize;
-                offsetSourceX[x] = backgroundSrc.ppu.offsetPerTileHorizontalCoordinate(
-                        backgroundSrc.backgroundNumber, mosaicX, scrollX);
-                offsetScrollY[x] = backgroundSrc.ppu.offsetPerTileVerticalScroll(
-                        backgroundSrc.backgroundNumber, mosaicX, scrollX, scrollY);
-            }
-        }
         for (int y = 0; y < height; y++) {
+            ScanlineState state = y < scanlineStates.length ? scanlineStates[y] : null;
+            if (state == null || !state.enabled()) {
+                continue;
+            }
             int width = Math.min(bufferDest[y].length, backgroundSrc.buffer[y].length);
+            int pixelSize = Math.max(1, state.mosaicSize());
             int mosaicY = (y / pixelSize) * pixelSize;
+            int[] offsetSourceX = null;
+            int[] offsetScrollY = null;
+            if (backgroundSrc.ppu.usesOffsetPerTile(backgroundSrc.backgroundNumber)) {
+                offsetSourceX = new int[width];
+                offsetScrollY = new int[width];
+                for (int x = 0; x < width; x++) {
+                    int mosaicX = (x / pixelSize) * pixelSize;
+                    offsetSourceX[x] = backgroundSrc.ppu.offsetPerTileHorizontalCoordinate(
+                            backgroundSrc.backgroundNumber, mosaicX, state.scrollX());
+                    offsetScrollY[x] = backgroundSrc.ppu.offsetPerTileVerticalScroll(
+                            backgroundSrc.backgroundNumber, mosaicX, state.scrollX(), state.scrollY());
+                }
+            }
             for (int x = 0; x < width; x++) {
-                if (windowMask != null && x < windowMask.length && windowMask[x]) {
+                if (state.windowMask() != null
+                        && x < state.windowMask().length
+                        && state.windowMask()[x]) {
                     continue;
                 }
                 int mosaicX = (x / pixelSize) * pixelSize;
-                int sourceCoordinateX = mosaicX + scrollX;
-                int sourceScrollY = scrollY;
+                int sourceCoordinateX = mosaicX + state.scrollX();
+                int sourceScrollY = state.scrollY();
                 if (offsetSourceX != null) {
                     sourceCoordinateX = offsetSourceX[x];
                     sourceScrollY = offsetScrollY[x];
                 }
-                int sourceX = Math.floorMod(sourceCoordinateX * horizontalScale, sourceWidth);
+                int sourceX = Math.floorMod(sourceCoordinateX * state.horizontalScale(), sourceWidth);
                 int sourceY = Math.floorMod(mosaicY + sourceScrollY, sourceHeight);
                 int pixel = backgroundSrc.buffer[sourceY][sourceX];
                 if (Integer.compareUnsigned(pixel, 0xff) <= 0) {

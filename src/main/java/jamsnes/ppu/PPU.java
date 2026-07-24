@@ -69,6 +69,7 @@ public class PPU extends AMemory {
     private final int[] evaluatedObjectCounts = new int[OBJ_EVALUATED_SCANLINES];
     private final int[] scanlineDisplayControl = new int[Background.BUFFER_SIZE];
     private final ColorMathState[] scanlineColorMathStates = new ColorMathState[Background.BUFFER_SIZE];
+    private final LayerState[] scanlineLayerStates = new LayerState[Background.BUFFER_SIZE];
     private final boolean[] scanlineDisplayControlCaptured = new boolean[Background.BUFFER_SIZE];
     private int vramAddress;
     private int vmain;
@@ -226,6 +227,7 @@ public class PPU extends AMemory {
         }
         renderer.drawScreen();
         Arrays.fill(scanlineColorMathStates, null);
+        Arrays.fill(scanlineLayerStates, null);
         Arrays.fill(scanlineDisplayControlCaptured, false);
         clearBuffer(mainScreen);
         clearBuffer(subScreen);
@@ -264,6 +266,7 @@ public class PPU extends AMemory {
         ppu2OpenBus = 0;
         Arrays.fill(scanlineDisplayControl, 0);
         Arrays.fill(scanlineColorMathStates, null);
+        Arrays.fill(scanlineLayerStates, null);
         Arrays.fill(scanlineDisplayControlCaptured, false);
         updateBackgroundModes();
         for (int i = 0; i < backgrounds.length; i++) {
@@ -286,7 +289,7 @@ public class PPU extends AMemory {
             }
         }
 
-        fillBuffer(subScreen, PPUUtils.cgramColorToRGBA(ppuRegisters.fixedColor()));
+        fillSubScreenBackdrop();
         clearBuffer(mainScreen);
         clearBuffer(mainScreenLevelMap);
         clearBuffer(subScreenLevelMap);
@@ -317,12 +320,23 @@ public class PPU extends AMemory {
         addObjectsToMainSubScreen();
     }
 
+    private void fillSubScreenBackdrop() {
+        ColorMathState currentState = currentColorMathState();
+        for (int y = 0; y < subScreen.length; y++) {
+            ColorMathState state = scanlineDisplayControlCaptured[y]
+                    ? scanlineColorMathStates[y]
+                    : currentState;
+            Arrays.fill(subScreen[y], PPUUtils.cgramColorToRGBA(state.fixedColor()));
+        }
+    }
+
     public void captureScanlineState(int scanline) {
         if (scanline < 0 || scanline >= vBlankStartScanline()) {
             return;
         }
         scanlineDisplayControl[scanline] = registers[0x00];
         scanlineColorMathStates[scanline] = currentColorMathState();
+        scanlineLayerStates[scanline] = currentLayerState();
         scanlineDisplayControlCaptured[scanline] = true;
     }
 
@@ -338,6 +352,28 @@ public class PPU extends AMemory {
                 registers[0x31],
                 ppuRegisters.fixedColor(),
                 cgram.read(0) | (cgram.read(1) << 8));
+    }
+
+    private LayerState currentLayerState() {
+        int[] offsets = new int[8];
+        for (int i = 0; i < offsets.length; i++) {
+            offsets[i] = ppuRegisters.bgOffset(i);
+        }
+        return new LayerState(
+                registers[0x05],
+                registers[0x06],
+                registers[0x23],
+                registers[0x24],
+                registers[0x26],
+                registers[0x27],
+                registers[0x28],
+                registers[0x29],
+                registers[0x2a],
+                registers[0x2c],
+                registers[0x2d],
+                registers[0x2e],
+                registers[0x2f],
+                offsets);
     }
 
     public int getBpp(int backgroundNumber) {
@@ -747,25 +783,87 @@ public class PPU extends AMemory {
     }
 
     private void addToMainSubScreen(Background background, int levelLow, int levelHigh) {
-        int backgroundBit = 1 << (background.getBackgroundNumber() - 1);
         int backgroundIndex = background.getBackgroundNumber() - 1;
-        Vector2<Integer> scroll = getBgScroll(background.getBackgroundNumber());
-        int horizontalScale = ppuRegisters.bgMode() == 5 || ppuRegisters.bgMode() == 6 ? 2 : 1;
-        int mosaicSize = ppuRegisters.mosaicAffectsBackground(backgroundIndex)
-                ? ppuRegisters.mosaicPixelSize() + 1
-                : 1;
-        if ((registers[0x2c] & backgroundBit) != 0) {
-            Background.mergeBackgroundBuffer(
-                    mainScreen, mainScreenLevelMap, mainScreenSourceMap, background.getBackgroundNumber(),
-                    background, levelLow, levelHigh, scroll.x, scroll.y, mosaicSize,
-                    layerWindowMask(backgroundIndex, 0), horizontalScale);
+        Background.mergeBackgroundBuffer(
+                mainScreen,
+                mainScreenLevelMap,
+                mainScreenSourceMap,
+                background.getBackgroundNumber(),
+                background,
+                levelLow,
+                levelHigh,
+                backgroundScanlineStates(backgroundIndex, 0));
+        Background.mergeBackgroundBuffer(
+                subScreen,
+                subScreenLevelMap,
+                subScreenSourceMap,
+                background.getBackgroundNumber(),
+                background,
+                levelLow,
+                levelHigh,
+                backgroundScanlineStates(backgroundIndex, 1));
+    }
+
+    private Background.ScanlineState[] backgroundScanlineStates(int backgroundIndex, int screenIndex) {
+        Background.ScanlineState[] result = new Background.ScanlineState[Background.BUFFER_SIZE];
+        LayerState currentState = currentLayerState();
+        boolean[] currentWindowMask = backgroundWindowMask(currentState, backgroundIndex, screenIndex);
+        int offsetIndex = backgroundIndex * 2;
+        int backgroundBit = 1 << backgroundIndex;
+
+        for (int y = 0; y < result.length; y++) {
+            LayerState state = scanlineDisplayControlCaptured[y]
+                    ? scanlineLayerStates[y]
+                    : currentState;
+            int designation = screenIndex == 0
+                    ? state.mainScreenDesignation()
+                    : state.subScreenDesignation();
+            int mode = state.backgroundMode() & 0x07;
+            int mosaicSize = (state.mosaic() & backgroundBit) != 0
+                    ? ((state.mosaic() >>> 4) & 0x0f) + 1
+                    : 1;
+            boolean[] windowMask = state == currentState
+                    ? currentWindowMask
+                    : backgroundWindowMask(state, backgroundIndex, screenIndex);
+            result[y] = new Background.ScanlineState(
+                    (designation & backgroundBit) != 0,
+                    state.backgroundOffsets()[offsetIndex],
+                    state.backgroundOffsets()[offsetIndex + 1],
+                    mosaicSize,
+                    windowMask,
+                    mode == 5 || mode == 6 ? 2 : 1);
         }
-        if ((registers[0x2d] & backgroundBit) != 0) {
-            Background.mergeBackgroundBuffer(
-                    subScreen, subScreenLevelMap, subScreenSourceMap, background.getBackgroundNumber(),
-                    background, levelLow, levelHigh, scroll.x, scroll.y, mosaicSize,
-                    layerWindowMask(backgroundIndex, 1), horizontalScale);
+        return result;
+    }
+
+    private boolean[] backgroundWindowMask(LayerState state, int backgroundIndex, int screenIndex) {
+        int designation = screenIndex == 0
+                ? state.mainScreenWindowDesignation()
+                : state.subScreenWindowDesignation();
+        if ((designation & (1 << backgroundIndex)) == 0) {
+            return null;
         }
+
+        int selection = backgroundIndex < 2
+                ? state.windowSelection12()
+                : state.windowSelection34();
+        boolean highNibble = (backgroundIndex & 1) != 0;
+        int shift = highNibble ? 4 : 0;
+        boolean[] mask = new boolean[Background.BUFFER_SIZE];
+        for (int x = 0; x < mask.length; x++) {
+            mask[x] = isInsideWindowMask(
+                    (selection & (0x02 << shift)) != 0,
+                    (selection & (0x01 << shift)) != 0,
+                    (selection & (0x08 << shift)) != 0,
+                    (selection & (0x04 << shift)) != 0,
+                    (state.windowLogic() >>> (backgroundIndex * 2)) & 0x03,
+                    x,
+                    state.window1Left(),
+                    state.window1Right(),
+                    state.window2Left(),
+                    state.window2Right());
+        }
+        return mask;
     }
 
     private void addMode7ToMainSubScreen() {
@@ -1204,6 +1302,23 @@ public class PPU extends AMemory {
             int designation,
             int fixedColor,
             int backdropColor) {
+    }
+
+    private record LayerState(
+            int backgroundMode,
+            int mosaic,
+            int windowSelection12,
+            int windowSelection34,
+            int window1Left,
+            int window1Right,
+            int window2Left,
+            int window2Right,
+            int windowLogic,
+            int mainScreenDesignation,
+            int subScreenDesignation,
+            int mainScreenWindowDesignation,
+            int subScreenWindowDesignation,
+            int[] backgroundOffsets) {
     }
 
     private record ObjectDimensions(int width, int height) {
