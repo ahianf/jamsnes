@@ -140,6 +140,27 @@ class SyntheticRomBootTest {
         assertEquals(0x802d, snes.cpu.registers().pc);
     }
 
+    @Test
+    void loadedLoRomUploadsAndLaunchesAnApuProgramBeforePresenting() throws IOException {
+        FrameBufferRenderer renderer =
+                new FrameBufferRenderer(Background.BUFFER_SIZE, Background.BUFFER_SIZE, 60);
+        SNES snes = new SNES(writeApuUploadRom().toString(), renderer);
+
+        for (int updates = 0; renderer.drawScreenCalls() < 2 && updates < 20_000; updates++) {
+            snes.update();
+        }
+
+        assertEquals(2, renderer.drawScreenCalls(), "Synthetic ROM should present after launching uploaded APU code");
+        assertEquals(0x8f, snes.apu._internalRead(0x0200));
+        assertEquals(0x5a, snes.apu._internalRead(0x0201));
+        assertEquals(0xf6, snes.apu._internalRead(0x0202));
+        assertEquals(0xff, snes.apu._internalRead(0x0203));
+        assertEquals(0x5a, snes.bus.read(0x002142), "Uploaded SPC700 code should signal through output port 2");
+        assertEquals(0xa5, snes.wram.data()[0], "Cartridge code should observe the uploaded program's signal");
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.pixel(0, 0));
+        assertEquals(0x80ae, snes.cpu.registers().pc);
+    }
+
     private Path writeBootRom() throws IOException {
         byte[] rom = new byte[0x8000];
         byte[] program = {
@@ -421,6 +442,97 @@ class SyntheticRomBootTest {
         rom[0x7ffc] = 0x00;
         rom[0x7ffd] = (byte) 0x80;
         Path path = tempDir.resolve("synthetic-apu-handshake.sfc");
+        Files.write(path, rom);
+        return path;
+    }
+
+    private Path writeApuUploadRom() throws IOException {
+        byte[] rom = new byte[0x8000];
+        byte[] program = {
+                (byte) 0x78,                         // SEI
+                (byte) 0xa9, (byte) 0x80,            // LDA #$80
+                (byte) 0x8d, 0x00, 0x21,             // STA $2100 (forced blank)
+                (byte) 0xad, 0x40, 0x21,             // waitBoot0: LDA $2140
+                (byte) 0xc9, (byte) 0xaa,            // CMP #$aa
+                (byte) 0xd0, (byte) 0xf9,            // BNE waitBoot0
+                (byte) 0xad, 0x41, 0x21,             // waitBoot1: LDA $2141
+                (byte) 0xc9, (byte) 0xbb,            // CMP #$bb
+                (byte) 0xd0, (byte) 0xf9,            // BNE waitBoot1
+                (byte) 0xa9, 0x00,                   // LDA #$00
+                (byte) 0x8d, 0x42, 0x21,             // STA $2142 (destination low)
+                (byte) 0xa9, 0x02,                   // LDA #$02
+                (byte) 0x8d, 0x43, 0x21,             // STA $2143 (destination high)
+                (byte) 0xa9, 0x01,                   // LDA #$01
+                (byte) 0x8d, 0x41, 0x21,             // STA $2141 (upload command)
+                (byte) 0xa9, (byte) 0xcc,            // LDA #$cc
+                (byte) 0x8d, 0x40, 0x21,             // STA $2140 (start upload)
+                (byte) 0xad, 0x40, 0x21,             // waitCommand: LDA $2140
+                (byte) 0xc9, (byte) 0xcc,            // CMP #$cc
+                (byte) 0xd0, (byte) 0xf9,            // BNE waitCommand
+                (byte) 0xa9, (byte) 0x8f,            // LDA #$8f (MOV dp,#imm)
+                (byte) 0x8d, 0x41, 0x21,             // STA $2141
+                (byte) 0xa9, 0x00,                   // LDA #$00
+                (byte) 0x8d, 0x40, 0x21,             // STA $2140
+                (byte) 0xad, 0x40, 0x21,             // waitByte0: LDA $2140
+                (byte) 0xc9, 0x00,                   // CMP #$00
+                (byte) 0xd0, (byte) 0xf9,            // BNE waitByte0
+                (byte) 0xa9, 0x5a,                   // LDA #$5a
+                (byte) 0x8d, 0x41, 0x21,             // STA $2141
+                (byte) 0xa9, 0x01,                   // LDA #$01
+                (byte) 0x8d, 0x40, 0x21,             // STA $2140
+                (byte) 0xad, 0x40, 0x21,             // waitByte1: LDA $2140
+                (byte) 0xc9, 0x01,                   // CMP #$01
+                (byte) 0xd0, (byte) 0xf9,            // BNE waitByte1
+                (byte) 0xa9, (byte) 0xf6,            // LDA #$f6
+                (byte) 0x8d, 0x41, 0x21,             // STA $2141
+                (byte) 0xa9, 0x02,                   // LDA #$02
+                (byte) 0x8d, 0x40, 0x21,             // STA $2140
+                (byte) 0xad, 0x40, 0x21,             // waitByte2: LDA $2140
+                (byte) 0xc9, 0x02,                   // CMP #$02
+                (byte) 0xd0, (byte) 0xf9,            // BNE waitByte2
+                (byte) 0xa9, (byte) 0xff,            // LDA #$ff (STOP)
+                (byte) 0x8d, 0x41, 0x21,             // STA $2141
+                (byte) 0xa9, 0x03,                   // LDA #$03
+                (byte) 0x8d, 0x40, 0x21,             // STA $2140
+                (byte) 0xad, 0x40, 0x21,             // waitByte3: LDA $2140
+                (byte) 0xc9, 0x03,                   // CMP #$03
+                (byte) 0xd0, (byte) 0xf9,            // BNE waitByte3
+                (byte) 0xa9, 0x00,                   // LDA #$00
+                (byte) 0x8d, 0x42, 0x21,             // STA $2142 (entry low)
+                (byte) 0xa9, 0x02,                   // LDA #$02
+                (byte) 0x8d, 0x43, 0x21,             // STA $2143 (entry high)
+                (byte) 0xa9, 0x00,                   // LDA #$00
+                (byte) 0x8d, 0x41, 0x21,             // STA $2141 (execute command)
+                (byte) 0xa9, 0x05,                   // LDA #$05
+                (byte) 0x8d, 0x40, 0x21,             // STA $2140 (finish upload)
+                (byte) 0xad, 0x40, 0x21,             // waitExecute: LDA $2140
+                (byte) 0xc9, 0x05,                   // CMP #$05
+                (byte) 0xd0, (byte) 0xf9,            // BNE waitExecute
+                (byte) 0xad, 0x42, 0x21,             // waitSignal: LDA $2142
+                (byte) 0xc9, 0x5a,                   // CMP #$5a
+                (byte) 0xd0, (byte) 0xf9,            // BNE waitSignal
+                (byte) 0xa9, 0x00,                   // LDA #$00
+                (byte) 0x8d, 0x21, 0x21,             // STA $2121 (CGADD)
+                (byte) 0xa9, 0x1f,                   // LDA #$1f
+                (byte) 0x8d, 0x22, 0x21,             // STA $2122 (CGDATA low)
+                (byte) 0xa9, 0x00,                   // LDA #$00
+                (byte) 0x8d, 0x22, 0x21,             // STA $2122 (CGDATA high)
+                (byte) 0xa9, (byte) 0xa5,            // LDA #$a5
+                (byte) 0x8d, 0x00, 0x00,             // STA $0000 (upload marker)
+                (byte) 0xa9, 0x0f,                   // LDA #$0f
+                (byte) 0x8d, 0x00, 0x21,             // STA $2100 (display on)
+                (byte) 0x80, (byte) 0xfe             // BRA *
+        };
+        System.arraycopy(program, 0, rom, 0, program.length);
+        byte[] title = "JAMSNES APU UPLOAD".getBytes(StandardCharsets.ISO_8859_1);
+        System.arraycopy(title, 0, rom, 0x7fc0, title.length);
+        rom[0x7fd5] = 0x20;
+        rom[0x7fd6] = 0x00;
+        rom[0x7fd7] = 0x05;
+        rom[0x7fd8] = 0x00;
+        rom[0x7ffc] = 0x00;
+        rom[0x7ffd] = (byte) 0x80;
+        Path path = tempDir.resolve("synthetic-apu-upload.sfc");
         Files.write(path, rom);
         return path;
     }
