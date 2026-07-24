@@ -148,9 +148,9 @@ public class DSP {
                 case 0x7:
                     return voices[voice].gain;
                 case 0x8:
-                    return latch.envx;
+                    return voices[voice].envx;
                 case 0x9:
-                    return latch.outx;
+                    return voices[voice].outx;
                 default:
                     break;
             }
@@ -226,7 +226,7 @@ public class DSP {
                     return;
                 }
                 case 0x9 -> {
-                    latch.outx = value;
+                    voices[voice].outx = value;
                     return;
                 }
                 default -> {
@@ -245,7 +245,7 @@ public class DSP {
                 master.reset = (value & 0x80) != 0;
                 master.mute = (value & 0x40) != 0;
                 echo.enabled = (value & 0x20) != 0;
-                noise.clock = value & 0x0f;
+                noise.clock = value & 0x1f;
             }
             case 0x7c -> setVoiceFlags(0, Flag.ENDX);
             case 0x0d -> echo.feedback = value;
@@ -442,7 +442,7 @@ public class DSP {
     }
 
     public int getSize() {
-        return 0x7f;
+        return 0x80;
     }
 
     public int getSamplesCount() {

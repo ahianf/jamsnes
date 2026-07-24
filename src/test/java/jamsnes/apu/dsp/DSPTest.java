@@ -80,6 +80,37 @@ class DSPTest {
     }
 
     @Test
+    void envxAndOutxRegistersRemainIndependentPerVoice() {
+        DSP dsp = new DSP();
+
+        dsp.write(0x08, 0x12);
+        dsp.write(0x18, 0x34);
+        dsp.write(0x09, 0x56);
+        dsp.write(0x19, 0x78);
+
+        assertEquals(0x12, dsp.read(0x08));
+        assertEquals(0x34, dsp.read(0x18));
+        assertEquals(0x56, dsp.read(0x09));
+        assertEquals(0x78, dsp.read(0x19));
+    }
+
+    @Test
+    void flagsRegisterPreservesTheFiveBitNoiseClock() {
+        DSP dsp = new DSP();
+
+        dsp.write(0x6c, 0x1f);
+
+        assertEquals(0x1f, dsp.read(0x6c));
+    }
+
+    @Test
+    void registerFileIncludesAddressSevenF() {
+        DSP dsp = new DSP();
+
+        assertEquals(0x80, dsp.getSize());
+    }
+
+    @Test
     void keyOnRegisterIsLatchedOnTheEveryOtherSamplePoll() {
         DSP dsp = new DSP();
         dsp.write(0x4c, 0x01);
