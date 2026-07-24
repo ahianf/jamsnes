@@ -138,12 +138,12 @@ class DSPTest {
         for (int i = 0; i < 32; i++) {
             dsp.update();
         }
-        assertEquals(5, dsp.voiceKonDelay(0));
+        assertEquals(4, dsp.voiceKonDelay(0));
 
         for (int i = 0; i < 32; i++) {
             dsp.update();
         }
-        assertEquals(4, dsp.voiceKonDelay(0));
+        assertEquals(3, dsp.voiceKonDelay(0));
         assertEquals(0, dsp.read(0x4c));
     }
 

@@ -865,12 +865,14 @@ public class DSP {
             voice.envelopeMode = EnvelopeMode.RELEASE;
         }
 
-        if (voice.tempKof) {
-            voice.envelopeMode = EnvelopeMode.RELEASE;
-        }
-        if (voice.tempKon) {
-            voice.konDelay = 5;
-            voice.envelopeMode = EnvelopeMode.ATTACK;
+        if (timer.sample) {
+            if (voice.tempKof) {
+                voice.envelopeMode = EnvelopeMode.RELEASE;
+            }
+            if (voice.tempKon) {
+                voice.konDelay = 5;
+                voice.envelopeMode = EnvelopeMode.ATTACK;
+            }
         }
 
         if (voice.konDelay == 0) {
