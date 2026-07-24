@@ -1215,35 +1215,26 @@ public class CPU extends AMemory {
     }
 
     public int MVN(int valueAddr) {
-        int srcBank = bus.read(valueAddr);
-        int destBank = bus.read(valueAddr + 1);
-        int length = registers.a + 1;
-
-        registers.dbr = destBank;
-        while (registers.a != 0xffff) {
-            int data = bus.read(u24((srcBank << 16) | blockMoveIndexValue(registers.x)));
-            bus.write(u24((destBank << 16) | blockMoveIndexValue(registers.y)), data);
-            registers.x = advanceBlockMoveIndex(registers.x, 1);
-            registers.y = advanceBlockMoveIndex(registers.y, 1);
-            registers.a = u16(registers.a - 1);
-        }
-        return 7 * length;
+        return blockMove(valueAddr, 1);
     }
 
     public int MVP(int valueAddr) {
-        int srcBank = bus.read(valueAddr);
-        int destBank = bus.read(valueAddr + 1);
-        int length = registers.a + 1;
+        return blockMove(valueAddr, -1);
+    }
 
+    private int blockMove(int valueAddr, int indexDelta) {
+        int destBank = bus.read(valueAddr);
+        int srcBank = bus.read(valueAddr + 1);
         registers.dbr = destBank;
-        while (registers.a != 0xffff) {
-            int data = bus.read(u24((srcBank << 16) | blockMoveIndexValue(registers.x)));
-            bus.write(u24((destBank << 16) | blockMoveIndexValue(registers.y)), data);
-            registers.x = advanceBlockMoveIndex(registers.x, -1);
-            registers.y = advanceBlockMoveIndex(registers.y, -1);
-            registers.a = u16(registers.a - 1);
+        int data = bus.read(u24((srcBank << 16) | blockMoveIndexValue(registers.x)));
+        bus.write(u24((destBank << 16) | blockMoveIndexValue(registers.y)), data);
+        registers.x = advanceBlockMoveIndex(registers.x, indexDelta);
+        registers.y = advanceBlockMoveIndex(registers.y, indexDelta);
+        registers.a = u16(registers.a - 1);
+        if (registers.a != 0xffff) {
+            registers.incrementPc(-3);
         }
-        return 7 * length;
+        return 7;
     }
 
     private int blockMoveIndexValue(int value) {

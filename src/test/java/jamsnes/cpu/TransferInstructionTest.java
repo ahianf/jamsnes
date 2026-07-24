@@ -233,7 +233,10 @@ class TransferInstructionTest {
             snes.wram.data()[i] = i;
         }
 
-        int cycles = snes.cpu.MVN(0x1ff0);
+        int cycles = 0;
+        do {
+            cycles += snes.cpu.MVN(0x1ff0);
+        } while (snes.cpu.registers().a != 0xffff);
 
         assertEquals(0x77, cycles);
         assertEquals(0x00, snes.cpu.registers().dbr);
@@ -259,7 +262,10 @@ class TransferInstructionTest {
             snes.wram.data()[i] = i;
         }
 
-        int cycles = snes.cpu.MVP(0x1ff0);
+        int cycles = 0;
+        do {
+            cycles += snes.cpu.MVP(0x1ff0);
+        } while (snes.cpu.registers().a != 0xffff);
 
         assertEquals(0x77, cycles);
         assertEquals(0x00, snes.cpu.registers().dbr);
@@ -283,7 +289,10 @@ class TransferInstructionTest {
         snes.wram.data()[0x0001] = 0xaa;
         snes.wram.data()[0x0002] = 0xbb;
 
-        int cycles = snes.cpu.MVN(0x1ff0);
+        int cycles = 0;
+        do {
+            cycles += snes.cpu.MVN(0x1ff0);
+        } while (snes.cpu.registers().a != 0xffff);
 
         assertEquals(14, cycles);
         assertEquals(0xaa, snes.wram.data()[0x0005]);
@@ -305,7 +314,10 @@ class TransferInstructionTest {
         snes.wram.data()[0x0002] = 0xaa;
         snes.wram.data()[0x0001] = 0xbb;
 
-        int cycles = snes.cpu.MVP(0x1ff0);
+        int cycles = 0;
+        do {
+            cycles += snes.cpu.MVP(0x1ff0);
+        } while (snes.cpu.registers().a != 0xffff);
 
         assertEquals(14, cycles);
         assertEquals(0xbb, snes.wram.data()[0x0005]);

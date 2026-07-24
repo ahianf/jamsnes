@@ -194,6 +194,32 @@ class CpuUpdateLoopTest {
     }
 
     @Test
+    void updateYieldsBetweenBlockMoveByteIterations() {
+        SNES snes = init();
+        snes.cpu.setEmulationMode(false);
+        snes.cpu.registers().p.x_b = false;
+        snes.cpu.registers().setPc(0x0200);
+        snes.cpu.registers().a = 3;
+        snes.cpu.registers().x = 0x0300;
+        snes.cpu.registers().y = 0x0400;
+        writeProgram(snes, 0x0200, 0x54, 0x00, 0x00);
+        writeProgram(snes, 0x0300, 0x11, 0x22, 0x33, 0x44);
+
+        assertEquals(14, snes.cpu.update(12));
+        assertEquals(1, snes.cpu.registers().a);
+        assertEquals(0x0200, snes.cpu.registers().pc);
+        assertEquals(0x11, snes.wram.data()[0x0400]);
+        assertEquals(0x22, snes.wram.data()[0x0401]);
+        assertEquals(0x00, snes.wram.data()[0x0402]);
+
+        assertEquals(14, snes.cpu.update(12));
+        assertEquals(0xffff, snes.cpu.registers().a);
+        assertEquals(0x0203, snes.cpu.registers().pc);
+        assertEquals(0x33, snes.wram.data()[0x0402]);
+        assertEquals(0x44, snes.wram.data()[0x0403]);
+    }
+
+    @Test
     void updateRunsDmaBeforeInstructions() {
         SNES snes = init();
         snes.wram.data()[0] = 0x34;
