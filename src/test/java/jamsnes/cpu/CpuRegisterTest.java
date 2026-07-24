@@ -11,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CpuRegisterTest {
     @Test
@@ -153,14 +154,14 @@ class CpuRegisterTest {
     }
 
     @Test
-    void rdnmiReadClearsNmiStatusAndPendingRequest() {
+    void rdnmiReadClearsStatusWithoutCancellingPendingNmi() {
         SNES snes = init();
 
         snes.cpu.requestNMI();
 
         assertEquals(0x82, snes.bus.read(0x4210));
         assertEquals(0x02, snes.bus.read(0x4210));
-        assertFalse(snes.cpu.isNMIRequested);
+        assertTrue(snes.cpu.isNMIRequested);
     }
 
     @Test

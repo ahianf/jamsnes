@@ -265,11 +265,15 @@ public class SNES {
         boolean inVBlank = ppu.isInVBlank();
         boolean nmiEnabled = nmiEnabled();
         boolean enteredVBlank = inVBlank && !wasInVBlank;
+        boolean leftVBlank = !inVBlank && wasInVBlank;
         boolean enabledDuringVBlank = inVBlank && nmiEnabled && !wasNmiEnabled;
         if (enteredVBlank) {
+            cpu.latchNmiStatus();
             updateAutoJoypadRegisters();
+        } else if (leftVBlank) {
+            cpu.clearNmiStatus();
         }
-        if ((enteredVBlank || enabledDuringVBlank) && nmiEnabled) {
+        if ((enteredVBlank || enabledDuringVBlank) && nmiEnabled && cpu.isNmiStatusLatched()) {
             cpu.requestNMI();
         }
         wasInVBlank = inVBlank;

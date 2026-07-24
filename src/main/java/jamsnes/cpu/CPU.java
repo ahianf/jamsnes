@@ -247,8 +247,7 @@ public class CPU extends AMemory {
 
     private int readNmiStatus() {
         int value = (internalRegisters[0x10] & 0x80) | (bus.getOpenBus() & 0x70) | CPU_VERSION;
-        internalRegisters[0x10] &= 0x7f;
-        isNMIRequested = false;
+        clearNmiStatus();
         return value;
     }
 
@@ -285,7 +284,19 @@ public class CPU extends AMemory {
 
     public void requestNMI() {
         isNMIRequested = true;
+        latchNmiStatus();
+    }
+
+    public void latchNmiStatus() {
         internalRegisters[0x10] |= 0x80;
+    }
+
+    public void clearNmiStatus() {
+        internalRegisters[0x10] &= 0x7f;
+    }
+
+    public boolean isNmiStatusLatched() {
+        return (internalRegisters[0x10] & 0x80) != 0;
     }
 
     public void requestIRQ() {
