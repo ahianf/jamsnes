@@ -2,6 +2,7 @@ package jamsnes.input;
 
 import jamsnes.exceptions.InvalidAddress;
 import jamsnes.memory.AMemory;
+import jamsnes.memory.IMemoryBus;
 import jamsnes.models.Component;
 
 import java.util.Objects;
@@ -24,7 +25,16 @@ public class Joypad extends AMemory {
 
     private final int[] controllerState = new int[2];
     private final int[] shiftRegister = new int[2];
+    private final IMemoryBus bus;
     private boolean strobe;
+
+    public Joypad() {
+        this(null);
+    }
+
+    public Joypad(IMemoryBus bus) {
+        this.bus = bus;
+    }
 
     @Override
     public int read(int address) {
@@ -37,7 +47,11 @@ public class Joypad extends AMemory {
         if (!strobe) {
             shiftRegister[address] = u16((shiftRegister[address] >>> 1) | 0x8000);
         }
-        return value;
+        int openBus = bus == null ? 0 : bus.getOpenBus();
+        if (address == 0) {
+            return (openBus & 0xfc) | value;
+        }
+        return (openBus & 0xe0) | 0x1c | value;
     }
 
     @Override

@@ -41,13 +41,28 @@ class JoypadTest {
         snes.bus.write(0x4016, 1);
         snes.bus.write(0x4016, 0);
 
-        assertEquals(0, snes.bus.read(0x4017));
-        assertEquals(1, snes.bus.read(0x4017));
-        assertEquals(1, snes.bus.read(0x4017));
-        assertEquals(0, snes.bus.read(0x4017));
-        assertEquals(0, snes.bus.read(0x4017));
-        assertEquals(0, snes.bus.read(0x4017));
-        assertEquals(1, snes.bus.read(0x4017));
+        assertEquals(0x1c, snes.bus.read(0x4017));
+        assertEquals(0x1d, snes.bus.read(0x4017));
+        assertEquals(0x1d, snes.bus.read(0x4017));
+        assertEquals(0x1c, snes.bus.read(0x4017));
+        assertEquals(0x1c, snes.bus.read(0x4017));
+        assertEquals(0x1c, snes.bus.read(0x4017));
+        assertEquals(0x1d, snes.bus.read(0x4017));
+    }
+
+    @Test
+    void serialReadsPreserveOpenBusBitsAndJoyser1Pullups() {
+        SNES snes = init();
+        snes.joypad.setControllerState(0, Joypad.BUTTON_B);
+        snes.joypad.setControllerState(1, Joypad.BUTTON_B);
+        snes.bus.write(0x4016, 1);
+        snes.bus.write(0x4016, 0);
+
+        snes.bus.setOpenBus(0xa4);
+        assertEquals(0xa5, snes.bus.read(0x4016));
+
+        snes.bus.setOpenBus(0xa4);
+        assertEquals(0xbd, snes.bus.read(0x4017));
     }
 
     @Test

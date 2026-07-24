@@ -49,7 +49,7 @@ public class SNES {
         this.wramPort = new WramPort(wram);
         this.sram = new MirroredRam(0, Component.SRAM, "SRam");
         this.cpu = new CPU(bus, cartridge.header);
-        this.joypad = new Joypad();
+        this.joypad = new Joypad(bus);
         this.ppu = new PPU(renderer);
         this.cpu.setIoPortLatchListener(this.ppu::latchCounters);
         this.ppu.setExternalCounterLatchEnabled(() -> (cpu.internalRegisters()[0x01] & 0x80) != 0);
