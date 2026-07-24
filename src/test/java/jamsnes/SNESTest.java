@@ -448,9 +448,12 @@ class SNESTest {
         snes.ppu.advanceCountersOnly(PPU.H_COUNTER_DOTS * PPU.V_BLANK_START_SCANLINE - 0xff);
 
         snes.update();
-        for (int i = 0; i < 17; i++) {
+        for (int i = 0; i < 4; i++) {
             snes.update();
         }
+        assertEquals(0x01, snes.bus.read(0x4212) & 0x01);
+
+        snes.update();
 
         assertEquals(0x80, snes.bus.read(0x4212));
     }

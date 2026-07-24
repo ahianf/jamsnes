@@ -20,7 +20,8 @@ public class SNES {
     private static final int NMITIMEN_AUTO_JOYPAD_ENABLE = 0x01;
     private static final int NMITIMEN_H_IRQ_ENABLE = 0x10;
     private static final int NMITIMEN_V_IRQ_ENABLE = 0x20;
-    private static final int AUTO_JOYPAD_READ_CYCLES = 4224;
+    private static final int MASTER_CLOCKS_PER_PPU_DOT = 4;
+    private static final int AUTO_JOYPAD_READ_DOTS = 4224 / MASTER_CLOCKS_PER_PPU_DOT;
 
     private final IRenderer renderer;
     public final MemoryBus bus;
@@ -212,7 +213,7 @@ public class SNES {
 
     private void updateAutoJoypadBusy(boolean enteredVBlank, int startHCounter, int startVCounter, int cycles) {
         if (enteredVBlank && autoJoypadEnabled()) {
-            autoJoypadReadCyclesRemaining = AUTO_JOYPAD_READ_CYCLES;
+            autoJoypadReadCyclesRemaining = AUTO_JOYPAD_READ_DOTS;
             autoJoypadReadCyclesRemaining = Math.max(0,
                     autoJoypadReadCyclesRemaining - cyclesAfterVBlankStart(startHCounter, startVCounter, cycles));
             return;
