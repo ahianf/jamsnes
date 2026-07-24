@@ -32,8 +32,6 @@ public class DMA {
     private boolean hdmaEnabled;
     private boolean hdmaActive;
     private boolean hdmaDoTransfer;
-    private boolean hdmaRepeat;
-    private int hdmaLineRemaining;
     private boolean dmaStartupPending;
     private int dmaModeIndex;
 
@@ -50,8 +48,6 @@ public class DMA {
         hdmaEnabled = false;
         hdmaActive = false;
         hdmaDoTransfer = false;
-        hdmaRepeat = false;
-        hdmaLineRemaining = 0;
         dmaStartupPending = false;
         dmaModeIndex = 0;
     }
@@ -142,12 +138,17 @@ public class DMA {
         if (hdmaDoTransfer) {
             cycles += transferHdmaBytes();
         }
-        hdmaLineRemaining--;
-        if (hdmaLineRemaining <= 0) {
+        int repeatFlag = lineCounter > 0x80 ? 0x80 : 0;
+        int linesRemaining = lineCounter & 0x7f;
+        if (linesRemaining == 0) {
+            linesRemaining = 128;
+        }
+        linesRemaining--;
+        if (linesRemaining == 0) {
             cycles += loadNextHdmaLine();
         } else {
-            lineCounter = (hdmaRepeat ? 0x80 : 0) | (hdmaLineRemaining & 0x7f);
-            hdmaDoTransfer = hdmaRepeat;
+            lineCounter = repeatFlag | (linesRemaining & 0x7f);
+            hdmaDoTransfer = repeatFlag != 0;
         }
         return cycles;
     }
@@ -159,17 +160,10 @@ public class DMA {
         if (lineCounter == 0) {
             hdmaActive = false;
             hdmaDoTransfer = false;
-            hdmaRepeat = false;
-            hdmaLineRemaining = 0;
             return 8;
         }
 
         int cycles = 8;
-        hdmaRepeat = lineCounter > 0x80;
-        hdmaLineRemaining = lineCounter & 0x7f;
-        if (hdmaLineRemaining == 0) {
-            hdmaLineRemaining = 128;
-        }
         hdmaDoTransfer = true;
         if (isHdmaIndirect()) {
             int low = bus.read(tableBank | tableAddress);
@@ -348,8 +342,6 @@ public class DMA {
         if (!hdmaEnabled) {
             hdmaActive = false;
             hdmaDoTransfer = false;
-            hdmaRepeat = false;
-            hdmaLineRemaining = 0;
         }
     }
 }

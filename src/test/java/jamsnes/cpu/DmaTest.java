@@ -145,6 +145,30 @@ class DmaTest {
     }
 
     @Test
+    void lineCounterRegisterWriteChangesActiveHdmaCountdown() {
+        SNES snes = init();
+        DMA dma = snes.cpu.dmaChannels()[0];
+
+        snes.wram.data()[0x0200] = 0x03;
+        snes.wram.data()[0x0201] = 0x5a;
+        snes.wram.data()[0x0202] = 0x00;
+
+        setupHdma(snes, DMA.ONE_TO_ONE, 0x26, 0x7e0200);
+        snes.bus.write(0x420c, 0x01);
+
+        assertEquals(8, snes.cpu.initializeHDMA());
+        assertEquals(8, snes.cpu.runHDMALine());
+        assertEquals(0x02, dma.getLineCounter());
+        assertTrue(dma.isHdmaActive());
+
+        snes.bus.write(0x430a, 0x01);
+
+        assertEquals(8, snes.cpu.runHDMALine());
+        assertEquals(0x0203, dma.getTableAddress());
+        assertFalse(dma.isHdmaActive());
+    }
+
+    @Test
     void repeatedDirectHdmaTransfersEachLine() {
         SNES snes = init();
         DMA dma = snes.cpu.dmaChannels()[0];
