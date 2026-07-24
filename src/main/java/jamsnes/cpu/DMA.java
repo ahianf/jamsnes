@@ -208,13 +208,21 @@ public class DMA {
     }
 
     private int writeOneByte(int aAddress, int bAddress, int direction) {
+        if (isInvalidABusAddress(aAddress)) {
+            if (direction == 0) {
+                bus.write(bAddress, bus.getOpenBus());
+            } else {
+                bus.read(bAddress);
+            }
+            return 8;
+        }
         if (port == 0x80) {
             IMemory accessor = bus.getAccessor(aAddress);
             if (accessor != null && accessor.getComponent() == Component.WRAM) {
                 if (direction == 0) {
                     return 8;
                 }
-                bus.write(aAddress, 0xff);
+                bus.write(aAddress, bus.getOpenBus());
                 return 4;
             }
         }
@@ -224,6 +232,18 @@ public class DMA {
             bus.write(aAddress, bus.read(bAddress));
         }
         return 8;
+    }
+
+    private boolean isInvalidABusAddress(int address) {
+        int bank = (address >>> 16) & 0xff;
+        if (bank > 0x3f && (bank < 0x80 || bank > 0xbf)) {
+            return false;
+        }
+        int page = address & 0xffff;
+        return (page >= 0x2100 && page <= 0x21ff)
+                || (page >= 0x4000 && page <= 0x41ff)
+                || (page >= 0x4200 && page <= 0x421f)
+                || (page >= 0x4300 && page <= 0x437f);
     }
 
     private int getModeOffset(int index) {

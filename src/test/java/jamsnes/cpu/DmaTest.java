@@ -586,6 +586,7 @@ class DmaTest {
     void wramDataPortDmaSpecialCasesAvoidWramBusConflict() {
         SNES snes = init();
         snes.wram.data()[0x60] = 0x44;
+        snes.bus.write(0x2181, 0x20);
 
         snes.bus.write(0x4301, 0x80);
         snes.bus.write(0x4304, 0x7e);
@@ -599,6 +600,7 @@ class DmaTest {
         DMA dma = snes.cpu.dmaChannels()[0];
         assertEquals(8 + 8, dma.run(1_000_000));
         assertEquals(0x44, snes.wram.data()[0x60]);
+        assertEquals(0x20, snes.wramPort.address());
 
         snes.bus.write(0x4301, 0x80);
         snes.bus.write(0x4304, 0x7e);
@@ -608,9 +610,47 @@ class DmaTest {
         snes.bus.write(0x4305, 0x01);
         snes.bus.write(0x4300, 0x80 | DMA.ONE_TO_ONE);
         snes.bus.write(0x420b, 0x01);
+        snes.bus.setOpenBus(0x5a);
 
         assertEquals(8 + 4, dma.run(1_000_000));
-        assertEquals(0xff, snes.wram.data()[0x60]);
+        assertEquals(0x5a, snes.wram.data()[0x60]);
+        assertEquals(0x20, snes.wramPort.address());
+    }
+
+    @Test
+    void dmaReadsOpenBusInsteadOfPpuRegisterThroughABus() {
+        SNES snes = init();
+        snes.bus.write(0x2100, 0x80);
+        snes.ppu.cgram.write(0x40, 0x34);
+        snes.bus.write(0x2121, 0x20);
+        setupDma(snes, DMA.ONE_TO_ONE, 0x26, 0x00213b, 0x0001);
+        snes.bus.write(0x420b, 0x01);
+        snes.bus.setOpenBus(0x5a);
+
+        DMA dma = snes.cpu.dmaChannels()[0];
+        assertEquals(16, dma.run(1_000_000));
+
+        assertEquals(0x5a, snes.ppu.registers()[0x26]);
+        assertEquals(0x20, snes.ppu.ppuRegisters().cgAddress());
+        assertEquals(0x00213c, dma.getAAddress());
+        assertEquals(0, dma.getCount());
+    }
+
+    @Test
+    void dmaIgnoresABusWritesToPpuRegisters() {
+        SNES snes = init();
+        snes.bus.write(0x2100, 0x80);
+        snes.ppu.cgram.write(0x40, 0x34);
+        snes.bus.write(0x2121, 0x20);
+        setupDma(snes, 0x80 | DMA.ONE_TO_ONE, 0x3b, 0x002100, 0x0001);
+        snes.bus.write(0x420b, 0x01);
+
+        DMA dma = snes.cpu.dmaChannels()[0];
+        assertEquals(16, dma.run(1_000_000));
+
+        assertEquals(0x80, snes.ppu.registers()[0x00]);
+        assertEquals(0x002101, dma.getAAddress());
+        assertEquals(0, dma.getCount());
     }
 
     private static SNES init() {
