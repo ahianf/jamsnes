@@ -157,6 +157,29 @@ class UpdateLoopTest {
     }
 
     @Test
+    void testRegisterGatesTimersWhileTheirDividersKeepRunning() {
+        SNES snes = init();
+        snes.apu.internalRegisters().pc = 0x200;
+        snes.apu._internalWrite(0x00fa, 0x01);
+        snes.apu._internalWrite(0x00f1, 0x01);
+
+        snes.apu._internalWrite(0x00f0, 0x0b);
+        snes.apu.update(128);
+        assertEquals(0, snes.apu._internalRead(0x00fd));
+
+        snes.apu._internalWrite(0x00f0, 0x02);
+        snes.apu.update(128);
+        assertEquals(0, snes.apu._internalRead(0x00fd));
+
+        snes.apu._internalWrite(0x00f0, 0x0a);
+        snes.apu.update(127);
+        assertEquals(0, snes.apu._internalRead(0x00fd));
+
+        snes.apu.update(1);
+        assertEquals(1, snes.apu._internalRead(0x00fd));
+    }
+
+    @Test
     void enablingTimerResetsTargetStageAndCounterButPreservesDividerPhase() {
         SNES snes = init();
         snes.apu.internalRegisters().pc = 0x200;

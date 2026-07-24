@@ -73,6 +73,45 @@ class InternalMemoryMapTest {
     }
 
     @Test
+    void testRegisterControlsSpcRamReadsAndWritesWithoutHidingIo() {
+        SNES snes = init();
+        snes.apu._internalWrite(0x0200, 0x12);
+
+        snes.apu._internalWrite(0x00f0, 0x0c);
+        assertEquals(0x5a, snes.apu._internalRead(0x0200));
+
+        snes.apu._internalWrite(0x0200, 0x34);
+        snes.apu._internalWrite(0x00f8, 0x56);
+        assertEquals(0x56, snes.apu._internalRead(0x00f8));
+
+        snes.apu._internalWrite(0x00f0, 0x0a);
+        assertEquals(0x12, snes.apu._internalRead(0x0200));
+        assertEquals(0x0c, snes.apu.readApuRam(0x00f0));
+        assertEquals(0x00, snes.apu.readApuRam(0x00f8));
+
+        snes.apu._internalWrite(0x00f0, 0x08);
+        snes.apu._internalWrite(0x0200, 0x34);
+        assertEquals(0x12, snes.apu._internalRead(0x0200));
+
+        snes.apu._internalWrite(0x00f0, 0x0a);
+        snes.apu._internalWrite(0x0200, 0x34);
+        assertEquals(0x34, snes.apu._internalRead(0x0200));
+    }
+
+    @Test
+    void testRegisterWritesAreIgnoredWhenDirectPageFlagIsSet() {
+        SNES snes = init();
+        snes.apu._internalWrite(0x0200, 0x12);
+        snes.apu.internalRegisters().p = true;
+
+        snes.apu._internalWrite(0x00f0, 0x04);
+        snes.apu._internalWrite(0x0200, 0x34);
+
+        assertEquals(0x34, snes.apu._internalRead(0x0200));
+        assertEquals(0x04, snes.apu.readApuRam(0x00f0));
+    }
+
+    @Test
     void controlRegisterTogglesIplRomOverlay() {
         SNES snes = init();
 
@@ -454,6 +493,9 @@ class InternalMemoryMapTest {
         spc[0x22] = 0x1a;
         spc[0x23] = 0x1a;
         spc[0x24] = 0x1e;
+        if (size > 0x1f0) {
+            spc[0x1f0] = 0x0a;
+        }
         return spc;
     }
 }

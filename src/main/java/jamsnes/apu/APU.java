@@ -12,6 +12,11 @@ import static jamsnes.models.Unsigned.u16;
 import static jamsnes.models.Unsigned.u8;
 
 public class APU extends AMemory {
+    private static final int TEST_TIMERS_DISABLE = 0x01;
+    private static final int TEST_RAM_WRITABLE = 0x02;
+    private static final int TEST_RAM_DISABLE = 0x04;
+    private static final int TEST_TIMERS_ENABLE = 0x08;
+
     public enum StateMode {
         RUNNING,
         SLEEPING,
@@ -112,7 +117,7 @@ public class APU extends AMemory {
                     yield iplRom[address - 0xffc0];
                 }
                 if (address <= 0x00ef || address >= 0x0100) {
-                    yield internalMemory[address];
+                    yield readSpcRam(address);
                 }
                 throw new InvalidAddress("APU Registers read", address);
             }
@@ -122,9 +127,13 @@ public class APU extends AMemory {
     public void _internalWrite(int address, int data) {
         validateInternalAddress(address, "APU Registers write");
         int value = u8(data);
-        writeApuRam(address, value);
+        writeSpcRam(address, value);
         switch (address) {
-            case 0x00f0 -> unknownRegister = value;
+            case 0x00f0 -> {
+                if (!internalRegisters.p) {
+                    unknownRegister = value;
+                }
+            }
             case 0x00f1 -> writeControlRegister(value);
             case 0x00f2 -> dspRegisterAddress = value;
             case 0x00f3 -> {
@@ -151,8 +160,22 @@ public class APU extends AMemory {
         return internalMemory[u16(address)];
     }
 
+    private int readSpcRam(int address) {
+        if ((unknownRegister & TEST_RAM_DISABLE) != 0) {
+            return 0x5a;
+        }
+        return readApuRam(address);
+    }
+
     private void writeApuRam(int address, int data) {
         internalMemory[u16(address)] = u8(data);
+    }
+
+    private void writeSpcRam(int address, int data) {
+        if ((unknownRegister & TEST_RAM_WRITABLE) != 0
+                && (unknownRegister & TEST_RAM_DISABLE) == 0) {
+            writeApuRam(address, data);
+        }
     }
 
     private int readCounter(int index) {
@@ -186,12 +209,14 @@ public class APU extends AMemory {
         if (cycles <= 0) {
             return;
         }
+        boolean timersClocking = (unknownRegister & TEST_TIMERS_ENABLE) != 0
+                && (unknownRegister & TEST_TIMERS_DISABLE) == 0;
         for (int i = 0; i < timerEnabled.length; i++) {
             int dividerPeriod = i == 2 ? 16 : 128;
             timerDividers[i] += cycles;
             while (timerDividers[i] >= dividerPeriod) {
                 timerDividers[i] -= dividerPeriod;
-                if (timerEnabled[i]) {
+                if (timerEnabled[i] && timersClocking) {
                     tickTimer(i);
                 }
             }
@@ -1890,7 +1915,7 @@ public class APU extends AMemory {
             timerStages[i] = 0;
         }
         dsp.reset();
-        unknownRegister = 0;
+        unknownRegister = TEST_RAM_WRITABLE | TEST_TIMERS_ENABLE;
         controlRegister = 0;
         iplRomEnabled = true;
         dspRegisterAddress = 0;
