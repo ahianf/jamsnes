@@ -115,6 +115,28 @@ class CpuRegisterTest {
     }
 
     @Test
+    void mathUnitAdvancesOnEachDramRefreshEdge() {
+        SNES snes = init();
+        snes.cpu.internalRegisters()[0x16] = 0x5a;
+        snes.cpu.internalRegisters()[0x17] = 0xa5;
+        snes.bus.write(0x4202, 0x12);
+        snes.bus.write(0x4203, 0x34);
+
+        assertEquals(40, snes.cpu.runDramRefresh());
+        assertEquals(0x5a, snes.bus.read(0x4216));
+        assertEquals(0xa5, snes.bus.read(0x4217));
+
+        snes.cpu.STP(0);
+        snes.cpu.update(2);
+        assertEquals(0x5a, snes.bus.read(0x4216));
+        assertEquals(0xa5, snes.bus.read(0x4217));
+
+        snes.cpu.update(1);
+        assertEquals(0xa8, snes.bus.read(0x4216));
+        assertEquals(0x03, snes.bus.read(0x4217));
+    }
+
+    @Test
     void resetCancelsPendingMathOperation() {
         SNES snes = init();
         snes.cpu.internalRegisters()[0x16] = 0x5a;

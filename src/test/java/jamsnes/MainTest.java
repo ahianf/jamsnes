@@ -80,7 +80,7 @@ class MainTest {
 
         new NoRenderer(0, 0, 0).createWindow(snes, 60);
 
-        assertEquals(0xff, snes.ppu.hCounter());
+        assertEquals(265, snes.ppu.hCounter());
     }
 
     @Test

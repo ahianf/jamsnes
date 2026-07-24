@@ -19,6 +19,8 @@ public class CPU extends AMemory {
     private static final int MULTIPLICATION_CYCLES = 8;
     private static final int DIVISION_CYCLES = 16;
     private static final int DMA_SHARED_OVERHEAD_CYCLES = 8;
+    private static final int DRAM_REFRESH_MASTER_CLOCKS = 40;
+    private static final int DRAM_REFRESH_ALU_EDGES = 5;
     private static final int MASTER_CLOCKS_PER_CPU_CYCLE = 6;
     private static final int MATH_OPERATION_NONE = 0;
     private static final int MATH_OPERATION_MULTIPLY = 1;
@@ -408,6 +410,11 @@ public class CPU extends AMemory {
         }
         advanceMathUnit(cycles);
         return cycles;
+    }
+
+    public int runDramRefresh() {
+        advanceMathUnit(DRAM_REFRESH_ALU_EDGES);
+        return DRAM_REFRESH_MASTER_CLOCKS;
     }
 
     private boolean hasEnabledHdmaChannel() {

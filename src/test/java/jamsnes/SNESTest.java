@@ -279,7 +279,7 @@ class SNESTest {
 
         assertEquals(0, renderer.drawScreenCalls);
         assertEquals(0, renderer.putPixelCalls);
-        assertEquals(0xff, snes.ppu.hCounter());
+        assertEquals(265, snes.ppu.hCounter());
         assertEquals(0, snes.ppu.vCounter());
     }
 
@@ -289,11 +289,13 @@ class SNESTest {
         snes.cpu.isDisabled = true;
 
         snes.update();
-        int expectedFirstCycles = (int) ((255L * SNES.APU_CLOCK_HZ) / SNES.PPU_DOT_CLOCK_HZ);
+        long firstUpdateMasterClocks = 255L * 4 + 40;
+        int expectedFirstCycles = (int) ((firstUpdateMasterClocks * SNES.APU_CLOCK_HZ) / SNES.MASTER_CLOCK_HZ);
         assertEquals(expectedFirstCycles % 32, snes.apu.dsp().voicePhase());
 
         snes.update();
-        int expectedTotalCycles = (int) ((510L * SNES.APU_CLOCK_HZ) / SNES.PPU_DOT_CLOCK_HZ);
+        int expectedTotalCycles = (int) ((firstUpdateMasterClocks * 2 * SNES.APU_CLOCK_HZ)
+                / SNES.MASTER_CLOCK_HZ);
         assertEquals(expectedTotalCycles % 32, snes.apu.dsp().voicePhase());
     }
 
@@ -331,6 +333,30 @@ class SNESTest {
         assertEquals(36, snes.ppu.hCounter());
         assertEquals(0, snes.ppu.vCounter());
         assertEquals(0x0201, snes.cpu.registers().pc);
+    }
+
+    @Test
+    void updateStallsOnceForDramRefreshEachScanline() {
+        SNES snes = new SNES(new TestRenderer());
+        snes.bus.mapComponents(snes);
+        snes.cpu.STP(0);
+        snes.ppu.advanceCountersOnly(120);
+
+        snes.update();
+
+        assertEquals(148, snes.ppu.hCounter());
+        int expectedApuCycles = (int) ((112L * SNES.APU_CLOCK_HZ) / SNES.MASTER_CLOCK_HZ);
+        assertEquals(expectedApuCycles % 32, snes.apu.dsp().voicePhase());
+
+        snes.update();
+
+        assertEquals(166, snes.ppu.hCounter());
+
+        snes.ppu.advanceCountersOnly(PPU.H_COUNTER_DOTS - 166 + 120);
+        snes.update();
+
+        assertEquals(148, snes.ppu.hCounter());
+        assertEquals(1, snes.ppu.vCounter());
     }
 
     @Test
@@ -452,7 +478,7 @@ class SNESTest {
         assertEquals(0x02, snes.cpu.internalRegisters()[0x1a]);
         assertEquals(0x00, snes.cpu.internalRegisters()[0x1b]);
 
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 3; i++) {
             snes.update();
         }
 
@@ -490,7 +516,7 @@ class SNESTest {
         snes.ppu.advanceCountersOnly(PPU.H_COUNTER_DOTS * PPU.V_BLANK_START_SCANLINE - 0xff);
 
         snes.update();
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 3; i++) {
             snes.update();
         }
         assertEquals(0x01, snes.bus.read(0x4212) & 0x01);
@@ -715,7 +741,7 @@ class SNESTest {
 
         assertEquals(0x00, snes.bus.read(0x4211) & 0x80);
         assertEquals(241, snes.ppu.vCounter());
-        assertEquals(254, snes.ppu.hCounter());
+        assertEquals(264, snes.ppu.hCounter());
     }
 
     @Test
@@ -733,7 +759,7 @@ class SNESTest {
         snes.update();
 
         assertEquals(262, snes.ppu.vCounter());
-        assertEquals(244, snes.ppu.hCounter());
+        assertEquals(254, snes.ppu.hCounter());
         assertEquals(0x80, snes.bus.read(0x4211));
     }
 
@@ -753,7 +779,7 @@ class SNESTest {
         snes.update();
 
         assertEquals(0, snes.ppu.vCounter());
-        assertEquals(244, snes.ppu.hCounter());
+        assertEquals(254, snes.ppu.hCounter());
         assertEquals(0x00, snes.bus.read(0x4211) & 0x80);
     }
 

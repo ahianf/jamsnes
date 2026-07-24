@@ -22,6 +22,7 @@ public class SNES {
     private static final int NMITIMEN_H_IRQ_ENABLE = 0x10;
     private static final int NMITIMEN_V_IRQ_ENABLE = 0x20;
     private static final int MASTER_CLOCKS_PER_PPU_DOT = 4;
+    static final int DRAM_REFRESH_START_DOT = 536 / MASTER_CLOCKS_PER_PPU_DOT;
     static final int HDMA_START_DOT = 1104 / MASTER_CLOCKS_PER_PPU_DOT;
     private static final int AUTO_JOYPAD_READ_DOTS = 4224 / MASTER_CLOCKS_PER_PPU_DOT;
 
@@ -47,6 +48,10 @@ public class SNES {
     private boolean autoJoypadLatchReleased;
     private int ppuMasterClockRemainder;
     private long apuClockRemainder;
+    private long dramRefreshFrame = -1;
+    private int dramRefreshScanline = -1;
+    private long hdmaFrame = -1;
+    private int hdmaScanline = -1;
 
     public SNES(IRenderer renderer) {
         this.renderer = renderer;
@@ -98,6 +103,10 @@ public class SNES {
         autoJoypadLatchReleased = true;
         ppuMasterClockRemainder = 0;
         apuClockRemainder = 0;
+        dramRefreshFrame = -1;
+        dramRefreshScanline = -1;
+        hdmaFrame = -1;
+        hdmaScanline = -1;
     }
 
     public void update() {
@@ -116,24 +125,10 @@ public class SNES {
             advanceApuForMasterClocks(hdmaInitMasterClocks);
         }
 
-        int startHCounter = ppu.hCounter();
-        int startVCounter = ppu.vCounter();
         cpu.update(0x0c);
         int cpuMasterClocks = cpu.elapsedMasterClocks();
         int cpuDots = ppuDotsForMasterClocks(cpuMasterClocks);
-        boolean entersHdma = entersHdma(startHCounter, startVCounter, cpuDots);
-        int hdmaMasterClocks = 0;
-        int hdmaDots = 0;
-        if (entersHdma) {
-            int dotsBeforeHdma = HDMA_START_DOT - startHCounter;
-            ppu.advanceCountersOnly(dotsBeforeHdma);
-            ppu.captureScanlineState(startVCounter);
-            hdmaMasterClocks = cpu.runHDMALine();
-            hdmaDots = advancePpuForMasterClocks(hdmaMasterClocks);
-            ppu.advanceCountersOnly(cpuDots - dotsBeforeHdma);
-        } else {
-            ppu.advanceCountersOnly(cpuDots);
-        }
+        ScanlineEventTiming eventTiming = advanceCpuDotsThroughScanlineEvents(cpuDots);
         if (ppu.frameCounter() != startFrameCounter) {
             hdmaInitializedThisFrame = false;
         }
@@ -142,14 +137,87 @@ public class SNES {
             ppu.renderFrame();
         }
         updateAutoJoypadBusy(enteredVBlank, timerStartHCounter, timerStartVCounter,
-                hdmaInitDots + cpuDots + hdmaDots);
+                hdmaInitDots + cpuDots + eventTiming.stallDots());
         updateVideoStatusRegisters();
         updateTimerIrq(timerStartHCounter, timerStartVCounter, timerStartSecondField,
-                hdmaInitDots + cpuDots + hdmaDots);
+                hdmaInitDots + cpuDots + eventTiming.stallDots());
         advanceApuForMasterClocks(cpuMasterClocks);
-        if (hdmaMasterClocks > 0) {
-            advanceApuForMasterClocks(hdmaMasterClocks);
+        if (eventTiming.stallMasterClocks() > 0) {
+            advanceApuForMasterClocks(eventTiming.stallMasterClocks());
         }
+    }
+
+    private ScanlineEventTiming advanceCpuDotsThroughScanlineEvents(int cpuDots) {
+        int remainingCpuDots = cpuDots;
+        int stallMasterClocks = 0;
+        int stallDots = 0;
+        markEventsPassedOutsideScheduler();
+
+        while (remainingCpuDots > 0 || hasDueScanlineEvent()) {
+            if (isDramRefreshPending() && ppu.hCounter() == DRAM_REFRESH_START_DOT) {
+                markDramRefreshHandled();
+                int refreshMasterClocks = cpu.runDramRefresh();
+                stallMasterClocks += refreshMasterClocks;
+                stallDots += advancePpuForMasterClocks(refreshMasterClocks);
+                continue;
+            }
+            if (isHdmaPending() && ppu.hCounter() == HDMA_START_DOT) {
+                markHdmaHandled();
+                ppu.captureScanlineState(ppu.vCounter());
+                int hdmaMasterClocks = cpu.runHDMALine();
+                stallMasterClocks += hdmaMasterClocks;
+                stallDots += advancePpuForMasterClocks(hdmaMasterClocks);
+                continue;
+            }
+
+            int currentHCounter = ppu.hCounter();
+            int dotsToLineEnd = ppu.scanlineDotsAt(ppu.vCounter(), ppu.isSecondField()) - currentHCounter;
+            int dotsToEvent = dotsToLineEnd;
+            if (isDramRefreshPending() && currentHCounter < DRAM_REFRESH_START_DOT) {
+                dotsToEvent = Math.min(dotsToEvent, DRAM_REFRESH_START_DOT - currentHCounter);
+            }
+            if (isHdmaPending() && currentHCounter < HDMA_START_DOT) {
+                dotsToEvent = Math.min(dotsToEvent, HDMA_START_DOT - currentHCounter);
+            }
+
+            int dots = Math.min(remainingCpuDots, dotsToEvent);
+            ppu.advanceCountersOnly(dots);
+            remainingCpuDots -= dots;
+        }
+        return new ScanlineEventTiming(stallMasterClocks, stallDots);
+    }
+
+    private boolean hasDueScanlineEvent() {
+        return (isDramRefreshPending() && ppu.hCounter() == DRAM_REFRESH_START_DOT)
+                || (isHdmaPending() && ppu.hCounter() == HDMA_START_DOT);
+    }
+
+    private void markEventsPassedOutsideScheduler() {
+        if (isDramRefreshPending() && ppu.hCounter() > DRAM_REFRESH_START_DOT) {
+            markDramRefreshHandled();
+        }
+        if (isHdmaPending() && ppu.hCounter() > HDMA_START_DOT) {
+            markHdmaHandled();
+        }
+    }
+
+    private boolean isDramRefreshPending() {
+        return dramRefreshFrame != ppu.frameCounter() || dramRefreshScanline != ppu.vCounter();
+    }
+
+    private void markDramRefreshHandled() {
+        dramRefreshFrame = ppu.frameCounter();
+        dramRefreshScanline = ppu.vCounter();
+    }
+
+    private boolean isHdmaPending() {
+        return ppu.vCounter() < ppu.vBlankStartScanline()
+                && (hdmaFrame != ppu.frameCounter() || hdmaScanline != ppu.vCounter());
+    }
+
+    private void markHdmaHandled() {
+        hdmaFrame = ppu.frameCounter();
+        hdmaScanline = ppu.vCounter();
     }
 
     private int advancePpuForMasterClocks(int masterClocks) {
@@ -186,13 +254,6 @@ public class SNES {
         }
         hdmaInitializedThisFrame = true;
         return cpu.initializeHDMA();
-    }
-
-    private boolean entersHdma(int hCounter, int vCounter, int cycles) {
-        if (cycles <= 0 || vCounter >= ppu.vBlankStartScanline() || hCounter >= HDMA_START_DOT) {
-            return false;
-        }
-        return hCounter + cycles >= HDMA_START_DOT;
     }
 
     private boolean requestFrameNmi() {
@@ -409,5 +470,8 @@ public class SNES {
 
     public IRenderer getRenderer() {
         return renderer;
+    }
+
+    private record ScanlineEventTiming(int stallMasterClocks, int stallDots) {
     }
 }
