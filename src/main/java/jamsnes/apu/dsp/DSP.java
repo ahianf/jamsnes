@@ -9,6 +9,7 @@ import static jamsnes.models.Unsigned.u16;
 import static jamsnes.models.Unsigned.u8;
 
 public class DSP {
+    public static final int OUTPUT_SAMPLE_RATE_HZ = 32_000;
     static final int AUDIO_BATCH_SAMPLES = 1024;
 
     @FunctionalInterface

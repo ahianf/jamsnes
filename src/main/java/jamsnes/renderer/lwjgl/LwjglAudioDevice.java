@@ -1,5 +1,6 @@
 package jamsnes.renderer.lwjgl;
 
+import jamsnes.apu.dsp.DSP;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.openal.AL;
 import org.lwjgl.openal.AL10;
@@ -13,7 +14,7 @@ import java.util.concurrent.locks.LockSupport;
 import static org.lwjgl.system.MemoryUtil.NULL;
 
 final class LwjglAudioDevice implements AutoCloseable {
-    static final int SAMPLE_RATE = 32_040;
+    static final int SAMPLE_RATE = DSP.OUTPUT_SAMPLE_RATE_HZ;
     static final int MAX_QUEUED_BUFFERS = 3;
     private static final long QUEUE_WAIT_NANOS = 1_000_000;
 

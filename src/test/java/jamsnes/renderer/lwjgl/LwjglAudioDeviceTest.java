@@ -1,5 +1,6 @@
 package jamsnes.renderer.lwjgl;
 
+import jamsnes.apu.dsp.DSP;
 import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
@@ -24,8 +25,9 @@ class LwjglAudioDeviceTest {
     }
 
     @Test
-    void usesSnesAudioSampleRateFromOriginalRenderer() {
-        assertEquals(32_040, LwjglAudioDevice.SAMPLE_RATE);
+    void usesTheNativeDspOutputSampleRate() {
+        assertEquals(32_000, DSP.OUTPUT_SAMPLE_RATE_HZ);
+        assertEquals(DSP.OUTPUT_SAMPLE_RATE_HZ, LwjglAudioDevice.SAMPLE_RATE);
     }
 
     @Test
