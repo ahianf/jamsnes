@@ -70,6 +70,16 @@ class DSPTest {
     }
 
     @Test
+    void resetRestoresPowerOnDspFlags() {
+        DSP dsp = new DSP();
+        dsp.write(0x6c, 0x00);
+
+        dsp.reset();
+
+        assertEquals(0xe0, dsp.read(0x6c));
+    }
+
+    @Test
     void keyOnRegisterIsLatchedOnTheEveryOtherSamplePoll() {
         DSP dsp = new DSP();
         dsp.write(0x4c, 0x01);
@@ -145,6 +155,7 @@ class DSPTest {
     void apuBackedDspPlaysBufferedAudioThroughRenderer() {
         TestRenderer renderer = new TestRenderer();
         SNES snes = new SNES(renderer);
+        snes.apu.dsp().write(0x6c, 0x00);
         snes.apu.dsp().setMasterOutput(0, 0x1234);
         snes.apu.dsp().setEchoOutput(1, 0x0055);
         snes.apu.dsp().write(0x0c, 0x7f);
@@ -164,6 +175,7 @@ class DSPTest {
     void apuBackedDspDoesNotReplayBufferedAudioWithoutNewSamples() {
         TestRenderer renderer = new TestRenderer();
         SNES snes = new SNES(renderer);
+        snes.apu.dsp().write(0x6c, 0x00);
         snes.apu.dsp().setMasterOutput(0, 0x1234);
         snes.apu.dsp().write(0x0c, 0x7f);
 
@@ -476,6 +488,32 @@ class DSPTest {
         dsp.loadEcho(0);
 
         assertEquals(-2048, dsp.echoHistory(0, 0));
+    }
+
+    @Test
+    void echoHistoryWrapsAfterEightStereoSamples() {
+        DSP dsp = new DSP();
+        dsp.setEchoRuntimeState(0, 0, 0, 7, 0x30, false);
+        dsp.writeRam(0x3000, 0x34);
+        dsp.writeRam(0x3001, 0x12);
+
+        dsp.echo22();
+
+        assertEquals(0, dsp.echoHistoryOffset());
+        assertEquals(0x091a, dsp.echoHistory(0, 0));
+    }
+
+    @Test
+    void echoDelayUsesOnlyTheLowFourRegisterBits() {
+        DSP dsp = new DSP();
+        dsp.write(0x7d, 0xf2);
+        dsp.setEchoRuntimeState(0, 0, 0, 0, 0, false);
+
+        dsp.echo29();
+
+        assertEquals(0xf2, dsp.read(0x7d));
+        assertEquals(0x1000, dsp.echoLength());
+        assertEquals(4, dsp.echoOffset());
     }
 
     @Test

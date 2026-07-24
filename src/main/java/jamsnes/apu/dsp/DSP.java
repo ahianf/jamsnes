@@ -622,11 +622,11 @@ public class DSP {
     }
 
     int echoHistory(int channel, int index) {
-        return echo.history[channel][index & 0x0f];
+        return echo.history[channel][index & (echo.history[channel].length - 1)];
     }
 
     void setEchoHistory(int channel, int index, int value) {
-        echo.history[channel][index & 0x0f] = (short) value;
+        echo.history[channel][index & (echo.history[channel].length - 1)] = (short) value;
     }
 
     int echoInput(int channel) {
@@ -925,7 +925,8 @@ public class DSP {
     }
 
     int loadFIR(int channel, int fir) {
-        int sample = echo.history[channel][(echo.historyOffset + fir + 1) & 0x0f];
+        int mask = echo.history[channel].length - 1;
+        int sample = echo.history[channel][(echo.historyOffset + fir + 1) & mask];
 
         return sample * (byte) echo.fir[fir] >> 6;
     }
@@ -936,7 +937,8 @@ public class DSP {
         int high = readRam(address);
         short echoSample = (short) ((high << 8) + low);
 
-        echo.history[channel][echo.historyOffset & 0x0f] = (short) (echoSample >> 1);
+        int mask = echo.history[channel].length - 1;
+        echo.history[channel][echo.historyOffset & mask] = (short) (echoSample >> 1);
     }
 
     void writeEcho(int channel) {
@@ -958,7 +960,7 @@ public class DSP {
     }
 
     void echo22() {
-        echo.historyOffset = u8(echo.historyOffset + 1);
+        echo.historyOffset = (echo.historyOffset + 1) & (echo.history[0].length - 1);
         echo.address = u16((echo.value << 8) + echo.offset);
 
         loadEcho(0);
@@ -1024,7 +1026,7 @@ public class DSP {
         echo.value = echo.data;
 
         if (echo.offset == 0) {
-            echo.length = echo.delay << 11;
+            echo.length = (echo.delay & 0x0f) << 11;
         }
 
         echo.offset += 4;
@@ -1307,8 +1309,8 @@ public class DSP {
             volume[1] = 0;
             output[0] = 0;
             output[1] = 0;
-            mute = false;
-            reset = false;
+            mute = true;
+            reset = true;
             unused = 0;
         }
     }
@@ -1323,7 +1325,7 @@ public class DSP {
         private int delay;
         private boolean enabled = true;
         private boolean toggle;
-        private final short[][] history = new short[2][16];
+        private final short[][] history = new short[2][8];
         private int historyOffset;
         private int address;
         private int value;
