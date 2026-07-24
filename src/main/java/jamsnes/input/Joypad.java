@@ -26,7 +26,8 @@ public class Joypad extends AMemory {
     private final int[] controllerState = new int[2];
     private final int[] shiftRegister = new int[2];
     private final IMemoryBus bus;
-    private boolean strobe;
+    private boolean cpuStrobe;
+    private boolean autoStrobe;
 
     public Joypad() {
         this(null);
@@ -48,17 +49,34 @@ public class Joypad extends AMemory {
     }
 
     public int[] autoRead() {
-        strobe = true;
-        latchControllers();
-        strobe = false;
+        beginAutoRead();
+        releaseAutoReadLatch();
 
         int[] reports = new int[controllerState.length];
         for (int bit = 0; bit < 16; bit++) {
-            for (int controller = 0; controller < reports.length; controller++) {
-                reports[controller] = (reports[controller] << 1) | readSerialBit(controller);
+            int[] values = clockAutoReadBit();
+            for (int controller = 0; controller < values.length; controller++) {
+                reports[controller] = (reports[controller] << 1) | values[controller];
             }
         }
         return reports;
+    }
+
+    public void beginAutoRead() {
+        autoStrobe = true;
+        latchControllers();
+    }
+
+    public void releaseAutoReadLatch() {
+        autoStrobe = false;
+    }
+
+    public int[] clockAutoReadBit() {
+        int[] values = new int[controllerState.length];
+        for (int controller = 0; controller < values.length; controller++) {
+            values[controller] = readSerialBit(controller);
+        }
+        return values;
     }
 
     @Override
@@ -68,8 +86,8 @@ public class Joypad extends AMemory {
             return;
         }
 
-        strobe = (data & 1) != 0;
-        if (strobe) {
+        cpuStrobe = (data & 1) != 0;
+        if (isStrobe()) {
             latchControllers();
         }
     }
@@ -77,7 +95,7 @@ public class Joypad extends AMemory {
     public void setControllerState(int controller, int state) {
         validateController(controller);
         controllerState[controller] = u16(state);
-        if (strobe) {
+        if (isStrobe()) {
             shiftRegister[controller] = controllerState[controller];
         }
     }
@@ -107,7 +125,7 @@ public class Joypad extends AMemory {
     }
 
     public boolean isStrobe() {
-        return strobe;
+        return cpuStrobe || autoStrobe;
     }
 
     @Override
@@ -140,12 +158,12 @@ public class Joypad extends AMemory {
     }
 
     private int readSerialBit(int controller) {
-        if (strobe) {
+        if (isStrobe()) {
             latchControllers();
         }
 
         int value = shiftRegister[controller] & 1;
-        if (!strobe) {
+        if (!isStrobe()) {
             shiftRegister[controller] = u16((shiftRegister[controller] >>> 1) | 0x8000);
         }
         return value;

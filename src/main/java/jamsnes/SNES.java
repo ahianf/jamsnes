@@ -40,6 +40,9 @@ public class SNES {
     private boolean wasInVBlank;
     private boolean wasNmiEnabled;
     private int autoJoypadReadCyclesRemaining;
+    private int autoJoypadReadDotsElapsed;
+    private int autoJoypadBitsRead;
+    private boolean autoJoypadLatchReleased;
     private long apuClockRemainder;
 
     public SNES(IRenderer renderer) {
@@ -87,6 +90,9 @@ public class SNES {
         wasInVBlank = ppu.isInVBlank();
         wasNmiEnabled = nmiEnabled();
         autoJoypadReadCyclesRemaining = 0;
+        autoJoypadReadDotsElapsed = 0;
+        autoJoypadBitsRead = 0;
+        autoJoypadLatchReleased = true;
         apuClockRemainder = 0;
     }
 
@@ -185,13 +191,11 @@ public class SNES {
             return;
         }
 
-        int[] states = joypad.autoRead();
-        for (int controller = 0; controller < states.length; controller++) {
-            int state = states[controller];
-            cpu.internalRegisters()[0x18 + controller * 2] = state & 0xff;
-            cpu.internalRegisters()[0x19 + controller * 2] = (state >>> 8) & 0xff;
-        }
-        for (int controller = 2; controller < 4; controller++) {
+        joypad.beginAutoRead();
+        autoJoypadReadDotsElapsed = 0;
+        autoJoypadBitsRead = 0;
+        autoJoypadLatchReleased = false;
+        for (int controller = 0; controller < 4; controller++) {
             cpu.internalRegisters()[0x18 + controller * 2] = 0;
             cpu.internalRegisters()[0x19 + controller * 2] = 0;
         }
@@ -214,16 +218,43 @@ public class SNES {
     private void updateAutoJoypadBusy(boolean enteredVBlank, int startHCounter, int startVCounter, int cycles) {
         if (enteredVBlank && autoJoypadEnabled()) {
             autoJoypadReadCyclesRemaining = AUTO_JOYPAD_READ_DOTS;
-            autoJoypadReadCyclesRemaining = Math.max(0,
-                    autoJoypadReadCyclesRemaining - cyclesAfterVBlankStart(startHCounter, startVCounter, cycles));
+            advanceAutoJoypadRead(cyclesAfterVBlankStart(startHCounter, startVCounter, cycles));
             return;
         }
         if (!autoJoypadEnabled()) {
+            if (!autoJoypadLatchReleased) {
+                joypad.releaseAutoReadLatch();
+                autoJoypadLatchReleased = true;
+            }
             autoJoypadReadCyclesRemaining = 0;
             return;
         }
         if (autoJoypadReadCyclesRemaining > 0) {
-            autoJoypadReadCyclesRemaining = Math.max(0, autoJoypadReadCyclesRemaining - Math.max(0, cycles));
+            advanceAutoJoypadRead(Math.max(0, cycles));
+        }
+    }
+
+    private void advanceAutoJoypadRead(int dots) {
+        int elapsed = Math.min(Math.max(0, dots), autoJoypadReadCyclesRemaining);
+        autoJoypadReadCyclesRemaining -= elapsed;
+        autoJoypadReadDotsElapsed += elapsed;
+
+        if (!autoJoypadLatchReleased && autoJoypadReadDotsElapsed >= 32) {
+            joypad.releaseAutoReadLatch();
+            autoJoypadLatchReleased = true;
+        }
+        while (autoJoypadBitsRead < 16
+                && autoJoypadReadDotsElapsed >= 96 + autoJoypadBitsRead * 64) {
+            int[] values = joypad.clockAutoReadBit();
+            for (int controller = 0; controller < values.length; controller++) {
+                int lowAddress = 0x18 + controller * 2;
+                int report = cpu.internalRegisters()[lowAddress]
+                        | (cpu.internalRegisters()[lowAddress + 1] << 8);
+                report = ((report << 1) | values[controller]) & 0xffff;
+                cpu.internalRegisters()[lowAddress] = report & 0xff;
+                cpu.internalRegisters()[lowAddress + 1] = report >>> 8;
+            }
+            autoJoypadBitsRead++;
         }
     }
 

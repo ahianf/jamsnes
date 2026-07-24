@@ -81,6 +81,20 @@ class JoypadTest {
     }
 
     @Test
+    void cpuStrobeRemainsAssertedAcrossAutomaticLatchPulses() {
+        SNES snes = init();
+        snes.joypad.setControllerState(0, Joypad.BUTTON_B);
+        snes.bus.write(0x4016, 1);
+
+        int[] reports = snes.joypad.autoRead();
+
+        assertTrue(snes.joypad.isStrobe());
+        assertEquals(0xffff, reports[0]);
+        assertEquals(1, snes.bus.read(0x4016) & 1);
+        assertEquals(1, snes.bus.read(0x4016) & 1);
+    }
+
+    @Test
     void strobeHighRefreshesLatchedState() {
         SNES snes = init();
 

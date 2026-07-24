@@ -116,7 +116,10 @@ class SyntheticRomBootTest {
         }
 
         assertEquals(2, renderer.drawScreenCalls(), "Synthetic ROM should present its input-updated frame");
-        assertEquals(0x80, snes.cpu.internalRegisters()[0x19], "Auto-read should place B in JOY1H bit 7");
+        assertEquals(0x00, snes.cpu.internalRegisters()[0x19],
+                "The next frame's automatic read should clear JOY1H before shifting its new report");
+        assertEquals(0x01, snes.cpu.internalRegisters()[0x12] & 0x01,
+                "The next frame's automatic read should be busy");
         assertEquals(1, snes.wram.data()[0], "The NMI handler should observe B exactly once before frame two");
         assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), renderer.pixel(0, 0));
         assertEquals(0x801a, snes.cpu.registers().pc, "RTI should return execution to the idle loop");
@@ -380,6 +383,9 @@ class SyntheticRomBootTest {
                 (byte) 0x80, (byte) 0xfe             // BRA *
         };
         byte[] nmiHandler = {
+                (byte) 0xad, 0x12, 0x42,             // wait: LDA $4212 (HVBJOY)
+                (byte) 0x29, 0x01,                   // AND #$01 (auto-read busy)
+                (byte) 0xd0, (byte) 0xf9,            // BNE wait
                 (byte) 0xad, 0x19, 0x42,             // LDA $4219 (JOY1H)
                 (byte) 0x10, 0x12,                   // BPL noButton
                 (byte) 0xa9, 0x00,                   // LDA #$00

@@ -17,6 +17,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SNESTest {
     @TempDir
@@ -403,7 +405,7 @@ class SNESTest {
     }
 
     @Test
-    void updateEncodesJoypadSerialStateInAutoReadRegisterOrderOnVBlankEntry() {
+    void updateShiftsJoypadSerialStateAcrossTheAutoReadBusyWindow() {
         SNES snes = new SNES(new TestRenderer());
         snes.cpu.isDisabled = true;
         snes.apu.isDisabled = true;
@@ -413,6 +415,23 @@ class SNESTest {
         snes.ppu.advanceCountersOnly(PPU.H_COUNTER_DOTS * PPU.V_BLANK_START_SCANLINE - 0xff);
 
         snes.update();
+
+        assertTrue(snes.joypad.isStrobe());
+        assertEquals(0x00, snes.cpu.internalRegisters()[0x18]);
+        assertEquals(0x00, snes.cpu.internalRegisters()[0x19]);
+        assertEquals(0x00, snes.cpu.internalRegisters()[0x1a]);
+        assertEquals(0x00, snes.cpu.internalRegisters()[0x1b]);
+
+        snes.update();
+        assertFalse(snes.joypad.isStrobe());
+        assertEquals(0x04, snes.cpu.internalRegisters()[0x18]);
+        assertEquals(0x00, snes.cpu.internalRegisters()[0x19]);
+        assertEquals(0x02, snes.cpu.internalRegisters()[0x1a]);
+        assertEquals(0x00, snes.cpu.internalRegisters()[0x1b]);
+
+        for (int i = 0; i < 4; i++) {
+            snes.update();
+        }
 
         assertEquals(0x80, snes.cpu.internalRegisters()[0x18]);
         assertEquals(0x90, snes.cpu.internalRegisters()[0x19]);
@@ -474,6 +493,7 @@ class SNESTest {
         snes.update();
 
         assertEquals(0x00, snes.bus.read(0x4212) & 0x01);
+        assertFalse(snes.joypad.isStrobe());
     }
 
     @Test
