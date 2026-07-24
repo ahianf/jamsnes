@@ -111,6 +111,19 @@ class DSPTest {
     }
 
     @Test
+    void unusedRegisterSlotsRoundTripStoredValues() {
+        DSP dsp = new DSP();
+
+        dsp.write(0x0a, 0x12);
+        dsp.write(0x3b, 0x34);
+        dsp.write(0x7e, 0x56);
+
+        assertEquals(0x12, dsp.read(0x0a));
+        assertEquals(0x34, dsp.read(0x3b));
+        assertEquals(0x56, dsp.read(0x7e));
+    }
+
+    @Test
     void keyOnRegisterIsLatchedOnTheEveryOtherSamplePoll() {
         DSP dsp = new DSP();
         dsp.write(0x4c, 0x01);

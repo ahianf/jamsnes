@@ -1,6 +1,5 @@
 package jamsnes.apu.dsp;
 
-import jamsnes.exceptions.InvalidAddress;
 import jamsnes.renderer.IRenderer;
 
 import java.util.Arrays;
@@ -80,6 +79,7 @@ public class DSP {
     private final BRR brr = new BRR();
     private final Latch latch = new Latch();
     private final Timer timer = new Timer();
+    private final int[] unusedRegisters = new int[0x80];
     private final short[] soundBuffer = new short[0x10000];
     private final IntUnaryOperator ramReader;
     private final RamWriter ramWriter;
@@ -120,6 +120,7 @@ public class DSP {
         brr.reset();
         latch.reset();
         timer.reset();
+        Arrays.fill(unusedRegisters, 0);
         voicePhase = 0;
         bufferOffset = 0;
     }
@@ -177,7 +178,7 @@ public class DSP {
             case 0x6d -> echo.data;
             case 0x7d -> echo.delay;
             case 0x0f, 0x1f, 0x2f, 0x3f, 0x4f, 0x5f, 0x6f, 0x7f -> echo.fir[normalized >>> 4];
-            default -> throw new InvalidAddress("DSP Registers read", normalized);
+            default -> unusedRegisters[normalized];
         };
     }
 
@@ -257,7 +258,7 @@ public class DSP {
             case 0x6d -> echo.data = value;
             case 0x7d -> echo.delay = value;
             case 0x0f, 0x1f, 0x2f, 0x3f, 0x4f, 0x5f, 0x6f, 0x7f -> echo.fir[normalized >>> 4] = value;
-            default -> throw new InvalidAddress("DSP Registers write", normalized);
+            default -> unusedRegisters[normalized] = value;
         }
     }
 

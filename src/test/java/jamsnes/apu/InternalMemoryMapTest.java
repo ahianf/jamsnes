@@ -264,13 +264,13 @@ class InternalMemoryMapTest {
     }
 
     @Test
-    void invalidDspRegisterAccessThrowsThroughApuDataRegister() {
+    void unusedDspRegisterAccessRoundTripsThroughApuDataRegister() {
         SNES snes = init();
 
         snes.apu._internalWrite(0x00f2, 0x0a);
+        snes.apu._internalWrite(0x00f3, 0x12);
 
-        assertThrows(InvalidAddress.class, () -> snes.apu._internalRead(0x00f3));
-        assertThrows(InvalidAddress.class, () -> snes.apu._internalWrite(0x00f3, 0x12));
+        assertEquals(0x12, snes.apu._internalRead(0x00f3));
     }
 
     @Test
