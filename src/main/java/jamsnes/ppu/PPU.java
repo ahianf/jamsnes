@@ -374,6 +374,7 @@ public class PPU extends AMemory {
         }
         return new LayerState(
                 registers[0x05],
+                registers[0x33],
                 registers[0x01],
                 registers[0x06],
                 registers[0x23],
@@ -978,7 +979,11 @@ public class PPU extends AMemory {
             for (int offset = 0; offset < OBJ_COUNT; offset++) {
                 int objectIndex = (firstObject + offset) % OBJ_COUNT;
                 ObjectDimensions dimensions = objectDimensionsForObject(objectIndex, state.objectSelection());
-                if (!objectIntersectsScanline(objectIndex, dimensions, screenY)
+                if (!objectIntersectsScanline(
+                        objectIndex,
+                        dimensions,
+                        screenY,
+                        objectInterlaceEnabled(state))
                         || !objectIntersectsHorizontalScreen(objectIndex, dimensions)) {
                     continue;
                 }
@@ -1020,9 +1025,11 @@ public class PPU extends AMemory {
     private boolean objectIntersectsScanline(
             int objectIndex,
             ObjectDimensions dimensions,
-            int screenY) {
+            int screenY,
+            boolean objectInterlace) {
         int objectY = oamram.read(objectIndex * 4 + 1);
-        return u8(screenY - objectY) < dimensions.height();
+        int height = dimensions.height() >>> (objectInterlace ? 1 : 0);
+        return u8(screenY - objectY) < height;
     }
 
     private boolean objectIntersectsHorizontalScreen(int objectIndex, ObjectDimensions dimensions) {
@@ -1067,7 +1074,8 @@ public class PPU extends AMemory {
                         sourceMap,
                         windowMask,
                         palette,
-                        state.objectSelection());
+                        state.objectSelection(),
+                        objectInterlaceEnabled(state));
             }
         }
     }
@@ -1081,7 +1089,8 @@ public class PPU extends AMemory {
             int[][] sourceMap,
             boolean[] windowMask,
             int[] paletteColors,
-            int objectSelection) {
+            int objectSelection,
+            boolean objectInterlace) {
         int objectAddress = objectIndex * 4;
         int y = oamram.read(objectAddress + 1);
         int tile = oamram.read(objectAddress + 2);
@@ -1094,7 +1103,13 @@ public class PPU extends AMemory {
         boolean verticalFlip = (attributes & 0x80) != 0;
         int baseAddress = objectTileBaseAddress(attributes, objectSelection);
         int pixelY = u8(screenY - y);
+        if (objectInterlace) {
+            pixelY = u8(pixelY << 1);
+        }
         int sourceY = verticalFlip ? verticallyFlippedObjectY(pixelY, dimensions) : pixelY;
+        if (objectInterlace && secondField) {
+            sourceY = u8(sourceY + (verticalFlip ? -1 : 1));
+        }
 
         for (int pixelX = 0; pixelX < dimensions.width(); pixelX++) {
             if ((sliverMask & (1 << (pixelX / Tile.NB_PIXELS_WIDTH))) == 0) {
@@ -1126,6 +1141,10 @@ public class PPU extends AMemory {
             x |= 0x100;
         }
         return x >= 256 ? x - 512 : x;
+    }
+
+    private boolean objectInterlaceEnabled(LayerState state) {
+        return (state.setini() & 0x02) != 0;
     }
 
     private ObjectDimensions objectDimensionsForObject(int objectIndex, int objectSelection) {
@@ -1438,6 +1457,7 @@ public class PPU extends AMemory {
 
     private record LayerState(
             int backgroundMode,
+            int setini,
             int objectSelection,
             int mosaic,
             int windowSelection12,

@@ -723,6 +723,51 @@ class PpuRenderIntegrationTest {
     }
 
     @Test
+    void objectInterlaceSelectsAlternatingSourceRowsAndHalvesCoverage() {
+        SNES snes = init(new TestRenderer());
+        hideAllObjects(snes);
+        writeColor(snes, 129, 0x001f);
+        writeColor(snes, 130, 0x03e0);
+        writeObject(snes, 0, 0x00, 0x00, 0x00, 0x30);
+        snes.ppu.vram.write(0x0000, 0x80);
+        snes.ppu.vram.write(0x0003, 0x80);
+        snes.ppu.vram.write(0x000c, 0x80);
+        snes.bus.write(0x212c, 0x10);
+        snes.bus.write(0x2133, 0x02);
+
+        snes.ppu.renderMainAndSubScreen();
+
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[3][0]);
+        assertEquals(0, snes.ppu.mainScreen()[4][0]);
+
+        snes.ppu.advanceCountersOnly(PPU.H_COUNTER_DOTS * PPU.V_COUNTER_SCANLINES);
+        snes.ppu.renderMainAndSubScreen();
+
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), snes.ppu.mainScreen()[0][0]);
+    }
+
+    @Test
+    void verticallyFlippedObjectInterlaceReversesFieldRowSelection() {
+        SNES snes = init(new TestRenderer());
+        hideAllObjects(snes);
+        writeColor(snes, 129, 0x001f);
+        writeColor(snes, 130, 0x03e0);
+        writeObject(snes, 0, 0x00, 0x00, 0x00, 0xb0);
+        snes.ppu.vram.write(0x000c, 0x80);
+        snes.ppu.vram.write(0x000f, 0x80);
+        snes.bus.write(0x212c, 0x10);
+        snes.bus.write(0x2133, 0x02);
+
+        snes.ppu.renderMainAndSubScreen();
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), snes.ppu.mainScreen()[0][0]);
+
+        snes.ppu.advanceCountersOnly(PPU.H_COUNTER_DOTS * PPU.V_COUNTER_SCANLINES);
+        snes.ppu.renderMainAndSubScreen();
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][0]);
+    }
+
+    @Test
     void lowerObjectIndexWinsEqualObjectPriorityByDefault() {
         SNES snes = init(new TestRenderer());
         setupOverlappingObjectPixels(snes);
