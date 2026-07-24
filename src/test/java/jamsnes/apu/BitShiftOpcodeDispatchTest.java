@@ -60,11 +60,13 @@ class BitShiftOpcodeDispatchTest {
 
         assertEquals(6, snes.apu.executeInstruction());
         assertEquals(0xff, snes.apu._internalRead(0x0300));
-        assertTrue(snes.apu.internalRegisters().n);
+        assertFalse(snes.apu.internalRegisters().n);
         assertFalse(snes.apu.internalRegisters().z);
 
         assertEquals(6, snes.apu.executeInstruction());
         assertEquals(0xf0, snes.apu._internalRead(0x0300));
+        assertFalse(snes.apu.internalRegisters().n);
+        assertFalse(snes.apu.internalRegisters().z);
     }
 
     @Test

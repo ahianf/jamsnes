@@ -61,6 +61,23 @@ class WordArithmeticInstructionTest {
     }
 
     @Test
+    void subtractWordHalfCarryTracksTwelveBitBorrow() {
+        SNES snes = init();
+        snes.apu._internalWrite(0x55, 0x01);
+        snes.apu._internalWrite(0x56, 0x00);
+
+        snes.apu.internalRegisters().setYa(0x1000);
+        assertEquals(5, snes.apu.SUBW(0x55));
+        assertEquals(0x0fff, snes.apu.internalRegisters().ya());
+        assertFalse(snes.apu.internalRegisters().h);
+
+        snes.apu.internalRegisters().setYa(0x1001);
+        assertEquals(5, snes.apu.SUBW(0x55));
+        assertEquals(0x1000, snes.apu.internalRegisters().ya());
+        assertTrue(snes.apu.internalRegisters().h);
+    }
+
+    @Test
     void addsAndComparesDirectWordsWithWrappedHighByte() {
         SNES snes = init();
         snes.apu.internalRegisters().p = true;

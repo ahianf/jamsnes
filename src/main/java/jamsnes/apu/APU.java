@@ -1029,14 +1029,14 @@ public class APU extends AMemory {
     public int TSET1(int absoluteAddress) {
         int data = _internalRead(absoluteAddress);
         _internalWrite(absoluteAddress, data | internalRegisters.a);
-        setNzFlags(data);
+        setNzFlags(internalRegisters.a - data);
         return 6;
     }
 
     public int TCLR1(int absoluteAddress) {
         int data = _internalRead(absoluteAddress);
         _internalWrite(absoluteAddress, data & ~internalRegisters.a);
-        setNzFlags(data);
+        setNzFlags(internalRegisters.a - data);
         return 6;
     }
 

@@ -31,14 +31,14 @@ class BitInstructionTest {
         assertEquals(6, snes.apu.TSET1(0xf00f));
         assertEquals(0x7b, snes.apu._internalRead(0xf00f));
         assertFalse(snes.apu.internalRegisters().z);
-        assertFalse(snes.apu.internalRegisters().n);
+        assertTrue(snes.apu.internalRegisters().n);
 
         snes.apu.internalRegisters().a = 0x80;
         snes.apu._internalWrite(0xf00f, 0x80);
         assertEquals(6, snes.apu.TCLR1(0xf00f));
         assertEquals(0, snes.apu._internalRead(0xf00f));
-        assertFalse(snes.apu.internalRegisters().z);
-        assertTrue(snes.apu.internalRegisters().n);
+        assertTrue(snes.apu.internalRegisters().z);
+        assertFalse(snes.apu.internalRegisters().n);
     }
 
     @Test
