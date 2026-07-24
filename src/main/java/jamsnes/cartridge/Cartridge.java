@@ -144,6 +144,10 @@ public class Cartridge extends Ram {
             }
 
             Header info = mapHeader(address);
+            boolean hiRomHeaderLocation = rawAddress == 0xffc0;
+            if (info.hasMappingMode(MappingMode.HIROM) == hiRomHeaderLocation) {
+                score += 2;
+            }
             if (info.romType <= 0x8) {
                 score++;
             }

@@ -53,6 +53,22 @@ class CartridgeTest {
     }
 
     @Test
+    void loadRomPrefersHeaderWhoseLocationMatchesItsDeclaredMapping() throws IOException {
+        byte[] rom = new byte[0x10000];
+        rom[0x8000] = 0x78;
+        writeHeader(rom, 0x7f00, "FALSE HEADER", 0x21);
+        writeHeader(rom, 0xff00, "REAL HIROM HEADER", 0x21);
+        Path path = tempDir.resolve("ambiguous-hirom.sfc");
+        Files.write(path, rom);
+
+        Cartridge cartridge = new Cartridge(path.toString());
+
+        assertEquals("REAL HIROM HEADER\u0000\u0000\u0000\u0000", cartridge.header.gameName);
+        assertFalse(cartridge.header.hasMappingMode(MappingMode.LOROM));
+        assertTrue(cartridge.header.hasMappingMode(MappingMode.HIROM));
+    }
+
+    @Test
     void threeMegabyteRomMirrorsItsTrailingMegabyteIntoTheFourth() {
         Cartridge cartridge = new Cartridge();
         cartridge.setSize(0x300000);
@@ -80,9 +96,13 @@ class CartridgeTest {
     }
 
     private static void writeLoRomHeader(byte[] rom, int base, String title) {
+        writeHeader(rom, base, title, 0x20);
+    }
+
+    private static void writeHeader(byte[] rom, int base, String title, int mappingMode) {
         byte[] name = title.getBytes(StandardCharsets.ISO_8859_1);
         System.arraycopy(name, 0, rom, base + 0xc0, name.length);
-        rom[base + 0xd5] = 0x20;
+        rom[base + 0xd5] = (byte) mappingMode;
         rom[base + 0xd6] = 0x00;
         rom[base + 0xd7] = 0x05;
         rom[base + 0xd8] = 0x00;
