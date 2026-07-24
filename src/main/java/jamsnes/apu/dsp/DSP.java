@@ -262,6 +262,15 @@ public class DSP {
         }
     }
 
+    public void restoreRegister(int address, int data) {
+        int normalized = u8(address) & 0x7f;
+        if (normalized == 0x7c) {
+            setVoiceFlags(u8(data), Flag.ENDX);
+            return;
+        }
+        write(normalized, data);
+    }
+
     public void update() {
         switch (voicePhase) {
             case 0 -> {

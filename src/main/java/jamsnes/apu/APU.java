@@ -922,52 +922,52 @@ public class APU extends AMemory {
         counters[2] = cartridge.read(0x100 + 0x00ff);
 
         for (int register = 0x00; register < 0x80; register += 0x10) {
-            dsp.write(register, cartridge.read(0x10100 + register));
+            dsp.restoreRegister(register, cartridge.read(0x10100 + register));
         }
         for (int register = 0x01; register < 0x80; register += 0x10) {
-            dsp.write(register, cartridge.read(0x10100 + register));
+            dsp.restoreRegister(register, cartridge.read(0x10100 + register));
         }
         for (int register = 0x02; register < 0x80; register += 0x10) {
-            dsp.write(register, cartridge.read(0x10100 + register));
+            dsp.restoreRegister(register, cartridge.read(0x10100 + register));
         }
         for (int register = 0x03; register < 0x80; register += 0x10) {
-            dsp.write(register, cartridge.read(0x10100 + register));
+            dsp.restoreRegister(register, cartridge.read(0x10100 + register));
         }
         for (int register = 0x04; register < 0x80; register += 0x10) {
-            dsp.write(register, cartridge.read(0x10100 + register));
+            dsp.restoreRegister(register, cartridge.read(0x10100 + register));
         }
         for (int register = 0x05; register < 0x80; register += 0x10) {
-            dsp.write(register, cartridge.read(0x10100 + register));
+            dsp.restoreRegister(register, cartridge.read(0x10100 + register));
         }
         for (int register = 0x06; register < 0x80; register += 0x10) {
-            dsp.write(register, cartridge.read(0x10100 + register));
+            dsp.restoreRegister(register, cartridge.read(0x10100 + register));
         }
         for (int register = 0x07; register < 0x80; register += 0x10) {
-            dsp.write(register, cartridge.read(0x10100 + register));
+            dsp.restoreRegister(register, cartridge.read(0x10100 + register));
         }
         for (int register = 0x08; register < 0x80; register += 0x10) {
-            dsp.write(register, cartridge.read(0x10100 + register));
+            dsp.restoreRegister(register, cartridge.read(0x10100 + register));
         }
         for (int register = 0x09; register < 0x80; register += 0x10) {
-            dsp.write(register, cartridge.read(0x10100 + register));
+            dsp.restoreRegister(register, cartridge.read(0x10100 + register));
         }
         for (int register = 0x0a; register < 0x80; register += 0x10) {
-            dsp.write(register, cartridge.read(0x10100 + register));
+            dsp.restoreRegister(register, cartridge.read(0x10100 + register));
         }
         for (int register = 0x0b; register < 0x80; register += 0x10) {
-            dsp.write(register, cartridge.read(0x10100 + register));
+            dsp.restoreRegister(register, cartridge.read(0x10100 + register));
         }
         for (int register = 0x0c; register < 0x80; register += 0x10) {
-            dsp.write(register, cartridge.read(0x10100 + register));
+            dsp.restoreRegister(register, cartridge.read(0x10100 + register));
         }
         for (int register = 0x0d; register < 0x80; register += 0x10) {
-            dsp.write(register, cartridge.read(0x10100 + register));
+            dsp.restoreRegister(register, cartridge.read(0x10100 + register));
         }
         for (int register = 0x0e; register < 0x80; register += 0x10) {
-            dsp.write(register, cartridge.read(0x10100 + register));
+            dsp.restoreRegister(register, cartridge.read(0x10100 + register));
         }
         for (int register = 0x0f; register < 0x80; register += 0x10) {
-            dsp.write(register, cartridge.read(0x10100 + register));
+            dsp.restoreRegister(register, cartridge.read(0x10100 + register));
         }
     }
 
