@@ -122,6 +122,24 @@ class SyntheticRomBootTest {
         assertEquals(0x801a, snes.cpu.registers().pc, "RTI should return execution to the idle loop");
     }
 
+    @Test
+    void loadedLoRomWaitsForTheApuIplHandshakeBeforePresenting() throws IOException {
+        FrameBufferRenderer renderer =
+                new FrameBufferRenderer(Background.BUFFER_SIZE, Background.BUFFER_SIZE, 60);
+        SNES snes = new SNES(writeApuHandshakeRom().toString(), renderer);
+
+        for (int updates = 0; renderer.drawScreenCalls() < 2 && updates < 20_000; updates++) {
+            snes.update();
+        }
+
+        assertEquals(2, renderer.drawScreenCalls(), "Synthetic ROM should present after the APU IPL handshake");
+        assertEquals(0xaa, snes.bus.read(0x002140));
+        assertEquals(0xbb, snes.bus.read(0x002141));
+        assertEquals(0x5a, snes.wram.data()[0], "Cartridge code should observe both IPL signature bytes");
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), renderer.pixel(0, 0));
+        assertEquals(0x802d, snes.cpu.registers().pc);
+    }
+
     private Path writeBootRom() throws IOException {
         byte[] rom = new byte[0x8000];
         byte[] program = {
@@ -365,6 +383,44 @@ class SyntheticRomBootTest {
         rom[0x7ffc] = 0x00;
         rom[0x7ffd] = (byte) 0x80;
         Path path = tempDir.resolve("synthetic-joypad.sfc");
+        Files.write(path, rom);
+        return path;
+    }
+
+    private Path writeApuHandshakeRom() throws IOException {
+        byte[] rom = new byte[0x8000];
+        byte[] program = {
+                (byte) 0x78,                         // SEI
+                (byte) 0xa9, (byte) 0x80,            // LDA #$80
+                (byte) 0x8d, 0x00, 0x21,             // STA $2100 (forced blank)
+                (byte) 0xad, 0x40, 0x21,             // wait: LDA $2140
+                (byte) 0xc9, (byte) 0xaa,            // CMP #$aa
+                (byte) 0xd0, (byte) 0xf9,            // BNE wait
+                (byte) 0xad, 0x41, 0x21,             // LDA $2141
+                (byte) 0xc9, (byte) 0xbb,            // CMP #$bb
+                (byte) 0xd0, (byte) 0xf2,            // BNE wait
+                (byte) 0xa9, 0x00,                   // LDA #$00
+                (byte) 0x8d, 0x21, 0x21,             // STA $2121 (CGADD)
+                (byte) 0xa9, (byte) 0xe0,            // LDA #$e0
+                (byte) 0x8d, 0x22, 0x21,             // STA $2122 (CGDATA low)
+                (byte) 0xa9, 0x03,                   // LDA #$03
+                (byte) 0x8d, 0x22, 0x21,             // STA $2122 (CGDATA high)
+                (byte) 0xa9, 0x5a,                   // LDA #$5a
+                (byte) 0x8d, 0x00, 0x00,             // STA $0000 (handshake marker)
+                (byte) 0xa9, 0x0f,                   // LDA #$0f
+                (byte) 0x8d, 0x00, 0x21,             // STA $2100 (display on)
+                (byte) 0x80, (byte) 0xfe             // BRA *
+        };
+        System.arraycopy(program, 0, rom, 0, program.length);
+        byte[] title = "JAMSNES APU PROBE".getBytes(StandardCharsets.ISO_8859_1);
+        System.arraycopy(title, 0, rom, 0x7fc0, title.length);
+        rom[0x7fd5] = 0x20;
+        rom[0x7fd6] = 0x00;
+        rom[0x7fd7] = 0x05;
+        rom[0x7fd8] = 0x00;
+        rom[0x7ffc] = 0x00;
+        rom[0x7ffd] = (byte) 0x80;
+        Path path = tempDir.resolve("synthetic-apu-handshake.sfc");
         Files.write(path, rom);
         return path;
     }
