@@ -745,6 +745,29 @@ class DmaTest {
     }
 
     @Test
+    void lowBankWramMirrorsDoNotTriggerWramPortConflict() {
+        SNES snes = init();
+        DMA dma = snes.cpu.dmaChannels()[0];
+        snes.wram.data()[0x60] = 0x44;
+        snes.bus.write(0x2181, 0x20);
+        setupDma(snes, DMA.ONE_TO_ONE, 0x80, 0x000060, 0x0001);
+        snes.bus.write(0x420b, 0x01);
+
+        assertEquals(8 + 8, dma.run(1_000_000));
+        assertEquals(0x44, snes.wram.data()[0x20]);
+        assertEquals(0x21, snes.wramPort.address());
+
+        snes.wram.data()[0x20] = 0x66;
+        snes.bus.write(0x2181, 0x20);
+        setupDma(snes, 0x80 | DMA.ONE_TO_ONE, 0x80, 0x000061, 0x0001);
+        snes.bus.write(0x420b, 0x01);
+
+        assertEquals(8 + 8, dma.run(1_000_000));
+        assertEquals(0x66, snes.wram.data()[0x61]);
+        assertEquals(0x21, snes.wramPort.address());
+    }
+
+    @Test
     void dmaReadsExternalOpenBusInsteadOfPpuRegisterThroughABus() {
         SNES snes = init();
         snes.bus.write(0x2100, 0x80);

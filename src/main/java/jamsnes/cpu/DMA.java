@@ -1,9 +1,7 @@
 package jamsnes.cpu;
 
 import jamsnes.exceptions.InvalidAddress;
-import jamsnes.memory.IMemory;
 import jamsnes.memory.IMemoryBus;
-import jamsnes.models.Component;
 
 import static jamsnes.models.Unsigned.u16;
 import static jamsnes.models.Unsigned.u24;
@@ -221,15 +219,12 @@ public class DMA {
             }
             return 8;
         }
-        if (bAddress == 0x2180) {
-            IMemory accessor = bus.getAccessor(aAddress);
-            if (accessor != null && accessor.getComponent() == Component.WRAM) {
-                if (direction == 0) {
-                    return 8;
-                }
-                bus.write(aAddress, bus.getExternalOpenBus());
-                return 4;
+        if (bAddress == 0x2180 && isWramBankAddress(aAddress)) {
+            if (direction == 0) {
+                return 8;
             }
+            bus.write(aAddress, bus.getExternalOpenBus());
+            return 4;
         }
         if (direction == 0) {
             bus.write(bAddress, bus.read(aAddress));
@@ -237,6 +232,10 @@ public class DMA {
             bus.write(aAddress, bus.read(bAddress));
         }
         return 8;
+    }
+
+    private boolean isWramBankAddress(int address) {
+        return (address & 0xfe0000) == 0x7e0000;
     }
 
     private boolean isInvalidABusAddress(int address) {
