@@ -8,6 +8,7 @@ import jamsnes.ram.Ram;
 import jamsnes.renderer.IRenderer;
 
 import java.util.Arrays;
+import java.util.function.BooleanSupplier;
 
 import static jamsnes.models.Unsigned.u16;
 import static jamsnes.models.Unsigned.u8;
@@ -56,6 +57,7 @@ public class PPU extends AMemory {
     private final int[] registers = new int[0x40];
     private final PPURegisters ppuRegisters = new PPURegisters(registers);
     private final IRenderer renderer;
+    private BooleanSupplier externalCounterLatchEnabled = () -> true;
     private final Background[] backgrounds;
     private final int[][] mainScreen = new int[Background.BUFFER_SIZE][Background.BUFFER_SIZE];
     private final int[][] subScreen = new int[Background.BUFFER_SIZE][Background.BUFFER_SIZE];
@@ -184,6 +186,10 @@ public class PPU extends AMemory {
 
     public PPURegisters ppuRegisters() {
         return ppuRegisters;
+    }
+
+    public void setExternalCounterLatchEnabled(BooleanSupplier enabled) {
+        externalCounterLatchEnabled = enabled == null ? () -> true : enabled;
     }
 
     public int getVramAddressRegister() {
@@ -670,10 +676,13 @@ public class PPU extends AMemory {
     }
 
     private int readStat78() {
+        boolean externalLatchEnabled = externalCounterLatchEnabled.getAsBoolean();
         int value = (ppu2OpenBus & 0x20) | PPU2_VERSION
-                | (counterLatchFlag ? 0x40 : 0)
+                | (!externalLatchEnabled || counterLatchFlag ? 0x40 : 0)
                 | (secondField ? 0x80 : 0);
-        counterLatchFlag = false;
+        if (externalLatchEnabled) {
+            counterLatchFlag = false;
+        }
         hCounterHighByte = false;
         vCounterHighByte = false;
         return readPpu2(value);

@@ -305,6 +305,19 @@ class PpuReadTest {
     }
 
     @Test
+    void stat78ForcesAndRetainsExternalLatchFlagWhileWrioIsLow() {
+        SNES snes = init();
+
+        snes.bus.write(0x4201, 0x00);
+        assertEquals(0x40, snes.bus.read(0x213f) & 0x40);
+        assertEquals(0x40, snes.bus.read(0x213f) & 0x40);
+
+        snes.bus.write(0x4201, 0x80);
+        assertEquals(0x40, snes.bus.read(0x213f) & 0x40);
+        assertEquals(0x00, snes.bus.read(0x213f) & 0x40);
+    }
+
+    @Test
     void softwareLatchDoesNotResetCounterReadFlipFlops() {
         SNES snes = init();
 
@@ -398,6 +411,7 @@ class PpuReadTest {
     private static SNES init() {
         SNES snes = new SNES(new NoRenderer(0, 0, 0));
         snes.bus.mapComponents(snes);
+        snes.cpu.internalRegisters()[0x01] = 0x80;
         return snes;
     }
 }

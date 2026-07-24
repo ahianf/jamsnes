@@ -48,6 +48,7 @@ public class SNES {
         this.joypad = new Joypad();
         this.ppu = new PPU(renderer);
         this.cpu.setIoPortLatchListener(this.ppu::latchCounters);
+        this.ppu.setExternalCounterLatchEnabled(() -> (cpu.internalRegisters()[0x01] & 0x80) != 0);
         this.apu = new APU(renderer);
     }
 
