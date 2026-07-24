@@ -270,6 +270,11 @@ class CpuUpdateLoopTest {
         assertEquals(0x0200, snes.cpu.registers().pc);
         assertEquals(0x00, snes.ppu.vram.data()[0]);
 
+        assertEquals(8, snes.cpu.update(1));
+        assertTrue(snes.cpu.dmaChannels()[0].isEnabled());
+        assertEquals(0x0200, snes.cpu.registers().pc);
+        assertEquals(0x00, snes.ppu.vram.data()[0]);
+
         assertEquals(16, snes.cpu.update(12));
         assertTrue(snes.cpu.dmaChannels()[0].isEnabled());
         assertEquals(0x0200, snes.cpu.registers().pc);

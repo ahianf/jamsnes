@@ -747,7 +747,7 @@ class SNESTest {
 
         assertEquals(0x12, snes.ppu.cgram.read(0x40));
         assertEquals(0x34, snes.ppu.cgram.read(0x41));
-        assertEquals(287, snes.ppu.hCounter());
+        assertEquals(303, snes.ppu.hCounter());
         assertEquals(0, snes.ppu.vCounter());
         assertEquals(0, snes.cpu.internalRegisters()[0x0b]);
         assertEquals(0x01, snes.cpu.internalRegisters()[0x0c]);

@@ -108,7 +108,7 @@ class CpuRegisterTest {
         snes.bus.write(0x4202, 0x12);
         snes.bus.write(0x4203, 0x34);
 
-        assertEquals(8, snes.cpu.initializeHDMA());
+        assertEquals(16, snes.cpu.initializeHDMA());
 
         assertEquals(0xa8, snes.bus.read(0x4216));
         assertEquals(0x03, snes.bus.read(0x4217));

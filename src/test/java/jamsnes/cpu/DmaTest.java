@@ -42,6 +42,34 @@ class DmaTest {
     }
 
     @Test
+    void cpuChargesSharedDmaStartupBeforeChannelStartup() {
+        SNES snes = init();
+        DMA dma = snes.cpu.dmaChannels()[0];
+        snes.wram.data()[0x0200] = 0x8f;
+        snes.bus.write(0x4300, DMA.ONE_TO_ONE);
+        snes.bus.write(0x4301, 0x00);
+        snes.bus.write(0x4302, 0x00);
+        snes.bus.write(0x4303, 0x02);
+        snes.bus.write(0x4304, 0x7e);
+        snes.bus.write(0x4305, 0x01);
+        snes.bus.write(0x4306, 0x00);
+        snes.bus.write(0x420b, 0x01);
+
+        assertEquals(8, snes.cpu.runDMA(8));
+        assertTrue(dma.isEnabled());
+        assertEquals(1, dma.getCount());
+
+        assertEquals(8, snes.cpu.runDMA(8));
+        assertTrue(dma.isEnabled());
+        assertEquals(1, dma.getCount());
+
+        assertEquals(8, snes.cpu.runDMA(8));
+        assertFalse(dma.isEnabled());
+        assertEquals(0, dma.getCount());
+        assertEquals(0x8f, snes.ppu.registers()[0x00]);
+    }
+
+    @Test
     void reverseDmaToMappedRomIsIgnoredWithoutAbortingTheTransfer() {
         SNES snes = init();
         snes.cartridge.setSize(0x8000);
@@ -157,15 +185,15 @@ class DmaTest {
         setupHdma(snes, DMA.TWO_TO_ONE, 0x22, 0x7e0200);
         snes.bus.write(0x420c, 0x01);
 
-        assertEquals(8, snes.cpu.initializeHDMA());
+        assertEquals(16, snes.cpu.initializeHDMA());
         enterHBlank(snes);
-        assertEquals(16, snes.cpu.runHDMALine());
+        assertEquals(24, snes.cpu.runHDMALine());
         assertEquals(0x12, snes.ppu.cgram.read(0x40));
         assertEquals(0x34, snes.ppu.cgram.read(0x41));
         assertEquals(0x01, dma.getLineCounter());
         assertTrue(dma.isHdmaEnabled());
 
-        assertEquals(8, snes.cpu.runHDMALine());
+        assertEquals(16, snes.cpu.runHDMALine());
         assertEquals(0x0204, dma.getTableAddress());
         assertTrue(dma.isHdmaEnabled());
         assertFalse(dma.isHdmaActive());
@@ -183,14 +211,14 @@ class DmaTest {
         setupHdma(snes, DMA.ONE_TO_ONE, 0x26, 0x7e0200);
         snes.bus.write(0x420c, 0x01);
 
-        assertEquals(8, snes.cpu.initializeHDMA());
-        assertEquals(8, snes.cpu.runHDMALine());
+        assertEquals(16, snes.cpu.initializeHDMA());
+        assertEquals(16, snes.cpu.runHDMALine());
         assertEquals(0x02, dma.getLineCounter());
         assertTrue(dma.isHdmaActive());
 
         snes.bus.write(0x430a, 0x01);
 
-        assertEquals(8, snes.cpu.runHDMALine());
+        assertEquals(16, snes.cpu.runHDMALine());
         assertEquals(0x0203, dma.getTableAddress());
         assertFalse(dma.isHdmaActive());
     }
@@ -211,11 +239,11 @@ class DmaTest {
         setupHdma(snes, DMA.TWO_TO_ONE, 0x22, 0x7e0200);
         snes.bus.write(0x420c, 0x01);
 
-        assertEquals(8, snes.cpu.initializeHDMA());
+        assertEquals(16, snes.cpu.initializeHDMA());
         enterHBlank(snes);
-        assertEquals(16, snes.cpu.runHDMALine());
+        assertEquals(24, snes.cpu.runHDMALine());
         assertEquals(0x81, dma.getLineCounter());
-        assertEquals(16 + 8, snes.cpu.runHDMALine());
+        assertEquals(16 + 8 + 8, snes.cpu.runHDMALine());
 
         assertEquals(0x12, snes.ppu.cgram.read(0x40));
         assertEquals(0x34, snes.ppu.cgram.read(0x41));
@@ -238,22 +266,22 @@ class DmaTest {
         setupHdma(snes, DMA.ONE_TO_ONE, 0x26, 0x7e0200);
         snes.bus.write(0x420c, 0x01);
 
-        assertEquals(8, snes.cpu.initializeHDMA());
-        assertEquals(8, snes.cpu.runHDMALine());
+        assertEquals(16, snes.cpu.initializeHDMA());
+        assertEquals(16, snes.cpu.runHDMALine());
         assertEquals(0x5a, snes.ppu.registers()[0x26]);
         assertEquals(0x7f, dma.getLineCounter());
         assertEquals(0x0202, dma.getTableAddress());
 
         snes.bus.write(0x2126, 0x33);
         for (int i = 0; i < 126; i++) {
-            assertEquals(0, snes.cpu.runHDMALine());
+            assertEquals(8, snes.cpu.runHDMALine());
             assertEquals(0x33, snes.ppu.registers()[0x26]);
             assertTrue(dma.isHdmaEnabled());
             assertTrue(dma.isHdmaActive());
         }
 
         assertEquals(0x01, dma.getLineCounter());
-        assertEquals(8, snes.cpu.runHDMALine());
+        assertEquals(16, snes.cpu.runHDMALine());
 
         assertEquals(0x33, snes.ppu.registers()[0x26]);
         assertEquals(0x0203, dma.getTableAddress());
@@ -278,9 +306,9 @@ class DmaTest {
         snes.bus.write(0x4307, 0x7e);
         snes.bus.write(0x420c, 0x01);
 
-        assertEquals(24, snes.cpu.initializeHDMA());
+        assertEquals(32, snes.cpu.initializeHDMA());
         enterHBlank(snes);
-        assertEquals(16 + 8, snes.cpu.runHDMALine());
+        assertEquals(16 + 8 + 8, snes.cpu.runHDMALine());
 
         assertEquals(0xab, snes.ppu.cgram.read(0x40));
         assertEquals(0x4d, snes.ppu.cgram.read(0x41));
@@ -309,9 +337,9 @@ class DmaTest {
         setupHdmaChannel(snes, 1, DMA.ONE_TO_ONE, 0x00, 0x7e0300);
         snes.bus.write(0x420c, 0x03);
 
-        assertEquals(16, snes.cpu.initializeHDMA());
+        assertEquals(24, snes.cpu.initializeHDMA());
         enterHBlank(snes);
-        assertEquals(40, snes.cpu.runHDMALine());
+        assertEquals(48, snes.cpu.runHDMALine());
 
         assertEquals(0x12, snes.ppu.cgram.read(0x40));
         assertEquals(0x34, snes.ppu.cgram.read(0x41));
@@ -341,8 +369,8 @@ class DmaTest {
         snes.bus.write(0x4317, 0x00);
         snes.bus.write(0x420c, 0x03);
 
-        assertEquals(32, snes.cpu.initializeHDMA());
-        assertEquals(32, snes.cpu.runHDMALine());
+        assertEquals(40, snes.cpu.initializeHDMA());
+        assertEquals(40, snes.cpu.runHDMALine());
 
         assertEquals(0x5a, snes.ppu.registers()[0x25]);
         assertEquals(0x5a, snes.ppu.registers()[0x26],
@@ -364,9 +392,9 @@ class DmaTest {
         setupHdma(snes, DMA.TWO_TO_TWO_BIS, 0x26, 0x7e0200);
         snes.bus.write(0x420c, 0x01);
 
-        assertEquals(8, snes.cpu.initializeHDMA());
+        assertEquals(16, snes.cpu.initializeHDMA());
         enterHBlank(snes);
-        assertEquals(40, snes.cpu.runHDMALine());
+        assertEquals(48, snes.cpu.runHDMALine());
 
         assertEquals(0x33, snes.ppu.registers()[0x26]);
         assertEquals(0x44, snes.ppu.registers()[0x27]);
@@ -391,9 +419,9 @@ class DmaTest {
         setupHdma(snes, 0x80 | DMA.ONE_TO_ONE, 0x34, 0x7e0200);
         snes.bus.write(0x420c, 0x01);
 
-        assertEquals(8, snes.cpu.initializeHDMA());
+        assertEquals(16, snes.cpu.initializeHDMA());
         enterHBlank(snes);
-        assertEquals(16, snes.cpu.runHDMALine());
+        assertEquals(24, snes.cpu.runHDMALine());
 
         assertEquals(0x10, snes.wram.data()[0x0201]);
         assertEquals(0x0203, dma.getTableAddress());
@@ -413,18 +441,18 @@ class DmaTest {
         setupHdma(snes, DMA.ONE_TO_ONE, 0x26, 0x7e0200);
         snes.bus.write(0x420c, 0x01);
 
-        assertEquals(8, snes.cpu.initializeHDMA());
+        assertEquals(16, snes.cpu.initializeHDMA());
         enterHBlank(snes);
-        assertEquals(16, snes.cpu.runHDMALine());
+        assertEquals(24, snes.cpu.runHDMALine());
         assertTrue(dma.isHdmaEnabled());
         assertFalse(dma.isHdmaActive());
         assertEquals(0, snes.cpu.runHDMALine());
 
         snes.bus.write(0x2126, 0x00);
 
-        assertEquals(8, snes.cpu.initializeHDMA());
+        assertEquals(16, snes.cpu.initializeHDMA());
         assertTrue(dma.isHdmaActive());
-        assertEquals(16, snes.cpu.runHDMALine());
+        assertEquals(24, snes.cpu.runHDMALine());
 
         assertEquals(0x5a, snes.ppu.registers()[0x26]);
         assertEquals(0x0203, dma.getTableAddress());
