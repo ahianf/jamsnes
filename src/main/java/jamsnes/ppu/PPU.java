@@ -196,14 +196,14 @@ public class PPU extends AMemory {
     }
 
     public int getVramAddress() {
-        int vanillaAddress = u16(vramAddress * 2);
-        return switch ((vmain >>> 2) & 0b11) {
-            case 0b00 -> vanillaAddress;
-            case 0b01 -> (vanillaAddress & 0xff00) | ((vanillaAddress & 0x00e0) >>> 5) | ((vanillaAddress & 0x001f) << 3);
-            case 0b10 -> (vanillaAddress & 0xfe00) | ((vanillaAddress & 0x01c0) >>> 6) | ((vanillaAddress & 0x003f) << 3);
-            case 0b11 -> (vanillaAddress & 0xfc00) | ((vanillaAddress & 0x0380) >>> 7) | ((vanillaAddress & 0x007f) << 3);
-            default -> vanillaAddress;
+        int wordAddress = switch ((vmain >>> 2) & 0b11) {
+            case 0b00 -> vramAddress;
+            case 0b01 -> (vramAddress & 0xff00) | ((vramAddress & 0x00e0) >>> 5) | ((vramAddress & 0x001f) << 3);
+            case 0b10 -> (vramAddress & 0xfe00) | ((vramAddress & 0x01c0) >>> 6) | ((vramAddress & 0x003f) << 3);
+            case 0b11 -> (vramAddress & 0xfc00) | ((vramAddress & 0x0380) >>> 7) | ((vramAddress & 0x007f) << 3);
+            default -> vramAddress;
         };
+        return u16(wordAddress * 2);
     }
 
     public void update(int cycles) {

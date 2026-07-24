@@ -282,6 +282,28 @@ class PpuRegisterWriteTest {
     }
 
     @Test
+    void fullGraphicVramRemappingPermutesWordAddressBeforeByteSelection() {
+        SNES snes = init();
+        snes.bus.write(0x2100, 0x80);
+
+        snes.bus.write(0x2115, 0b0000_0100);
+        snes.bus.write(0x2116, 0x10);
+        snes.bus.write(0x2117, 0x00);
+        assertEquals(0x0100, snes.ppu.getVramAddress());
+
+        snes.bus.write(0x2118, 0x5a);
+        assertEquals(0x5a, snes.ppu.vram.read(0x0100));
+
+        snes.bus.write(0x2115, 0b0000_1000);
+        snes.bus.write(0x2116, 0x20);
+        assertEquals(0x0200, snes.ppu.getVramAddress());
+
+        snes.bus.write(0x2115, 0b0000_1100);
+        snes.bus.write(0x2116, 0x40);
+        assertEquals(0x0400, snes.ppu.getVramAddress());
+    }
+
+    @Test
     void vramDataWriteCommitsDuringForcedBlankAndIncrementsLowByteMode() {
         SNES snes = init();
 
