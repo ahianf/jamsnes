@@ -78,6 +78,19 @@ class RectangleMemoryTest {
     }
 
     @Test
+    void rectangleShadowCanRetainAFullSourceBankStride() {
+        Ram ram = new Ram(0x40000, Component.ROM, "Rom");
+        RectangleShadow shadow = new RectangleShadow(ram, 0x00, 0x03, 0x8000, 0xffff)
+                .setBankOffset(1)
+                .setSourceBankStride(0x10000);
+        ram.data()[0x018000] = 0x5a;
+        ram.data()[0x038123] = 0xa5;
+
+        assertEquals(0x5a, shadow.read(shadow.getRelativeAddress(0x018000)));
+        assertEquals(0xa5, shadow.read(shadow.getRelativeAddress(0x038123)));
+    }
+
+    @Test
     void shadowOffsetCartridge() {
         Ram ram = new Ram(0x3fff80, Component.ROM, "Rom");
         ram.setMemoryRegion(0x80, 0xff, 0x8000, 0xffff);

@@ -5,6 +5,7 @@ import jamsnes.models.Component;
 public class RectangleShadow extends ARectangleMemory {
     private final IMemory initial;
     private int bankOffset;
+    private int sourceBankStride;
 
     public RectangleShadow(IMemory initial, int startBank, int endBank, int startPage, int endPage) {
         this.initial = initial;
@@ -14,7 +15,11 @@ public class RectangleShadow extends ARectangleMemory {
     @Override
     public int getRelativeAddress(int address) {
         int base = super.getRelativeAddress(address);
-        return base + bankOffset * (1 + endPage - startPage);
+        int pageCount = 1 + endPage - startPage;
+        int bankCount = base / pageCount;
+        int pageOffset = base % pageCount;
+        int stride = sourceBankStride == 0 ? pageCount : sourceBankStride;
+        return bankOffset * pageCount + bankCount * stride + pageOffset;
     }
 
     @Override
@@ -48,6 +53,11 @@ public class RectangleShadow extends ARectangleMemory {
 
     public RectangleShadow setBankOffset(int bankOffset) {
         this.bankOffset = bankOffset;
+        return this;
+    }
+
+    public RectangleShadow setSourceBankStride(int sourceBankStride) {
+        this.sourceBankStride = sourceBankStride;
         return this;
     }
 }

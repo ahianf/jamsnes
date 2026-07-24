@@ -302,6 +302,22 @@ class MemoryBusTest {
     }
 
     @Test
+    void hiromUpperHalfMirrorsRetainFullSourceBankStride() {
+        SNES snes = initHirom();
+        snes.cartridge.setSize(0x400000);
+        snes.bus.mapComponents(snes);
+        snes.cartridge.data()[0x010000] = 0x11;
+        snes.cartridge.data()[0x018000] = 0x22;
+        snes.cartridge.data()[0x200000] = 0x33;
+        snes.cartridge.data()[0x3f8000] = 0x44;
+
+        assertEquals(0x22, snes.bus.read(0x018000));
+        assertEquals(0x22, snes.bus.read(0x818000));
+        assertEquals(0x44, snes.bus.read(0x3f8000));
+        assertEquals(0x44, snes.bus.read(0xbf8000));
+    }
+
+    @Test
     void mappedLoromReadsMirrorPhysicalRomSize() {
         SNES snes = init();
         snes.cartridge.setSize(0x8000);
