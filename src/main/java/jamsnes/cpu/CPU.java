@@ -1119,6 +1119,7 @@ public class CPU extends AMemory {
         emulationMode = true;
         registers.p.m = true;
         registers.p.x_b = true;
+        enforceStatusWidth();
         registers.dbr = 0;
         registers.setPbr(0);
         registers.d = 0;
