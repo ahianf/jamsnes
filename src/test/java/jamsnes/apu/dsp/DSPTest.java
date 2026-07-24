@@ -381,17 +381,18 @@ class DSPTest {
     }
 
     @Test
-    void voicePhasesLoadBrrDirectoryAndHeaderState() {
+    void voicePhasesLoadBrrDirectoryPointersAndCurrentBlockState() {
         DSP dsp = new DSP();
         dsp.setBrrDirectoryState(0x12, 0x05, 0, 0);
+        dsp.setVoiceBrrState(0, 0x2000, 3, 0);
         dsp.write(0x04, 0x07);
         dsp.write(0x05, 0x8f);
         dsp.write(0x02, 0x34);
         dsp.write(0x03, 0x12);
         dsp.writeRam(0x1216, 0xcd);
         dsp.writeRam(0x1217, 0xab);
-        dsp.writeRam(0x1214, 0x60);
-        dsp.writeRam(0x1215, 0xee);
+        dsp.writeRam(0x2000, 0x60);
+        dsp.writeRam(0x2003, 0xee);
 
         dsp.voice1(0);
         dsp.voice2(0);

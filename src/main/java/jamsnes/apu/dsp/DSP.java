@@ -823,8 +823,8 @@ public class DSP {
     }
 
     private void voice3b(Voice voice) {
-        brr.header = readRam(brr.address);
-        brr.value = readRam(brr.address + voice.brrOffset);
+        brr.header = readRam(voice.brrAddress);
+        brr.value = readRam(voice.brrAddress + voice.brrOffset);
     }
 
     private void voice3c(Voice voice) {
