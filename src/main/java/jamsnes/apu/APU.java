@@ -100,7 +100,7 @@ public class APU extends AMemory {
     public int _internalRead(int address) {
         validateInternalAddress(address, "APU Registers read");
         return switch (address) {
-            case 0x00f0 -> unknownRegister;
+            case 0x00f0, 0x00f1, 0x00fa, 0x00fb, 0x00fc -> 0;
             case 0x00f2 -> dspRegisterAddress;
             case 0x00f3 -> dsp.read(dspRegisterAddress);
             case 0x00f4, 0x00f5, 0x00f6, 0x00f7 -> apuReadPorts[address - 0x00f4];
@@ -126,11 +126,17 @@ public class APU extends AMemory {
             case 0x00f0 -> unknownRegister = value;
             case 0x00f1 -> writeControlRegister(value);
             case 0x00f2 -> dspRegisterAddress = value;
-            case 0x00f3 -> dsp.write(dspRegisterAddress, value);
+            case 0x00f3 -> {
+                if ((dspRegisterAddress & 0x80) == 0) {
+                    dsp.write(dspRegisterAddress, value);
+                }
+            }
             case 0x00f4, 0x00f5, 0x00f6, 0x00f7 -> cpuReadPorts[address - 0x00f4] = value;
             case 0x00f8 -> registerMemory1 = value;
             case 0x00f9 -> registerMemory2 = value;
             case 0x00fa, 0x00fb, 0x00fc -> timers[address - 0x00fa] = value;
+            case 0x00fd, 0x00fe, 0x00ff -> {
+            }
             default -> {
                 if (address <= 0x00ef || address >= 0x0100) {
                     internalMemory[address] = value;

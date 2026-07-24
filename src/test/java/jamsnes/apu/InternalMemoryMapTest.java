@@ -164,6 +164,38 @@ class InternalMemoryMapTest {
     }
 
     @Test
+    void writeOnlyIoRegistersReadAsZero() {
+        SNES snes = init();
+        snes.apu._internalWrite(0x00f0, 0xaa);
+        snes.apu._internalWrite(0x00f1, 0x80);
+        snes.apu._internalWrite(0x00fa, 0x11);
+        snes.apu._internalWrite(0x00fb, 0x22);
+        snes.apu._internalWrite(0x00fc, 0x33);
+
+        assertEquals(0, snes.apu._internalRead(0x00f0));
+        assertEquals(0, snes.apu._internalRead(0x00f1));
+        assertEquals(0, snes.apu._internalRead(0x00fa));
+        assertEquals(0, snes.apu._internalRead(0x00fb));
+        assertEquals(0, snes.apu._internalRead(0x00fc));
+    }
+
+    @Test
+    void timerOutputRegistersIgnoreWrites() {
+        SNES snes = init();
+        snes.apu.counters()[0] = 0x01;
+        snes.apu.counters()[1] = 0x02;
+        snes.apu.counters()[2] = 0x03;
+
+        snes.apu._internalWrite(0x00fd, 0xaa);
+        snes.apu._internalWrite(0x00fe, 0xbb);
+        snes.apu._internalWrite(0x00ff, 0xcc);
+
+        assertEquals(0x01, snes.apu._internalRead(0x00fd));
+        assertEquals(0x02, snes.apu._internalRead(0x00fe));
+        assertEquals(0x03, snes.apu._internalRead(0x00ff));
+    }
+
+    @Test
     void internalWriteUsesApuMemoryRegionsAndRegisters() {
         SNES snes = init();
 
@@ -198,14 +230,17 @@ class InternalMemoryMapTest {
     }
 
     @Test
-    void dspRegisterAddressHighBitMirrorsLowSevenBits() {
+    void dspRegisterAddressHighBitMirrorsReadsAndBlocksWrites() {
         SNES snes = init();
+        snes.apu._internalWrite(0x00f2, 0x0c);
+        snes.apu._internalWrite(0x00f3, 0x34);
 
         snes.apu._internalWrite(0x00f2, 0x8c);
+        assertEquals(0x34, snes.apu._internalRead(0x00f3));
         snes.apu._internalWrite(0x00f3, 0x56);
 
         snes.apu._internalWrite(0x00f2, 0x0c);
-        assertEquals(0x56, snes.apu._internalRead(0x00f3));
+        assertEquals(0x34, snes.apu._internalRead(0x00f3));
 
         snes.apu._internalWrite(0x00f2, 0x9c);
         assertEquals(0x00, snes.apu._internalRead(0x00f3));
@@ -297,12 +332,10 @@ class InternalMemoryMapTest {
     }
 
     @Test
-    void invalidInternalReadsAndWritesThrow() {
+    void invalidInternalAddressesThrow() {
         SNES snes = init();
 
-        assertThrows(InvalidAddress.class, () -> snes.apu._internalRead(0x00f1));
         assertThrows(InvalidAddress.class, () -> snes.apu._internalRead(0x10000));
-        assertThrows(InvalidAddress.class, () -> snes.apu._internalWrite(0x00fd, 123));
         assertThrows(InvalidAddress.class, () -> snes.apu._internalWrite(0x10000, 123));
     }
 
