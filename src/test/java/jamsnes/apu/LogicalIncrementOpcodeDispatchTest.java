@@ -40,9 +40,9 @@ class LogicalIncrementOpcodeDispatchTest {
         snes.apu._internalWrite(0x41, 0xf0);
         snes.apu._internalWrite(0x42, 0x0f);
         writeProgram(snes, 0x200,
-                0x18, 0x40, 0x03,
-                0x38, 0x41, 0x0f,
-                0x58, 0x42, 0x0f);
+                0x18, 0x03, 0x40,
+                0x38, 0x0f, 0x41,
+                0x58, 0x0f, 0x42);
 
         assertEquals(5, snes.apu.executeInstruction());
         assertEquals(0x13, snes.apu._internalRead(0x40));
@@ -61,13 +61,26 @@ class LogicalIncrementOpcodeDispatchTest {
         snes.apu.internalRegisters().pc = 0x200;
         snes.apu._internalWrite(0x10, 0xf0);
         snes.apu._internalWrite(0x20, 0x0f);
-        snes.apu._internalWrite(0x200, 0x49);
-        snes.apu._internalWrite(0x201, 0x10);
-        snes.apu._internalWrite(0x202, 0x20);
+        snes.apu._internalWrite(0x11, 0x0f);
+        snes.apu._internalWrite(0x21, 0xf3);
+        snes.apu._internalWrite(0x12, 0xaa);
+        snes.apu._internalWrite(0x22, 0x0f);
+        writeProgram(snes, 0x200,
+                0x09, 0x10, 0x20,
+                0x29, 0x11, 0x21,
+                0x49, 0x12, 0x22);
 
         assertEquals(6, snes.apu.executeInstruction());
+        assertEquals(0xf0, snes.apu._internalRead(0x10));
+        assertEquals(0xff, snes.apu._internalRead(0x20));
 
-        assertEquals(0xff, snes.apu._internalRead(0x10));
+        assertEquals(6, snes.apu.executeInstruction());
+        assertEquals(0x0f, snes.apu._internalRead(0x11));
+        assertEquals(0x03, snes.apu._internalRead(0x21));
+
+        assertEquals(6, snes.apu.executeInstruction());
+        assertEquals(0xaa, snes.apu._internalRead(0x12));
+        assertEquals(0xa5, snes.apu._internalRead(0x22));
         assertTrue(snes.apu.internalRegisters().n);
         assertFalse(snes.apu.internalRegisters().z);
     }

@@ -107,9 +107,9 @@ class ArithmeticOpcodeDispatchTest {
         snes.apu._internalWrite(0x30, 10);
         writeProgram(snes, 0x200,
                 0x88, 5,
-                0x98, 0x30, 7,
+                0x98, 7, 0x30,
                 0xa8, 3,
-                0xb8, 0x30, 2);
+                0xb8, 2, 0x30);
 
         assertEquals(2, snes.apu.executeInstruction());
         assertEquals(15, snes.apu.internalRegisters().a);
@@ -127,6 +127,28 @@ class ArithmeticOpcodeDispatchTest {
     }
 
     @Test
+    void executesTwoDirectArithmeticOpcodesInSourceDestinationOrder() {
+        SNES snes = init();
+        snes.apu.internalRegisters().pc = 0x200;
+        snes.apu._internalWrite(0x10, 3);
+        snes.apu._internalWrite(0x20, 5);
+        snes.apu._internalWrite(0x11, 2);
+        snes.apu._internalWrite(0x21, 9);
+        writeProgram(snes, 0x200,
+                0x89, 0x10, 0x20,
+                0xa9, 0x11, 0x21);
+
+        assertEquals(6, snes.apu.executeInstruction());
+        assertEquals(3, snes.apu._internalRead(0x10));
+        assertEquals(8, snes.apu._internalRead(0x20));
+
+        snes.apu.internalRegisters().c = true;
+        assertEquals(6, snes.apu.executeInstruction());
+        assertEquals(2, snes.apu._internalRead(0x11));
+        assertEquals(7, snes.apu._internalRead(0x21));
+    }
+
+    @Test
     void executesCompareOpcodes() {
         SNES snes = init();
         snes.apu.internalRegisters().pc = 0x200;
@@ -141,6 +163,7 @@ class ArithmeticOpcodeDispatchTest {
                 0x64, 0x20,
                 0xc8, 0x20,
                 0x69, 0x21, 0x22,
+                0x78, 0x45, 0x22,
                 0x79);
 
         assertEquals(3, snes.apu.executeInstruction());
@@ -152,7 +175,11 @@ class ArithmeticOpcodeDispatchTest {
         assertTrue(snes.apu.internalRegisters().z);
 
         assertEquals(6, snes.apu.executeInstruction());
+        assertTrue(snes.apu.internalRegisters().c);
+
+        assertEquals(5, snes.apu.executeInstruction());
         assertFalse(snes.apu.internalRegisters().c);
+        assertTrue(snes.apu.internalRegisters().n);
 
         snes.apu.internalRegisters().x = 0x30;
         snes.apu.internalRegisters().y = 0x31;

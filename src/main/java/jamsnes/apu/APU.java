@@ -299,9 +299,9 @@ public class APU extends AMemory {
             case 0x08:
                 return ORaccValue(_getImmediateData(), 2);
             case 0x09: {
-                int operand1 = _getDirectAddr();
-                int operand2 = _getDirectAddr();
-                return OR(operand1, operand2, 6);
+                int source = _getDirectAddr();
+                int destination = _getDirectAddr();
+                return OR(destination, source, 6);
             }
             case 0x0a:
                 return OR1(_getAbsoluteBit());
@@ -332,9 +332,9 @@ public class APU extends AMemory {
             case 0x17:
                 return ORacc(_getAbsoluteDirectAddrByY(), 6);
             case 0x18: {
-                int operand1 = _getDirectAddr();
-                int operand2 = _getImmediateData();
-                return ORmemValue(operand1, operand2, 5);
+                int source = _getImmediateData();
+                int destination = _getDirectAddr();
+                return ORmemValue(destination, source, 5);
             }
             case 0x19:
                 return OR(_getIndexXAddr(), _getIndexYAddr(), 5);
@@ -369,9 +369,9 @@ public class APU extends AMemory {
             case 0x28:
                 return ANDaccValue(_getImmediateData(), 2);
             case 0x29: {
-                int operand1 = _getDirectAddr();
-                int operand2 = _getDirectAddr();
-                return AND(operand1, operand2, 6);
+                int source = _getDirectAddr();
+                int destination = _getDirectAddr();
+                return AND(destination, source, 6);
             }
             case 0x2a:
                 return OR1(_getAbsoluteBit(), true);
@@ -402,9 +402,9 @@ public class APU extends AMemory {
             case 0x37:
                 return ANDacc(_getAbsoluteDirectAddrByY(), 6);
             case 0x38: {
-                int operand1 = _getDirectAddr();
-                int operand2 = _getImmediateData();
-                return ANDmemValue(operand1, operand2, 5);
+                int source = _getImmediateData();
+                int destination = _getDirectAddr();
+                return ANDmemValue(destination, source, 5);
             }
             case 0x39:
                 return AND(_getIndexXAddr(), _getIndexYAddr(), 5);
@@ -439,9 +439,9 @@ public class APU extends AMemory {
             case 0x48:
                 return EORaccValue(_getImmediateData(), 2);
             case 0x49: {
-                int operand1 = _getDirectAddr();
-                int operand2 = _getDirectAddr();
-                return EOR(operand1, operand2, 6);
+                int source = _getDirectAddr();
+                int destination = _getDirectAddr();
+                return EOR(destination, source, 6);
             }
             case 0x4a:
                 return AND1(_getAbsoluteBit());
@@ -472,9 +472,9 @@ public class APU extends AMemory {
             case 0x57:
                 return EORacc(_getAbsoluteDirectAddrByY(), 6);
             case 0x58: {
-                int operand1 = _getDirectAddr();
-                int operand2 = _getImmediateData();
-                return EORmemValue(operand1, operand2, 5);
+                int source = _getImmediateData();
+                int destination = _getDirectAddr();
+                return EORmemValue(destination, source, 5);
             }
             case 0x59:
                 return EOR(_getIndexXAddr(), _getIndexYAddr(), 5);
@@ -509,9 +509,9 @@ public class APU extends AMemory {
             case 0x68:
                 return CMPregValue("a", _getImmediateData(), 2);
             case 0x69: {
-                int operand1 = _getDirectAddr();
-                int operand2 = _getDirectAddr();
-                return CMPmemToMem(operand1, operand2, 6);
+                int source = _getDirectAddr();
+                int destination = _getDirectAddr();
+                return CMPmemToMem(destination, source, 6);
             }
             case 0x6a:
                 return AND1(_getAbsoluteBit(), true);
@@ -542,9 +542,9 @@ public class APU extends AMemory {
             case 0x77:
                 return CMPreg("a", _getAbsoluteDirectAddrByY(), 6);
             case 0x78: {
-                int operand1 = _getDirectAddr();
-                int operand2 = _getImmediateData();
-                return CMP(operand1, operand2, 5);
+                int source = _getImmediateData();
+                int destination = _getDirectAddr();
+                return CMP(destination, source, 5);
             }
             case 0x79:
                 return CMPmemToMem(_getIndexXAddr(), _getIndexYAddr(), 5);
@@ -579,9 +579,9 @@ public class APU extends AMemory {
             case 0x88:
                 return ADCaccValue(_getImmediateData(), 2);
             case 0x89: {
-                int operand1 = _getDirectAddr();
-                int operand2 = _getDirectAddr();
-                return ADC(operand1, operand2, 6);
+                int source = _getDirectAddr();
+                int destination = _getDirectAddr();
+                return ADC(destination, source, 6);
             }
             case 0x8a:
                 return EOR1(_getAbsoluteBit());
@@ -595,9 +595,9 @@ public class APU extends AMemory {
                 internalRegisters.setPsw(popStack());
                 return 4;
             case 0x8f: {
-                int to = _getDirectAddr();
-                int from = _getImmediateData();
-                return MOVvalueToMem(to, from, 5);
+                int source = _getImmediateData();
+                int destination = _getDirectAddr();
+                return MOVvalueToMem(destination, source, 5);
             }
             case 0x90:
                 return BCC(_getImmediateData());
@@ -616,9 +616,9 @@ public class APU extends AMemory {
             case 0x97:
                 return ADCacc(_getAbsoluteDirectAddrByY(), 6);
             case 0x98: {
-                int operand1 = _getDirectAddr();
-                int operand2 = _getImmediateData();
-                return ADCmemValue(operand1, operand2, 5);
+                int source = _getImmediateData();
+                int destination = _getDirectAddr();
+                return ADCmemValue(destination, source, 5);
             }
             case 0x99:
                 return ADC(_getIndexXAddr(), _getIndexYAddr(), 5);
@@ -653,9 +653,9 @@ public class APU extends AMemory {
             case 0xa8:
                 return SBCaccValue(_getImmediateData(), 2);
             case 0xa9: {
-                int operand1 = _getDirectAddr();
-                int operand2 = _getDirectAddr();
-                return SBC(operand1, operand2, 6);
+                int source = _getDirectAddr();
+                int destination = _getDirectAddr();
+                return SBC(destination, source, 6);
             }
             case 0xaa:
                 return MOV1(_getAbsoluteBit(), true);
@@ -686,9 +686,9 @@ public class APU extends AMemory {
             case 0xb7:
                 return SBCacc(_getAbsoluteDirectAddrByY(), 6);
             case 0xb8: {
-                int operand1 = _getDirectAddr();
-                int operand2 = _getImmediateData();
-                return SBCmemValue(operand1, operand2, 5);
+                int source = _getImmediateData();
+                int destination = _getDirectAddr();
+                return SBCmemValue(destination, source, 5);
             }
             case 0xb9:
                 return SBC(_getIndexXAddr(), _getIndexYAddr(), 5);
@@ -821,9 +821,9 @@ public class APU extends AMemory {
             case 0xf9:
                 return MOVmemToReg(_getDirectAddrByY(), "x", 4);
             case 0xfa: {
-                int to = _getDirectAddr();
-                int from = _getDirectAddr();
-                return MOVmemToMem(to, from);
+                int source = _getDirectAddr();
+                int destination = _getDirectAddr();
+                return MOVmemToMem(destination, source);
             }
             case 0xfb:
                 return MOVmemToReg(_getDirectAddrByX(), "y", 4);

@@ -47,13 +47,17 @@ class DataTransmissionOpcodeDispatchTest {
     void executesImmediateToDirectMemoryMoveOpcode() {
         SNES snes = init();
         snes.apu.internalRegisters().pc = 0x200;
-        snes.apu._internalWrite(0x200, 0x8f);
-        snes.apu._internalWrite(0x201, 0x55);
-        snes.apu._internalWrite(0x202, 0xab);
+        snes.apu._internalWrite(0x40, 0x7a);
+        writeProgram(snes, 0x200,
+                0x8f, 0xab, 0x55,
+                0xfa, 0x40, 0x50);
 
         assertEquals(5, snes.apu.executeInstruction());
-
         assertEquals(0xab, snes.apu._internalRead(0x55));
+
+        assertEquals(5, snes.apu.executeInstruction());
+        assertEquals(0x7a, snes.apu._internalRead(0x40));
+        assertEquals(0x7a, snes.apu._internalRead(0x50));
     }
 
     @Test
