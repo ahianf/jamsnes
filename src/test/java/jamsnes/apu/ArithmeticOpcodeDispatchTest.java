@@ -32,6 +32,19 @@ class ArithmeticOpcodeDispatchTest {
     }
 
     @Test
+    void absoluteAdcUsesFourCycles() {
+        SNES snes = init();
+        snes.apu.internalRegisters().pc = 0x200;
+        snes.apu.internalRegisters().a = 0x10;
+        snes.apu._internalWrite(0x0340, 0x20);
+        writeProgram(snes, 0x200, 0x85, 0x40, 0x03);
+
+        assertEquals(4, snes.apu.executeInstruction());
+        assertEquals(0x30, snes.apu.internalRegisters().a);
+        assertEquals(0x0203, snes.apu.internalRegisters().pc);
+    }
+
+    @Test
     void executesAdcAndSbcMemoryToMemoryOpcodes() {
         SNES snes = init();
         snes.apu.internalRegisters().pc = 0x200;
@@ -43,7 +56,7 @@ class ArithmeticOpcodeDispatchTest {
         snes.apu._internalWrite(0x200, 0x99);
         snes.apu._internalWrite(0x201, 0xb9);
 
-        assertEquals(3, snes.apu.executeInstruction());
+        assertEquals(5, snes.apu.executeInstruction());
         assertEquals(9, snes.apu._internalRead(0x10));
 
         snes.apu.internalRegisters().c = true;

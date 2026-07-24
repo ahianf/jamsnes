@@ -571,7 +571,7 @@ public class APU extends AMemory {
             case 0x84:
                 return ADCacc(_getDirectAddr(), 3);
             case 0x85:
-                return ADCacc(_getAbsoluteAddr(), 5);
+                return ADCacc(_getAbsoluteAddr(), 4);
             case 0x86:
                 return ADCacc(_getIndexXAddr(), 3);
             case 0x87:
@@ -621,7 +621,7 @@ public class APU extends AMemory {
                 return ADCmemValue(operand1, operand2, 5);
             }
             case 0x99:
-                return ADC(_getIndexXAddr(), _getIndexYAddr(), 3);
+                return ADC(_getIndexXAddr(), _getIndexYAddr(), 5);
             case 0x9a:
                 return SUBW(_getDirectAddr());
             case 0x9b:
