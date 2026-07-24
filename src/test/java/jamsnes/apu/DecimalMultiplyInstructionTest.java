@@ -27,7 +27,7 @@ class DecimalMultiplyInstructionTest {
     }
 
     @Test
-    void multiplyStoresProductInYaAndSetsFlagsFromCppRegisterBytes() {
+    void multiplyStoresProductInYaAndSetsFlagsFromHighProductByte() {
         SNES snes = init();
 
         snes.apu.internalRegisters().a = 10;
@@ -35,14 +35,14 @@ class DecimalMultiplyInstructionTest {
 
         assertEquals(9, snes.apu.MUL());
         assertEquals(230, snes.apu.internalRegisters().ya());
-        assertTrue(snes.apu.internalRegisters().n);
+        assertFalse(snes.apu.internalRegisters().n);
         assertTrue(snes.apu.internalRegisters().z);
 
         snes.apu.internalRegisters().a = 0xff;
         snes.apu.internalRegisters().y = 0xff;
         assertEquals(9, snes.apu.MUL());
         assertEquals(0xfe01, snes.apu.internalRegisters().ya());
-        assertFalse(snes.apu.internalRegisters().n);
+        assertTrue(snes.apu.internalRegisters().n);
         assertFalse(snes.apu.internalRegisters().z);
     }
 
