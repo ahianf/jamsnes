@@ -67,8 +67,8 @@ class SubroutineOpcodeDispatchTest {
         SNES snes = init();
         snes.apu.internalRegisters().pc = 0x0200;
         snes.apu._internalWrite(0x0200, 0x6f);
-        snes.apu._internalWrite(0x01f0, 0x12);
-        snes.apu._internalWrite(0x01f1, 0x34);
+        snes.apu._internalWrite(0x01f0, 0x34);
+        snes.apu._internalWrite(0x01f1, 0x12);
 
         assertEquals(5, snes.apu.executeInstruction());
         assertEquals(0x1234, snes.apu.internalRegisters().pc);
@@ -78,8 +78,8 @@ class SubroutineOpcodeDispatchTest {
         snes.apu.internalRegisters().sp = 0xef;
         snes.apu._internalWrite(0x0300, 0x7f);
         snes.apu._internalWrite(0x01f0, 0xdd);
-        snes.apu._internalWrite(0x01f1, 0x56);
-        snes.apu._internalWrite(0x01f2, 0x78);
+        snes.apu._internalWrite(0x01f1, 0x78);
+        snes.apu._internalWrite(0x01f2, 0x56);
 
         assertEquals(6, snes.apu.executeInstruction());
         assertEquals(0xdd, snes.apu.internalRegisters().psw());

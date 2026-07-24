@@ -1669,8 +1669,8 @@ public class APU extends AMemory {
     }
 
     public int RET() {
-        internalRegisters.setPcHigh(popStack());
         internalRegisters.setPcLow(popStack());
+        internalRegisters.setPcHigh(popStack());
         return 5;
     }
 

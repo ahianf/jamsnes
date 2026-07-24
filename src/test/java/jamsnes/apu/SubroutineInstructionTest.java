@@ -73,8 +73,8 @@ class SubroutineInstructionTest {
     @Test
     void retRestoresProgramCounterFromStack() {
         SNES snes = init();
-        snes.apu._internalWrite(0x01f0, 0x12);
-        snes.apu._internalWrite(0x01f1, 0x34);
+        snes.apu._internalWrite(0x01f0, 0x34);
+        snes.apu._internalWrite(0x01f1, 0x12);
 
         assertEquals(5, snes.apu.RET());
 
@@ -86,14 +86,43 @@ class SubroutineInstructionTest {
     void retiRestoresPswAndProgramCounterFromStack() {
         SNES snes = init();
         snes.apu._internalWrite(0x01f0, 0xdd);
-        snes.apu._internalWrite(0x01f1, 0x34);
-        snes.apu._internalWrite(0x01f2, 0x56);
+        snes.apu._internalWrite(0x01f1, 0x56);
+        snes.apu._internalWrite(0x01f2, 0x34);
 
         assertEquals(6, snes.apu.RETI());
 
         assertEquals(0xdd, snes.apu.internalRegisters().psw());
         assertEquals(0x3456, snes.apu.internalRegisters().pc);
         assertEquals(0xf2, snes.apu.internalRegisters().sp);
+    }
+
+    @Test
+    void callAndReturnRoundTripProgramCounterByteOrder() {
+        SNES snes = init();
+        snes.apu.internalRegisters().pc = 0x1234;
+
+        snes.apu.CALL(0x5678);
+        assertEquals(5, snes.apu.RET());
+
+        assertEquals(0x1234, snes.apu.internalRegisters().pc);
+        assertEquals(0xef, snes.apu.internalRegisters().sp);
+    }
+
+    @Test
+    void brkAndRetiRoundTripProgramCounterByteOrder() {
+        SNES snes = init();
+        snes.apu.internalRegisters().pc = 0x2468;
+        snes.apu.internalRegisters().setPsw(0x45);
+        snes.apu._internalWrite(0x00f1, 0x00);
+        snes.apu._internalWrite(0xffde, 0x34);
+        snes.apu._internalWrite(0xffdf, 0x12);
+
+        snes.apu.BRK();
+        assertEquals(6, snes.apu.RETI());
+
+        assertEquals(0x2468, snes.apu.internalRegisters().pc);
+        assertEquals(0x55, snes.apu.internalRegisters().psw());
+        assertEquals(0xef, snes.apu.internalRegisters().sp);
     }
 
     private static SNES init() {
