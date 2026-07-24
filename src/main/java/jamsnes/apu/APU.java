@@ -951,10 +951,19 @@ public class APU extends AMemory {
         for (int register = 0x09; register < 0x80; register += 0x10) {
             dsp.write(register, cartridge.read(0x10100 + register));
         }
+        for (int register = 0x0a; register < 0x80; register += 0x10) {
+            dsp.write(register, cartridge.read(0x10100 + register));
+        }
+        for (int register = 0x0b; register < 0x80; register += 0x10) {
+            dsp.write(register, cartridge.read(0x10100 + register));
+        }
         for (int register = 0x0c; register < 0x80; register += 0x10) {
             dsp.write(register, cartridge.read(0x10100 + register));
         }
         for (int register = 0x0d; register < 0x80; register += 0x10) {
+            dsp.write(register, cartridge.read(0x10100 + register));
+        }
+        for (int register = 0x0e; register < 0x80; register += 0x10) {
             dsp.write(register, cartridge.read(0x10100 + register));
         }
         for (int register = 0x0f; register < 0x80; register += 0x10) {

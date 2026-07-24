@@ -301,6 +301,12 @@ class InternalMemoryMapTest {
         assertEquals(0x77, snes.apu._internalRead(0x00f3));
         snes.apu._internalWrite(0x00f2, 0x6c);
         assertEquals(0xe5, snes.apu._internalRead(0x00f3));
+        snes.apu._internalWrite(0x00f2, 0x0a);
+        assertEquals(0x12, snes.apu._internalRead(0x00f3));
+        snes.apu._internalWrite(0x00f2, 0x3b);
+        assertEquals(0x34, snes.apu._internalRead(0x00f3));
+        snes.apu._internalWrite(0x00f2, 0x7e);
+        assertEquals(0x56, snes.apu._internalRead(0x00f3));
     }
 
     @Test
@@ -407,6 +413,9 @@ class InternalMemoryMapTest {
         spc[0x10100] = 0x66;
         spc[0x10110] = 0x77;
         spc[0x1016c] = (byte) 0xe5;
+        spc[0x1010a] = 0x12;
+        spc[0x1013b] = 0x34;
+        spc[0x1017e] = 0x56;
 
         Path path = tempDir.resolve("state.spc");
         Files.write(path, spc);
