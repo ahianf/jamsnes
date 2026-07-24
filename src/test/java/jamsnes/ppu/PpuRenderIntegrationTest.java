@@ -369,7 +369,7 @@ class PpuRenderIntegrationTest {
         SNES snes = init(new TestRenderer());
         writeColor(snes, 1, 0x001f);
         snes.bus.write(0x210b, 0x01);
-        snes.bus.write(0x2123, 0x40);
+        snes.bus.write(0x2123, 0x02);
         snes.bus.write(0x2126, 0x00);
         snes.bus.write(0x2127, 0x00);
         snes.bus.write(0x212c, 0x01);
@@ -382,6 +382,70 @@ class PpuRenderIntegrationTest {
 
         assertEquals(0, snes.ppu.mainScreen()[0][0]);
         assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][1]);
+    }
+
+    @Test
+    void mainScreenWindowTwoMaskSuppressesBackgroundPixelsInsideWindow() {
+        SNES snes = init(new TestRenderer());
+        writeColor(snes, 1, 0x001f);
+        snes.bus.write(0x210b, 0x01);
+        snes.bus.write(0x2123, 0x08);
+        snes.bus.write(0x2128, 0x00);
+        snes.bus.write(0x2129, 0x00);
+        snes.bus.write(0x212c, 0x01);
+        snes.bus.write(0x212e, 0x01);
+        snes.ppu.vram.write(0x0000, 0x00);
+        snes.ppu.vram.write(0x0001, 0x00);
+        snes.ppu.vram.write(0x2000, 0xc0);
+
+        snes.ppu.renderMainAndSubScreen();
+
+        assertEquals(0, snes.ppu.mainScreen()[0][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][1]);
+    }
+
+    @Test
+    void invertedMainScreenWindowMasksBackgroundPixelsOutsideWindow() {
+        SNES snes = init(new TestRenderer());
+        writeColor(snes, 1, 0x001f);
+        snes.bus.write(0x210b, 0x01);
+        snes.bus.write(0x2123, 0x03);
+        snes.bus.write(0x2126, 0x00);
+        snes.bus.write(0x2127, 0x00);
+        snes.bus.write(0x212c, 0x01);
+        snes.bus.write(0x212e, 0x01);
+        snes.ppu.vram.write(0x0000, 0x00);
+        snes.ppu.vram.write(0x0001, 0x00);
+        snes.ppu.vram.write(0x2000, 0xc0);
+
+        snes.ppu.renderMainAndSubScreen();
+
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][0]);
+        assertEquals(0, snes.ppu.mainScreen()[0][1]);
+    }
+
+    @Test
+    void backgroundWindowLogicUsesItsLowRegisterPair() {
+        SNES snes = init(new TestRenderer());
+        writeColor(snes, 1, 0x001f);
+        snes.bus.write(0x210b, 0x01);
+        snes.bus.write(0x2123, 0x0a);
+        snes.bus.write(0x2126, 0x00);
+        snes.bus.write(0x2127, 0x01);
+        snes.bus.write(0x2128, 0x01);
+        snes.bus.write(0x2129, 0x02);
+        snes.bus.write(0x212a, 0x02);
+        snes.bus.write(0x212c, 0x01);
+        snes.bus.write(0x212e, 0x01);
+        snes.ppu.vram.write(0x0000, 0x00);
+        snes.ppu.vram.write(0x0001, 0x00);
+        snes.ppu.vram.write(0x2000, 0xe0);
+
+        snes.ppu.renderMainAndSubScreen();
+
+        assertEquals(0, snes.ppu.mainScreen()[0][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][1]);
+        assertEquals(0, snes.ppu.mainScreen()[0][2]);
     }
 
     @Test
@@ -820,7 +884,7 @@ class PpuRenderIntegrationTest {
         SNES snes = init(renderer);
         setupBg1FirstPixel(snes, 0x0010);
         snes.bus.write(0x2100, 0x0f);
-        snes.bus.write(0x2125, 0x04);
+        snes.bus.write(0x2125, 0x20);
         snes.bus.write(0x2126, 0x00);
         snes.bus.write(0x2127, 0x00);
         snes.bus.write(0x2130, 0x80);
@@ -838,7 +902,7 @@ class PpuRenderIntegrationTest {
         SNES snes = init(renderer);
         setupBg1FirstPixel(snes, 0x0010);
         snes.bus.write(0x2100, 0x0f);
-        snes.bus.write(0x2125, 0x04);
+        snes.bus.write(0x2125, 0x20);
         snes.bus.write(0x2126, 0x10);
         snes.bus.write(0x2127, 0x20);
         snes.bus.write(0x2130, 0x10);
@@ -884,7 +948,7 @@ class PpuRenderIntegrationTest {
     void mainScreenWindowMaskSuppressesObjectPixelsInsideWindow() {
         SNES snes = init(new TestRenderer());
         setupObjFirstPixel(snes, 0x001f);
-        snes.bus.write(0x2125, 0x40);
+        snes.bus.write(0x2125, 0x02);
         snes.bus.write(0x2126, 0x00);
         snes.bus.write(0x2127, 0x00);
         snes.bus.write(0x212c, 0x10);

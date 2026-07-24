@@ -429,10 +429,10 @@ class PpuRegisterWriteTest {
         snes.bus.write(0x2125, 0b1011_0001);
         assertTrue(snes.ppu.ppuRegisters().window1InversionForBg1Bg3Obj(2));
         assertFalse(snes.ppu.ppuRegisters().windowEnableWindow1ForBg1Bg3Obj(2));
-        assertTrue(snes.ppu.ppuRegisters().window2InversionForBg1Bg3Obj(2));
-        assertTrue(snes.ppu.ppuRegisters().windowEnableWindow2ForBg1Bg3Obj(2));
-        assertFalse(snes.ppu.ppuRegisters().window1InversionForBg2Bg4Color(2));
-        assertFalse(snes.ppu.ppuRegisters().windowEnableWindow1ForBg2Bg4Color(2));
+        assertFalse(snes.ppu.ppuRegisters().window2InversionForBg1Bg3Obj(2));
+        assertFalse(snes.ppu.ppuRegisters().windowEnableWindow2ForBg1Bg3Obj(2));
+        assertTrue(snes.ppu.ppuRegisters().window1InversionForBg2Bg4Color(2));
+        assertTrue(snes.ppu.ppuRegisters().windowEnableWindow1ForBg2Bg4Color(2));
         assertFalse(snes.ppu.ppuRegisters().window2InversionForBg2Bg4Color(2));
         assertTrue(snes.ppu.ppuRegisters().windowEnableWindow2ForBg2Bg4Color(2));
 
@@ -446,10 +446,10 @@ class PpuRegisterWriteTest {
         assertEquals(0x78, snes.ppu.ppuRegisters().windowPosition(3));
 
         snes.bus.write(0x212a, 0b1011_0001);
-        assertEquals(0b10, snes.ppu.ppuRegisters().windowMaskLogicBg1());
-        assertEquals(0b11, snes.ppu.ppuRegisters().windowMaskLogicBg2());
-        assertEquals(0b00, snes.ppu.ppuRegisters().windowMaskLogicBg3());
-        assertEquals(0b01, snes.ppu.ppuRegisters().windowMaskLogicBg4());
+        assertEquals(0b01, snes.ppu.ppuRegisters().windowMaskLogicBg1());
+        assertEquals(0b00, snes.ppu.ppuRegisters().windowMaskLogicBg2());
+        assertEquals(0b11, snes.ppu.ppuRegisters().windowMaskLogicBg3());
+        assertEquals(0b10, snes.ppu.ppuRegisters().windowMaskLogicBg4());
 
         snes.bus.write(0x212b, 0b1011_0001);
         assertEquals(0b01, snes.ppu.ppuRegisters().windowMaskLogicObj());

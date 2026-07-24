@@ -184,35 +184,35 @@ public class PPURegisters {
     }
 
     public boolean windowEnableWindow2ForBg2Bg4Color(int index) {
-        return bit(raw[0x23 + index], 0);
+        return bit(raw[0x23 + index], 7);
     }
 
     public boolean window2InversionForBg2Bg4Color(int index) {
-        return bit(raw[0x23 + index], 1);
-    }
-
-    public boolean windowEnableWindow1ForBg2Bg4Color(int index) {
-        return bit(raw[0x23 + index], 2);
-    }
-
-    public boolean window1InversionForBg2Bg4Color(int index) {
-        return bit(raw[0x23 + index], 3);
-    }
-
-    public boolean windowEnableWindow2ForBg1Bg3Obj(int index) {
-        return bit(raw[0x23 + index], 4);
-    }
-
-    public boolean window2InversionForBg1Bg3Obj(int index) {
-        return bit(raw[0x23 + index], 5);
-    }
-
-    public boolean windowEnableWindow1ForBg1Bg3Obj(int index) {
         return bit(raw[0x23 + index], 6);
     }
 
+    public boolean windowEnableWindow1ForBg2Bg4Color(int index) {
+        return bit(raw[0x23 + index], 5);
+    }
+
+    public boolean window1InversionForBg2Bg4Color(int index) {
+        return bit(raw[0x23 + index], 4);
+    }
+
+    public boolean windowEnableWindow2ForBg1Bg3Obj(int index) {
+        return bit(raw[0x23 + index], 3);
+    }
+
+    public boolean window2InversionForBg1Bg3Obj(int index) {
+        return bit(raw[0x23 + index], 2);
+    }
+
+    public boolean windowEnableWindow1ForBg1Bg3Obj(int index) {
+        return bit(raw[0x23 + index], 1);
+    }
+
     public boolean window1InversionForBg1Bg3Obj(int index) {
-        return bit(raw[0x23 + index], 7);
+        return bit(raw[0x23 + index], 0);
     }
 
     public int windowPosition(int index) {
@@ -220,19 +220,19 @@ public class PPURegisters {
     }
 
     public int windowMaskLogicBg1() {
-        return (raw[0x2a] >>> 6) & 0b11;
+        return raw[0x2a] & 0b11;
     }
 
     public int windowMaskLogicBg2() {
-        return (raw[0x2a] >>> 4) & 0b11;
-    }
-
-    public int windowMaskLogicBg3() {
         return (raw[0x2a] >>> 2) & 0b11;
     }
 
+    public int windowMaskLogicBg3() {
+        return (raw[0x2a] >>> 4) & 0b11;
+    }
+
     public int windowMaskLogicBg4() {
-        return raw[0x2a] & 0b11;
+        return (raw[0x2a] >>> 6) & 0b11;
     }
 
     public int windowMaskLogicObj() {
