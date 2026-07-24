@@ -291,6 +291,20 @@ class PpuReadTest {
     }
 
     @Test
+    void stat78ReportsAlternatingVideoFields() {
+        SNES snes = init();
+        int frameDots = PPU.H_COUNTER_DOTS * PPU.V_COUNTER_SCANLINES;
+
+        assertEquals(0x00, snes.bus.read(0x213f) & 0x80);
+
+        snes.ppu.advanceCountersOnly(frameDots);
+        assertEquals(0x80, snes.bus.read(0x213f) & 0x80);
+
+        snes.ppu.advanceCountersOnly(frameDots);
+        assertEquals(0x00, snes.bus.read(0x213f) & 0x80);
+    }
+
+    @Test
     void softwareLatchDoesNotResetCounterReadFlipFlops() {
         SNES snes = init();
 

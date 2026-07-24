@@ -87,6 +87,7 @@ public class PPU extends AMemory {
     private boolean hCounterHighByte;
     private boolean vCounterHighByte;
     private boolean counterLatchFlag;
+    private boolean secondField;
     private boolean objectRangeOver;
     private boolean objectTimeOver;
     private int ppu1OpenBus;
@@ -245,6 +246,7 @@ public class PPU extends AMemory {
         hCounterHighByte = false;
         vCounterHighByte = false;
         counterLatchFlag = false;
+        secondField = false;
     }
 
     public void resetRegisterState() {
@@ -668,7 +670,9 @@ public class PPU extends AMemory {
     }
 
     private int readStat78() {
-        int value = (ppu2OpenBus & 0x20) | PPU2_VERSION | (counterLatchFlag ? 0x40 : 0);
+        int value = (ppu2OpenBus & 0x20) | PPU2_VERSION
+                | (counterLatchFlag ? 0x40 : 0)
+                | (secondField ? 0x80 : 0);
         counterLatchFlag = false;
         hCounterHighByte = false;
         vCounterHighByte = false;
@@ -695,6 +699,7 @@ public class PPU extends AMemory {
             vCounter++;
             if (vCounter >= V_COUNTER_SCANLINES) {
                 vCounter = 0;
+                secondField = !secondField;
             }
             if (vCounter == vBlankStartScanline()) {
                 reloadOamAddressAtVBlankEntry();
