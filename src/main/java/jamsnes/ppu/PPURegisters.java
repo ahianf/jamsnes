@@ -68,7 +68,7 @@ public class PPURegisters {
     }
 
     public int oamPriorityObjectNumber() {
-        return (raw[0x02] >>> 1) & 0x7f;
+        return (oamAddress >>> 2) & 0x7f;
     }
 
     public int oamData() {

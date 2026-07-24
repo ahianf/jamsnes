@@ -841,6 +841,29 @@ class PpuRenderIntegrationTest {
     }
 
     @Test
+    void oamDataAccessAdvancesPriorityRotationUntilVblankReloadsAddress() {
+        SNES snes = init(new TestRenderer());
+        setupOverlappingObjectPixels(snes);
+        snes.bus.write(0x2100, 0x0f);
+        snes.bus.write(0x2102, 0x00);
+        snes.bus.write(0x2103, 0x80);
+        snes.bus.read(0x2138);
+        snes.bus.read(0x2138);
+        snes.bus.read(0x2138);
+        snes.bus.read(0x2138);
+        snes.bus.write(0x212c, 0x10);
+
+        snes.ppu.renderMainAndSubScreen();
+
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), snes.ppu.mainScreen()[0][0]);
+
+        snes.ppu.advanceCountersOnly(PPU.H_COUNTER_DOTS * PPU.V_BLANK_START_SCANLINE);
+        snes.ppu.renderMainAndSubScreen();
+
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][0]);
+    }
+
+    @Test
     void objectRangeLimitDropsTheThirtyThirdObjectAndSetsStat77() {
         SNES snes = init(new TestRenderer());
         hideAllObjects(snes);
