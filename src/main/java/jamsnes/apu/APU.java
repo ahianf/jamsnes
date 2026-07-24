@@ -152,7 +152,6 @@ public class APU extends AMemory {
         for (int i = 0; i < timerEnabled.length; i++) {
             boolean enabled = (value & (1 << i)) != 0;
             if (enabled && !timerEnabled[i]) {
-                timerDividers[i] = 0;
                 timerStages[i] = 0;
                 counters[i] = 0;
             }
@@ -174,14 +173,13 @@ public class APU extends AMemory {
             return;
         }
         for (int i = 0; i < timerEnabled.length; i++) {
-            if (!timerEnabled[i]) {
-                continue;
-            }
             int dividerPeriod = i == 2 ? 16 : 128;
             timerDividers[i] += cycles;
             while (timerDividers[i] >= dividerPeriod) {
                 timerDividers[i] -= dividerPeriod;
-                tickTimer(i);
+                if (timerEnabled[i]) {
+                    tickTimer(i);
+                }
             }
         }
     }
