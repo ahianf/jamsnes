@@ -570,7 +570,7 @@ public class DSP {
 
     void setLatchState(int pitch, int output) {
         latch.pitch = u16(pitch);
-        latch.output = u16(output);
+        latch.output = (short) output;
     }
 
     int latchPitch() {
@@ -586,7 +586,7 @@ public class DSP {
     }
 
     void setMasterOutput(int channel, int output) {
-        master.output[channel] = u16(output);
+        master.output[channel] = (short) output;
     }
 
     void setEchoRuntimeState(
@@ -634,7 +634,7 @@ public class DSP {
     }
 
     void setEchoInput(int channel, int value) {
-        echo.input[channel] = u16(value);
+        echo.input[channel] = (short) value;
     }
 
     int echoOutput(int channel) {
@@ -642,7 +642,7 @@ public class DSP {
     }
 
     void setEchoOutput(int channel, int value) {
-        echo.output[channel] = u16(value);
+        echo.output[channel] = (short) value;
     }
 
     int voiceOutx(int voiceIndex) {
@@ -788,11 +788,11 @@ public class DSP {
     private void voiceOutput(Voice voice, int channel) {
         int out = latch.output * (byte) voice.volume[channel] >> 7;
 
-        master.output[channel] = u16(master.output[channel] + out);
+        master.output[channel] = clamp16(master.output[channel] + out);
         if (!voice.echo) {
             return;
         }
-        echo.volume[channel] = u8(echo.volume[channel] + out);
+        echo.output[channel] = clamp16(echo.output[channel] + out);
     }
 
     private void voice1(Voice voice) {
@@ -853,10 +853,10 @@ public class DSP {
         int interpolated = interpolate(voice);
 
         if (voice.tempNon) {
-            interpolated = noise.lfsr << 1;
+            interpolated = (short) (noise.lfsr << 1);
         }
 
-        latch.output = u16((interpolated * voice.envelope >> 11) & ~1);
+        latch.output = (interpolated * voice.envelope >> 11) & ~1;
         voice.envx = voice.envelope >> 4;
 
         if (master.reset || (brr.header & 3) == 1) {
@@ -883,7 +883,7 @@ public class DSP {
             decodeBRR(voice);
             voice.brrOffset += 2;
             if (voice.brrOffset >= 9) {
-                voice.brrOffset = voice.brrAddress + 9;
+                voice.brrAddress = u16(voice.brrAddress + 9);
                 if ((brr.header & 1) != 0) {
                     voice.brrAddress = brr.nextAddress;
                     voice.loop = true;
@@ -909,7 +909,7 @@ public class DSP {
     }
 
     private void voice6(Voice voice) {
-        latch.outx = latch.output >> 8;
+        latch.outx = u8(latch.output >> 8);
     }
 
     private void voice7(Voice voice) {
@@ -927,7 +927,7 @@ public class DSP {
     int loadFIR(int channel, int fir) {
         int sample = echo.history[channel][(echo.historyOffset + fir + 1) & 0x0f];
 
-        return sample * echo.fir[fir] >> 6;
+        return sample * (byte) echo.fir[fir] >> 6;
     }
 
     void loadEcho(int channel) {
@@ -951,10 +951,10 @@ public class DSP {
     }
 
     int outputEcho(int channel) {
-        short masterSample = (short) (master.output[channel] * master.volume[channel] >> 7);
-        short echoSample = (short) (echo.input[channel] * echo.input[channel] >> 7);
+        short masterSample = (short) (master.output[channel] * (byte) master.volume[channel] >> 7);
+        short echoSample = (short) (echo.input[channel] * (byte) echo.volume[channel] >> 7);
 
-        return (short) (masterSample + echoSample);
+        return clamp16(masterSample + echoSample);
     }
 
     void echo22() {
@@ -963,32 +963,37 @@ public class DSP {
 
         loadEcho(0);
 
-        echo.input[0] = u16(loadFIR(0, 0));
-        echo.input[1] = u16(loadFIR(1, 0));
+        echo.input[0] = loadFIR(0, 0);
+        echo.input[1] = loadFIR(1, 0);
     }
 
     void echo23() {
         loadEcho(1);
 
-        echo.input[0] = u16(echo.input[0] + loadFIR(0, 1) + loadFIR(0, 2));
-        echo.input[1] = u16(echo.input[1] + loadFIR(1, 1) + loadFIR(1, 2));
+        echo.input[0] += loadFIR(0, 1) + loadFIR(0, 2);
+        echo.input[1] += loadFIR(1, 1) + loadFIR(1, 2);
     }
 
     void echo24() {
-        echo.input[0] = u16(echo.input[0] + loadFIR(0, 3) + loadFIR(0, 4) + loadFIR(0, 5));
-        echo.input[1] = u16(echo.input[1] + loadFIR(1, 3) + loadFIR(1, 4) + loadFIR(1, 5));
+        echo.input[0] += loadFIR(0, 3) + loadFIR(0, 4) + loadFIR(0, 5);
+        echo.input[1] += loadFIR(1, 3) + loadFIR(1, 4) + loadFIR(1, 5);
     }
 
     void echo25() {
-        echo.input[0] = u16(echo.input[0] + loadFIR(0, 6) + loadFIR(0, 7));
-        echo.input[1] = u16(echo.input[1] + loadFIR(1, 6) + loadFIR(1, 7));
+        for (int channel = 0; channel < echo.input.length; channel++) {
+            int filtered = (short) (echo.input[channel] + loadFIR(channel, 6));
+            filtered += (short) loadFIR(channel, 7);
+            echo.input[channel] = clamp16(filtered) & ~1;
+        }
     }
 
     void echo26() {
-        master.output[0] = u16(outputEcho(0));
+        master.output[0] = outputEcho(0);
 
-        echo.output[0] = u16(echo.output[0] + (echo.input[0] * echo.feedback >> 7));
-        echo.output[1] = u16(echo.output[1] + (echo.input[1] * echo.feedback >> 7));
+        for (int channel = 0; channel < echo.output.length; channel++) {
+            short feedback = (short) (echo.input[channel] * (byte) echo.feedback >> 7);
+            echo.output[channel] = clamp16(echo.output[channel] + feedback) & ~1;
+        }
     }
 
     void echo27() {
@@ -1109,19 +1114,16 @@ public class DSP {
     }
 
     private void decodeBRR(Voice voice) {
-        int value = (brr.value << 8) | readRam(voice.brrAddress + voice.brrOffset + 1);
-        int filter = (brr.header >>> 2) & 0b11;
-        int range = (brr.header >>> 4) & 0b1111;
+        int nybbles = (brr.value << 8) | readRam(voice.brrAddress + voice.brrOffset + 1);
+        int filter = brr.header & 0x0c;
+        int shift = brr.header >>> 4;
 
         for (int i = 0; i < 4; i++) {
-            int sample = value >> 12;
-            value <<= 4;
-
-            if (range <= 12) {
-                sample <<= range;
-                sample >>= 1;
-            } else {
-                sample &= ~0x7ff;
+            int sample = (short) nybbles >> 12;
+            nybbles <<= 4;
+            sample = (sample << shift) >> 1;
+            if (shift >= 0x0d) {
+                sample = (sample >> 25) << 11;
             }
 
             int offset = voice.sampleOffset;
@@ -1134,29 +1136,23 @@ public class DSP {
             }
             int afterLastSample = voice.samples[offset];
 
-            switch (filter) {
-                case 1 -> {
-                    sample += lastSample;
-                    sample += lastSample >> 4;
+            if (filter >= 0x08) {
+                int halfAfterLastSample = afterLastSample >> 1;
+                sample += lastSample;
+                sample -= halfAfterLastSample;
+                if (filter == 0x08) {
+                    sample += halfAfterLastSample >> 4;
+                    sample += (lastSample * -3) >> 6;
+                } else {
+                    sample += (lastSample * -13) >> 7;
+                    sample += (halfAfterLastSample * 3) >> 4;
                 }
-                case 2 -> {
-                    sample += lastSample << 1;
-                    sample += -((lastSample << 1) + lastSample) >> 5;
-                    sample -= afterLastSample;
-                    sample += afterLastSample >> 4;
-                }
-                case 3 -> {
-                    sample += lastSample << 1;
-                    sample += -(lastSample + (lastSample << 2) + (lastSample << 3)) >> 6;
-                    sample -= afterLastSample;
-                    sample += ((afterLastSample << 1) + afterLastSample) >> 4;
-                }
-                default -> {
-                }
+            } else if (filter != 0) {
+                sample += lastSample >> 1;
+                sample += (-lastSample) >> 5;
             }
-            sample = Math.max(0, Math.min(16, sample));
-            sample <<= 1;
-            voice.samples[voice.sampleOffset] = sample;
+
+            voice.samples[voice.sampleOffset] = (short) (clamp16(sample) * 2);
             if (++voice.sampleOffset >= voice.samples.length) {
                 voice.sampleOffset = 0;
             }
@@ -1178,7 +1174,11 @@ public class DSP {
         interpolated = (short) interpolated;
         interpolated += GAUSS[reverse] * voice.samples[offset] >> 11;
 
-        return Math.max(0, Math.min(16, interpolated)) & ~1;
+        return clamp16(interpolated) & ~1;
+    }
+
+    private static int clamp16(int value) {
+        return Math.max(Short.MIN_VALUE, Math.min(Short.MAX_VALUE, value));
     }
 
     private int packedVoiceFlags(Flag flag) {

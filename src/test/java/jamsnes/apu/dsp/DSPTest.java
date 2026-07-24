@@ -247,14 +247,14 @@ class DSPTest {
         dsp.decodeBRR(0);
 
         assertEquals(0, dsp.voiceSample(0, 0));
-        assertEquals(18, dsp.voiceSample(0, 1));
-        assertEquals(32, dsp.voiceSample(0, 2));
-        assertEquals(32, dsp.voiceSample(0, 3));
+        assertEquals(2, dsp.voiceSample(0, 1));
+        assertEquals(2, dsp.voiceSample(0, 2));
+        assertEquals(4, dsp.voiceSample(0, 3));
         assertEquals(4, dsp.voiceSampleOffset(0));
     }
 
     @Test
-    void decodeBrrAppliesPreviousSampleFilterAndWrapsOffset() {
+    void decodeBrrSignExtendsNibblesAndAppliesFilterOne() {
         DSP dsp = new DSP();
         dsp.setBrrState(0x04, 0xf0);
         dsp.setVoiceBrrState(0, 0x3000, 1, 10);
@@ -263,11 +263,24 @@ class DSPTest {
 
         dsp.decodeBRR(0);
 
-        assertEquals(32, dsp.voiceSample(0, 10));
-        assertEquals(32, dsp.voiceSample(0, 11));
-        assertEquals(32, dsp.voiceSample(0, 0));
-        assertEquals(32, dsp.voiceSample(0, 1));
+        assertEquals(12, dsp.voiceSample(0, 10));
+        assertEquals(10, dsp.voiceSample(0, 11));
+        assertEquals(8, dsp.voiceSample(0, 0));
+        assertEquals(6, dsp.voiceSample(0, 1));
         assertEquals(2, dsp.voiceSampleOffset(0));
+    }
+
+    @Test
+    void decodeBrrInvalidNegativeRangeProducesSignedSample() {
+        DSP dsp = new DSP();
+        dsp.setBrrState(0xe0, 0xf0);
+        dsp.setVoiceBrrState(0, 0x3000, 1, 0);
+        dsp.writeRam(0x3002, 0x00);
+
+        dsp.decodeBRR(0);
+
+        assertEquals(-4096, dsp.voiceSample(0, 0));
+        assertEquals(0, dsp.voiceSample(0, 1));
     }
 
     @Test
@@ -279,7 +292,7 @@ class DSPTest {
 
         snes.apu.dsp().decodeBRR(0);
 
-        assertEquals(32, snes.apu.dsp().voiceSample(0, 3));
+        assertEquals(4, snes.apu.dsp().voiceSample(0, 3));
     }
 
     @Test
@@ -306,6 +319,22 @@ class DSPTest {
         dsp.setVoiceGaussOffset(0, 0x1000);
 
         assertEquals(6, dsp.interpolate(0));
+    }
+
+    @Test
+    void interpolatePreservesSignedSamplesAndHardwareIntermediateOverflow() {
+        DSP dsp = new DSP();
+        dsp.setVoiceBrrState(0, 0, 1, 0);
+        for (int i = 0; i < 4; i++) {
+            dsp.setVoiceSample(0, i, -8192);
+        }
+
+        assertTrue(dsp.interpolate(0) < 0);
+
+        for (int i = 0; i < 4; i++) {
+            dsp.setVoiceSample(0, i, 32767);
+        }
+        assertEquals(-32756, dsp.interpolate(0));
     }
 
     @Test
@@ -348,6 +377,55 @@ class DSPTest {
         assertEquals(4, dsp.voiceSampleOffset(0));
         assertEquals(3, dsp.voiceBrrOffset(0));
         assertEquals(0x0111, dsp.voiceGaussOffset(0));
+    }
+
+    @Test
+    void voiceFourAdvancesToTheNextBrrBlock() {
+        DSP dsp = new DSP();
+        dsp.setBrrState(0x00, 0x00);
+        dsp.setVoiceBrrState(0, 0x2000, 7, 0);
+        dsp.setVoiceGaussOffset(0, 0x4000);
+
+        dsp.voice4(0);
+
+        assertEquals(0x2009, dsp.voiceBrrAddress(0));
+        assertEquals(1, dsp.voiceBrrOffset(0));
+    }
+
+    @Test
+    void voiceMixUsesSignedVolumeAndSaturatesMainAndEchoTotals() {
+        DSP dsp = new DSP();
+        dsp.write(0x00, 0x80);
+        dsp.setLatchState(0, 0x4000);
+        dsp.setVoiceRuntimeState(0, 0, false, true, false, false);
+
+        dsp.voice4(0);
+
+        assertEquals(-16384, dsp.masterOutput(0));
+        assertEquals(-16384, dsp.echoOutput(0));
+
+        dsp.write(0x00, 0x7f);
+        dsp.setLatchState(0, 0x7ffe);
+        dsp.voice4(0);
+        dsp.voice4(0);
+        dsp.voice4(0);
+
+        assertEquals(32767, dsp.masterOutput(0));
+        assertEquals(32767, dsp.echoOutput(0));
+    }
+
+    @Test
+    void noiseSourceIsTreatedAsSignedBeforeApplyingTheEnvelope() {
+        DSP dsp = new DSP();
+        dsp.write(0x3d, 0x01);
+        dsp.setVoiceEnvelopeState(0, 0x7ff, 0x7ff, DSP.EnvelopeMode.SUSTAIN);
+        for (int i = 0; i < 29; i++) {
+            dsp.update();
+        }
+
+        dsp.voice3c(0);
+
+        assertEquals(-32752, dsp.latchOutput());
     }
 
     @Test
@@ -429,19 +507,42 @@ class DSPTest {
     }
 
     @Test
-    void echoOutputUsesMasterVolumeAndSquaredEchoInputFormula() {
+    void echoOutputUsesSignedMasterAndEchoVolumeRegisters() {
         DSP dsp = new DSP();
         dsp.write(0x1c, 0x40);
+        dsp.write(0x3c, 0xc0);
         dsp.setMasterOutput(1, 0x0100);
-        dsp.setEchoInput(1, 0x20);
+        dsp.setEchoInput(1, 0x0800);
 
-        assertEquals(136, dsp.outputEcho(1));
+        assertEquals(-896, dsp.outputEcho(1));
+    }
+
+    @Test
+    void echoFeedbackUsesSignedVolumeAndSaturates() {
+        DSP dsp = new DSP();
+        dsp.write(0x0d, 0x7f);
+        dsp.setEchoInput(0, 0x4000);
+        dsp.setEchoOutput(0, 0x7000);
+
+        dsp.echo26();
+
+        assertEquals(32766, dsp.echoOutput(0));
+    }
+
+    @Test
+    void firCoefficientsAreSigned() {
+        DSP dsp = new DSP();
+        dsp.write(0x0f, 0x80);
+        dsp.setEchoHistory(0, 1, 0x1000);
+
+        assertEquals(-8192, dsp.loadFIR(0, 0));
     }
 
     @Test
     void echoTwentySevenWritesStereoSamplesAndClearsMasterOutput() {
         DSP dsp = new DSP();
         dsp.write(0x1c, 0x40);
+        dsp.write(0x3c, 0x40);
         dsp.setMasterOutput(0, 0x1234);
         dsp.setMasterOutput(1, 0x0100);
         dsp.setEchoInput(1, 0x20);
@@ -449,7 +550,7 @@ class DSPTest {
         dsp.echo27();
 
         assertEquals(0x1234, dsp.soundBuffer()[0]);
-        assertEquals(136, dsp.soundBuffer()[1]);
+        assertEquals(144, dsp.soundBuffer()[1]);
         assertEquals(2, dsp.getSamplesCount());
         assertEquals(0, dsp.masterOutput(0));
         assertEquals(0, dsp.masterOutput(1));
