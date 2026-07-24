@@ -595,6 +595,47 @@ class SNESTest {
     }
 
     @Test
+    void updateTimerIrqReassertsAtSamePositionOnFollowingFrame() {
+        SNES snes = new SNES(new TestRenderer());
+        snes.bus.mapComponents(snes);
+        snes.bus.write(0x4200, 0x20);
+        snes.bus.write(0x4209, 0x01);
+        snes.bus.write(0x420a, 0x00);
+
+        snes.ppu.advanceCountersOnly(PPU.H_COUNTER_DOTS);
+        snes.updateTimerIrq();
+        assertEquals(0x80, snes.bus.read(0x4211));
+
+        snes.ppu.advanceCountersOnly(1);
+        snes.updateTimerIrq();
+        snes.ppu.advanceCountersOnly(PPU.H_COUNTER_DOTS * PPU.V_COUNTER_SCANLINES - 1);
+        snes.updateTimerIrq();
+
+        assertEquals(0x80, snes.bus.read(0x4211));
+    }
+
+    @Test
+    void updateTimerIrqSkipsMissingLastDotOfShortScanline() {
+        SNES snes = new SNES(new TestRenderer());
+        snes.bus.mapComponents(snes);
+        snes.cpu.isDisabled = true;
+        snes.apu.isDisabled = true;
+        int frameDots = PPU.H_COUNTER_DOTS * PPU.V_COUNTER_SCANLINES;
+        snes.ppu.advanceCountersOnly(frameDots + PPU.H_COUNTER_DOTS * 240 + 339);
+        snes.bus.write(0x4200, 0x30);
+        snes.bus.write(0x4207, 0x54);
+        snes.bus.write(0x4208, 0x01);
+        snes.bus.write(0x4209, 0xf0);
+        snes.bus.write(0x420a, 0x00);
+
+        snes.update();
+
+        assertEquals(0x00, snes.bus.read(0x4211) & 0x80);
+        assertEquals(241, snes.ppu.vCounter());
+        assertEquals(254, snes.ppu.hCounter());
+    }
+
+    @Test
     void updateTimerIrqCanReassertAfterTimersAreDisabledAndReenabled() {
         SNES snes = new SNES(new TestRenderer());
         snes.bus.mapComponents(snes);

@@ -45,6 +45,7 @@ public class PPU extends AMemory {
     public static final int H_COUNTER_DOTS = 341;
     public static final int H_BLANK_START_DOT = 256;
     public static final int V_COUNTER_SCANLINES = 262;
+    private static final int NTSC_SHORT_SCANLINE = 240;
     public static final int V_BLANK_START_SCANLINE = 225;
     public static final int OVERSCAN_V_BLANK_START_SCANLINE = 240;
     private static final int OBJ_EVALUATED_SCANLINES = OVERSCAN_V_BLANK_START_SCANLINE;
@@ -83,6 +84,7 @@ public class PPU extends AMemory {
     private int hScrollPreviousValue;
     private int hCounter;
     private int vCounter;
+    private long frameCounter;
     private int latchedHCounter;
     private int latchedVCounter;
     private int oamLowTableLatch;
@@ -247,6 +249,7 @@ public class PPU extends AMemory {
     public void resetTimingState() {
         hCounter = 0;
         vCounter = 0;
+        frameCounter = 0;
         latchedHCounter = 0;
         latchedVCounter = 0;
         hCounterHighByte = false;
@@ -544,6 +547,21 @@ public class PPU extends AMemory {
         return vCounter;
     }
 
+    public long frameCounter() {
+        return frameCounter;
+    }
+
+    public boolean isSecondField() {
+        return secondField;
+    }
+
+    public int scanlineDotsAt(int scanline, boolean field) {
+        if (field && scanline == NTSC_SHORT_SCANLINE && !ppuRegisters.setiniScreenInterlace()) {
+            return H_COUNTER_DOTS - 1;
+        }
+        return H_COUNTER_DOTS;
+    }
+
     public boolean isInHBlank() {
         return hCounter >= H_BLANK_START_DOT;
     }
@@ -705,16 +723,19 @@ public class PPU extends AMemory {
             return;
         }
         hCounter += cycles;
-        while (hCounter >= H_COUNTER_DOTS) {
-            hCounter -= H_COUNTER_DOTS;
+        int scanlineDots = scanlineDotsAt(vCounter, secondField);
+        while (hCounter >= scanlineDots) {
+            hCounter -= scanlineDots;
             vCounter++;
             if (vCounter >= V_COUNTER_SCANLINES) {
                 vCounter = 0;
+                frameCounter++;
                 secondField = !secondField;
             }
             if (vCounter == vBlankStartScanline()) {
                 reloadOamAddressAtVBlankEntry();
             }
+            scanlineDots = scanlineDotsAt(vCounter, secondField);
         }
     }
 

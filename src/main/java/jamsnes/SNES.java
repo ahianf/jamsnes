@@ -92,6 +92,8 @@ public class SNES {
 
         int timerStartHCounter = ppu.hCounter();
         int timerStartVCounter = ppu.vCounter();
+        boolean timerStartSecondField = ppu.isSecondField();
+        long startFrameCounter = ppu.frameCounter();
         int hdmaInitCycles = initializeHdmaAtFrameStart();
         if (hdmaInitCycles > 0) {
             ppu.advanceCountersOnly(hdmaInitCycles);
@@ -102,11 +104,7 @@ public class SNES {
         int startVCounter = ppu.vCounter();
         int cycleCount = cpu.update(0x0c);
         boolean entersHBlank = entersHBlank(startHCounter, startVCounter, cycleCount);
-        boolean startsNewFrame = startsNewFrame(startHCounter, startVCounter, cycleCount);
         ppu.advanceCountersOnly(cycleCount);
-        if (startsNewFrame) {
-            hdmaInitializedThisFrame = false;
-        }
         int hdmaCycles = 0;
         if (entersHBlank && !ppu.isInVBlank()) {
             ppu.captureScanlineState(startVCounter);
@@ -115,6 +113,9 @@ public class SNES {
                 ppu.advanceCountersOnly(hdmaCycles);
             }
         }
+        if (ppu.frameCounter() != startFrameCounter) {
+            hdmaInitializedThisFrame = false;
+        }
         boolean enteredVBlank = requestFrameNmi();
         if (enteredVBlank) {
             ppu.renderFrame();
@@ -122,7 +123,8 @@ public class SNES {
         updateAutoJoypadBusy(enteredVBlank, timerStartHCounter, timerStartVCounter,
                 hdmaInitCycles + cycleCount + hdmaCycles);
         updateVideoStatusRegisters();
-        updateTimerIrq(timerStartHCounter, timerStartVCounter, hdmaInitCycles + cycleCount + hdmaCycles);
+        updateTimerIrq(timerStartHCounter, timerStartVCounter, timerStartSecondField,
+                hdmaInitCycles + cycleCount + hdmaCycles);
         apu.update(cycleCount);
         if (hdmaCycles > 0) {
             apu.update(hdmaCycles);
@@ -142,14 +144,6 @@ public class SNES {
             return false;
         }
         return hCounter + cycles >= PPU.H_BLANK_START_DOT;
-    }
-
-    private boolean startsNewFrame(int hCounter, int vCounter, int cycles) {
-        if (cycles <= 0) {
-            return false;
-        }
-        int dots = vCounter * PPU.H_COUNTER_DOTS + hCounter + cycles;
-        return dots >= PPU.V_COUNTER_SCANLINES * PPU.H_COUNTER_DOTS;
     }
 
     private boolean requestFrameNmi() {
@@ -237,10 +231,10 @@ public class SNES {
     }
 
     void updateTimerIrq() {
-        updateTimerIrq(ppu.hCounter(), ppu.vCounter(), 0);
+        updateTimerIrq(ppu.hCounter(), ppu.vCounter(), ppu.isSecondField(), 0);
     }
 
-    private void updateTimerIrq(int startHCounter, int startVCounter, int cycles) {
+    private void updateTimerIrq(int startHCounter, int startVCounter, boolean startSecondField, int cycles) {
         int nmitimen = cpu.internalRegisters()[0x00];
         if (lastTimerEnableGeneration != cpu.timerEnableGeneration()) {
             clearLastTimerIrqPosition();
@@ -253,9 +247,13 @@ public class SNES {
             return;
         }
 
-        int[] matchedPosition = timerMatchPosition(hTimerEnabled, vTimerEnabled, startHCounter, startVCounter, cycles);
-        if (matchedPosition == null
-                || (matchedPosition[0] == lastTimerIrqHCounter && matchedPosition[1] == lastTimerIrqVCounter)) {
+        int[] matchedPosition = timerMatchPosition(
+                hTimerEnabled, vTimerEnabled, startHCounter, startVCounter, startSecondField, cycles);
+        if (matchedPosition == null) {
+            clearLastTimerIrqPosition();
+            return;
+        }
+        if (matchedPosition[0] == lastTimerIrqHCounter && matchedPosition[1] == lastTimerIrqVCounter) {
             return;
         }
 
@@ -269,7 +267,8 @@ public class SNES {
         lastTimerIrqVCounter = -1;
     }
 
-    private int[] timerMatchPosition(boolean hTimerEnabled, boolean vTimerEnabled, int startHCounter, int startVCounter, int cycles) {
+    private int[] timerMatchPosition(boolean hTimerEnabled, boolean vTimerEnabled,
+                                     int startHCounter, int startVCounter, boolean startSecondField, int cycles) {
         if (cycles <= 0) {
             int hCounter = ppu.hCounter();
             int vCounter = ppu.vCounter();
@@ -286,27 +285,31 @@ public class SNES {
         if (vTimerEnabled && vTarget >= PPU.V_COUNTER_SCANLINES) {
             return null;
         }
-        long start = (long) startVCounter * PPU.H_COUNTER_DOTS + startHCounter;
-        long end = start + cycles;
-        if (hTimerEnabled && !vTimerEnabled) {
-            long firstLine = start / PPU.H_COUNTER_DOTS;
-            long lastLine = end / PPU.H_COUNTER_DOTS;
-            for (long line = firstLine; line <= lastLine; line++) {
-                long candidate = line * PPU.H_COUNTER_DOTS + hTarget;
-                if (start < candidate && candidate <= end) {
-                    return new int[]{hTarget, (int) (line % PPU.V_COUNTER_SCANLINES)};
+        int targetH = hTimerEnabled ? hTarget : 0;
+        int hCounter = startHCounter;
+        int vCounter = startVCounter;
+        boolean secondField = startSecondField;
+        long elapsed = 0;
+        while (elapsed <= cycles) {
+            int scanlineDots = ppu.scanlineDotsAt(vCounter, secondField);
+            boolean verticalMatch = !vTimerEnabled || vCounter == vTarget;
+            if (verticalMatch && targetH < scanlineDots) {
+                long candidate = elapsed + targetH - hCounter;
+                if (candidate > 0 && candidate <= cycles) {
+                    return new int[]{targetH, vCounter};
                 }
             }
-            return null;
-        }
 
-        int targetH = hTimerEnabled ? hTarget : 0;
-        int targetV = vTarget;
-        long target = (long) targetV * PPU.H_COUNTER_DOTS + targetH;
-        long frameDots = (long) PPU.V_COUNTER_SCANLINES * PPU.H_COUNTER_DOTS;
-        for (long candidate = target; candidate <= end; candidate += frameDots) {
-            if (start < candidate) {
-                return new int[]{targetH, targetV};
+            int toNextScanline = scanlineDots - hCounter;
+            if (elapsed + toNextScanline > cycles) {
+                return null;
+            }
+            elapsed += toNextScanline;
+            hCounter = 0;
+            vCounter++;
+            if (vCounter >= PPU.V_COUNTER_SCANLINES) {
+                vCounter = 0;
+                secondField = !secondField;
             }
         }
         return null;
