@@ -289,6 +289,41 @@ class CpuUpdateLoopTest {
     }
 
     @Test
+    void updateStartsNewDmaBeforeFollowingInstruction() {
+        SNES snes = init();
+        snes.wram.data()[0x0040] = 0x5a;
+        snes.bus.write(0x4300, DMA.ONE_TO_ONE);
+        snes.bus.write(0x4301, 0x26);
+        snes.bus.write(0x4302, 0x40);
+        snes.bus.write(0x4303, 0x00);
+        snes.bus.write(0x4304, 0x7e);
+        snes.bus.write(0x4305, 0x01);
+        snes.bus.write(0x4306, 0x00);
+        snes.cpu.registers().setPc(0x0200);
+        writeProgram(snes, 0x0200,
+                0xa9, 0x01,
+                0x8d, 0x0b, 0x42,
+                0xea);
+
+        assertEquals(14, snes.cpu.update(8));
+        assertEquals(0x0205, snes.cpu.registers().pc);
+        assertTrue(snes.cpu.dmaChannels()[0].isEnabled());
+        assertEquals(0x00, snes.ppu.registers()[0x26]);
+
+        assertEquals(8, snes.cpu.update(8));
+        assertEquals(0x0205, snes.cpu.registers().pc);
+        assertTrue(snes.cpu.dmaChannels()[0].isEnabled());
+
+        assertEquals(8, snes.cpu.update(8));
+        assertEquals(0x0205, snes.cpu.registers().pc);
+        assertFalse(snes.cpu.dmaChannels()[0].isEnabled());
+        assertEquals(0x5a, snes.ppu.registers()[0x26]);
+
+        assertEquals(2, snes.cpu.update(2));
+        assertEquals(0x0206, snes.cpu.registers().pc);
+    }
+
+    @Test
     void disabledCpuReturnsSentinel() {
         SNES snes = init();
         snes.cpu.isDisabled = true;

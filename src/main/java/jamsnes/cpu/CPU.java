@@ -286,9 +286,14 @@ public class CPU extends AMemory {
         if (isDisabled) {
             return 0xff;
         }
-        int cycles = runDMA(maxCycles);
+        int cycles = 0;
 
         while (cycles < maxCycles) {
+            cycles += runDMA(maxCycles - cycles);
+            if (cycles >= maxCycles) {
+                continue;
+            }
+
             if (stopped) {
                 cycles++;
                 advanceMathUnit(1);
