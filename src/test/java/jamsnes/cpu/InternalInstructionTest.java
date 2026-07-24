@@ -298,7 +298,9 @@ class InternalInstructionTest {
         assertEquals(0xbeef, snes.cpu._pop16());
 
         snes.cpu.registers().s = 0x1fff;
-        snes.cpu.PEA(0x1234);
+        snes.wram.data()[0x30] = 0x34;
+        snes.wram.data()[0x31] = 0x12;
+        snes.cpu.PEA(0x30);
         assertEquals(0x1234, snes.cpu._pop16());
     }
 

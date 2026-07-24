@@ -935,14 +935,14 @@ public class CPU extends AMemory {
     }
 
     public int PER(int valueAddr) {
-        int value = bus.read(valueAddr) | (bus.read(valueAddr + 1) << 8);
+        int value = readProgramWord(valueAddr);
         value = u16(value + registers.pc);
         _push16(value);
         return 0;
     }
 
-    public int PEA(int value) {
-        _push16(value);
+    public int PEA(int valueAddr) {
+        _push16(readProgramWord(valueAddr));
         return 0;
     }
 
@@ -998,7 +998,7 @@ public class CPU extends AMemory {
     }
 
     public int BRL(int valueAddr) {
-        int value = bus.read(valueAddr) | (bus.read(valueAddr + 1) << 8);
+        int value = readProgramWord(valueAddr);
         registers.setPc(registers.pc + (short) value);
         return 0;
     }
@@ -1225,7 +1225,7 @@ public class CPU extends AMemory {
 
     private int blockMove(int valueAddr, int indexDelta) {
         int destBank = bus.read(valueAddr);
-        int srcBank = bus.read(valueAddr + 1);
+        int srcBank = bus.read(nextProgramAddress(valueAddr));
         registers.dbr = destBank;
         int data = bus.read(u24((srcBank << 16) | blockMoveIndexValue(registers.x)));
         bus.write(u24((destBank << 16) | blockMoveIndexValue(registers.y)), data);
@@ -1600,6 +1600,14 @@ public class CPU extends AMemory {
         int result = bus.read(registers.pac);
         registers.incrementPc(1);
         return result;
+    }
+
+    private int readProgramWord(int address) {
+        return bus.read(address) | (bus.read(nextProgramAddress(address)) << 8);
+    }
+
+    private int nextProgramAddress(int address) {
+        return (address & 0xff0000) | u16(address + 1);
     }
 
     private int branch(int valueAddr, boolean condition) {

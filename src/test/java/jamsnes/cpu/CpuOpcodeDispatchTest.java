@@ -366,8 +366,56 @@ class CpuOpcodeDispatchTest {
         assertEquals(0x5678, snes.cpu._pop16());
 
         assertEquals(5, snes.cpu.executeInstruction());
-        assertEquals(0x0206, snes.cpu._pop16());
+        assertEquals(0x1234, snes.cpu._pop16());
         assertEquals(0x0208, snes.cpu.registers().pc);
+    }
+
+    @Test
+    void programWordOperandsWrapWithinProgramBank() {
+        SNES snes = init();
+        snes.cpu.registers().setPac(0x7ffffe);
+        snes.cpu.registers().s = 0x01ff;
+        writeWramBank7f(snes, 0xfffe, 0xf4, 0x34);
+        writeWramBank7f(snes, 0x0000, 0x12);
+        snes.wram.data()[0x0000] = 0xaa;
+
+        assertEquals(5, snes.cpu.executeInstruction());
+        assertEquals(0x7f0001, snes.cpu.registers().pac);
+        assertEquals(0x1234, snes.cpu._pop16());
+
+        snes.cpu.registers().setPac(0x7ffffe);
+        snes.cpu.registers().s = 0x01ff;
+        writeWramBank7f(snes, 0xfffe, 0x62, 0xfd);
+        writeWramBank7f(snes, 0x0000, 0xff);
+
+        assertEquals(6, snes.cpu.executeInstruction());
+        assertEquals(0x7f0001, snes.cpu.registers().pac);
+        assertEquals(0xfffe, snes.cpu._pop16());
+
+        snes.cpu.registers().setPac(0x7ffffe);
+        writeWramBank7f(snes, 0xfffe, 0x82, 0x00);
+        writeWramBank7f(snes, 0x0000, 0x01);
+
+        assertEquals(4, snes.cpu.executeInstruction());
+        assertEquals(0x7f0101, snes.cpu.registers().pac);
+    }
+
+    @Test
+    void blockMoveBankOperandsWrapWithinProgramBank() {
+        SNES snes = init();
+        snes.cpu.setEmulationMode(false);
+        snes.cpu.registers().p.x_b = false;
+        snes.cpu.registers().setPac(0x7ffffe);
+        snes.cpu.registers().a = 0;
+        snes.cpu.registers().x = 0x0100;
+        snes.cpu.registers().y = 0x0200;
+        writeWramBank7f(snes, 0xfffe, 0x54, 0x7e);
+        writeWramBank7f(snes, 0x0000, 0x7f);
+        writeWramBank7f(snes, 0x0100, 0x5a);
+
+        assertEquals(7, snes.cpu.executeInstruction());
+        assertEquals(0x7f0001, snes.cpu.registers().pac);
+        assertEquals(0x5a, snes.wram.data()[0x0200]);
     }
 
     @Test
