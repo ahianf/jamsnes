@@ -699,7 +699,7 @@ public class CPU extends AMemory {
         int abs = readPC();
         abs = u16(abs + (readPC() << 8));
         int effective = bus.read(abs);
-        effective += bus.read(abs + 1) << 8;
+        effective += bus.read(u16(abs + 1)) << 8;
         return u24(effective);
     }
 
@@ -707,8 +707,8 @@ public class CPU extends AMemory {
         int abs = readPC();
         abs = u16(abs + (readPC() << 8));
         int effective = bus.read(abs);
-        effective += bus.read(abs + 1) << 8;
-        effective += bus.read(abs + 2) << 16;
+        effective += bus.read(u16(abs + 1)) << 8;
+        effective += bus.read(u16(abs + 2)) << 16;
         return u24(effective);
     }
 

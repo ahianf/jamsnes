@@ -1,9 +1,16 @@
 package jamsnes.cpu;
 
 import jamsnes.SNES;
+import jamsnes.cartridge.Header;
 import jamsnes.cartridge.MappingMode;
+import jamsnes.memory.IMemory;
+import jamsnes.memory.IMemoryBus;
 import jamsnes.renderer.NoRenderer;
 import org.junit.jupiter.api.Test;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.OptionalInt;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -353,6 +360,25 @@ class AddressingModeTest {
     }
 
     @Test
+    void absoluteIndirectPointersWrapWithinBankZero() {
+        SparseBus bus = new SparseBus();
+        CPU cpu = new CPU(bus, new Header());
+        cpu.registers().setPac(0x008000);
+        bus.write(0x008000, 0xff);
+        bus.write(0x008001, 0xff);
+        bus.write(0x00ffff, 0x34);
+        bus.write(0x000000, 0x12);
+        bus.write(0x000001, 0x9a);
+        bus.write(0x010000, 0x56);
+        bus.write(0x010001, 0x78);
+
+        assertEquals(0x1234, cpu._getAbsoluteIndirectAddr());
+
+        cpu.registers().setPac(0x008000);
+        assertEquals(0x9a1234, cpu._getAbsoluteIndirectLongAddr());
+    }
+
+    @Test
     void absoluteIndexedIndirect() {
         SNES snes = init();
         snes.cpu.registers().setPac(0x7f0200);
@@ -497,5 +523,41 @@ class AddressingModeTest {
         snes.sram.setSize(100);
         snes.bus.mapComponents(snes);
         return snes;
+    }
+
+    private static final class SparseBus implements IMemoryBus {
+        private final Map<Integer, Integer> values = new HashMap<>();
+        private int openBus;
+
+        @Override
+        public int read(int address) {
+            openBus = values.getOrDefault(address & 0xffffff, 0);
+            return openBus;
+        }
+
+        @Override
+        public OptionalInt peek(int address) {
+            return OptionalInt.of(values.getOrDefault(address & 0xffffff, openBus));
+        }
+
+        @Override
+        public int peekValue(int address) {
+            return peek(address).orElse(0);
+        }
+
+        @Override
+        public int getOpenBus() {
+            return openBus;
+        }
+
+        @Override
+        public void write(int address, int data) {
+            values.put(address & 0xffffff, data & 0xff);
+        }
+
+        @Override
+        public IMemory getAccessor(int address) {
+            return null;
+        }
     }
 }
