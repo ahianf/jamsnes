@@ -26,15 +26,15 @@ public class PPU extends AMemory {
     private static final int OBJ_TILE_BYTE_SIZE = 32;
     private static final int OBJ_TILE_ROW_SIZE = 16;
     private static final int OBJ_PALETTE_BASE = 128;
-    private static final int[][] OBJ_SIZE_PRESETS = {
-            {8, 16},
-            {8, 32},
-            {8, 64},
-            {16, 32},
-            {16, 64},
-            {32, 64},
-            {16, 32},
-            {16, 32}
+    private static final ObjectDimensions[][] OBJ_SIZE_PRESETS = {
+            {new ObjectDimensions(8, 8), new ObjectDimensions(16, 16)},
+            {new ObjectDimensions(8, 8), new ObjectDimensions(32, 32)},
+            {new ObjectDimensions(8, 8), new ObjectDimensions(64, 64)},
+            {new ObjectDimensions(16, 16), new ObjectDimensions(32, 32)},
+            {new ObjectDimensions(16, 16), new ObjectDimensions(64, 64)},
+            {new ObjectDimensions(32, 32), new ObjectDimensions(64, 64)},
+            {new ObjectDimensions(16, 32), new ObjectDimensions(32, 64)},
+            {new ObjectDimensions(16, 32), new ObjectDimensions(32, 32)}
     };
     private static final int MODE7_SIZE = 1024;
     private static final int MODE7_TILE_MAP_WIDTH = 128;
@@ -760,20 +760,20 @@ public class PPU extends AMemory {
             x -= 512;
         }
 
-        int objectSize = objectSize((highTable >>> (highShift + 1)) & 0x01);
+        ObjectDimensions dimensions = objectDimensions((highTable >>> (highShift + 1)) & 0x01);
         int level = objectPriorityLevel((attributes >>> 4) & 0x03);
         int palette = (attributes >>> 1) & 0x07;
         boolean horizontalFlip = (attributes & 0x40) != 0;
         boolean verticalFlip = (attributes & 0x80) != 0;
         int baseAddress = objectTileBaseAddress(attributes);
 
-        for (int pixelY = 0; pixelY < objectSize; pixelY++) {
+        for (int pixelY = 0; pixelY < dimensions.height(); pixelY++) {
             int screenY = y + pixelY;
             if (screenY < 0 || screenY >= destination.length) {
                 continue;
             }
-            int sourceY = verticalFlip ? objectSize - 1 - pixelY : pixelY;
-            for (int pixelX = 0; pixelX < objectSize; pixelX++) {
+            int sourceY = verticalFlip ? verticallyFlippedObjectY(pixelY, dimensions) : pixelY;
+            for (int pixelX = 0; pixelX < dimensions.width(); pixelX++) {
                 int screenX = x + pixelX;
                 if (screenX < 0 || screenX >= destination[screenY].length) {
                     continue;
@@ -781,7 +781,7 @@ public class PPU extends AMemory {
                 if (windowMask != null && screenX < windowMask.length && windowMask[screenX]) {
                     continue;
                 }
-                int sourceX = horizontalFlip ? objectSize - 1 - pixelX : pixelX;
+                int sourceX = horizontalFlip ? dimensions.width() - 1 - pixelX : pixelX;
                 int color = readObjectPixel(baseAddress, tile, palette, sourceX, sourceY);
                 if (Integer.compareUnsigned(color, 0xff) <= 0 || level < levelMap[screenY][screenX]) {
                     continue;
@@ -793,8 +793,16 @@ public class PPU extends AMemory {
         }
     }
 
-    private int objectSize(int sizeBit) {
+    private ObjectDimensions objectDimensions(int sizeBit) {
         return OBJ_SIZE_PRESETS[ppuRegisters.obselObjectSize()][sizeBit];
+    }
+
+    private int verticallyFlippedObjectY(int pixelY, ObjectDimensions dimensions) {
+        if (dimensions.height() == dimensions.width()) {
+            return dimensions.height() - 1 - pixelY;
+        }
+        int squareStart = pixelY / dimensions.width() * dimensions.width();
+        return squareStart + dimensions.width() - 1 - pixelY % dimensions.width();
     }
 
     private int objectPriorityLevel(int priority) {
@@ -1001,6 +1009,9 @@ public class PPU extends AMemory {
 
     private record Mode7Pixel(int color, boolean priority) {
         private static final Mode7Pixel TRANSPARENT = new Mode7Pixel(0, false);
+    }
+
+    private record ObjectDimensions(int width, int height) {
     }
 
     private void addBuffer(int[][] destination, int[][] source) {

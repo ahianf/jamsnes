@@ -672,6 +672,66 @@ class PpuRenderIntegrationTest {
     }
 
     @Test
+    void objectSizeModeSixRendersSmallObjectsAsSixteenByThirtyTwo() {
+        SNES snes = init(new TestRenderer());
+        writeColor(snes, 129, 0x001f);
+        snes.bus.write(0x2101, 0xc0);
+        writeObject(snes, 0, 0x00, 0x00, 0x00, 0x30);
+        snes.ppu.vram.write(0x0600, 0x80);
+        snes.bus.write(0x212c, 0x10);
+
+        snes.ppu.renderMainAndSubScreen();
+
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[24][0]);
+    }
+
+    @Test
+    void objectSizeModeSixRendersLargeObjectsAsThirtyTwoBySixtyFour() {
+        SNES snes = init(new TestRenderer());
+        writeColor(snes, 129, 0x001f);
+        snes.bus.write(0x2101, 0xc0);
+        writeObject(snes, 0, 0x00, 0x00, 0x00, 0x30);
+        snes.ppu.oamram.write(0x200, 0x02);
+        snes.ppu.vram.write(0x0e00, 0x80);
+        snes.bus.write(0x212c, 0x10);
+
+        snes.ppu.renderMainAndSubScreen();
+
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[56][0]);
+    }
+
+    @Test
+    void objectSizeModeSevenRendersSmallObjectsAsSixteenByThirtyTwo() {
+        SNES snes = init(new TestRenderer());
+        writeColor(snes, 129, 0x001f);
+        snes.bus.write(0x2101, 0xe0);
+        writeObject(snes, 0, 0x00, 0x00, 0x00, 0x30);
+        snes.ppu.vram.write(0x0600, 0x80);
+        snes.bus.write(0x212c, 0x10);
+
+        snes.ppu.renderMainAndSubScreen();
+
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[24][0]);
+    }
+
+    @Test
+    void verticallyFlippedRectangularObjectsFlipEachSquareHalf() {
+        SNES snes = init(new TestRenderer());
+        writeColor(snes, 129, 0x001f);
+        writeColor(snes, 130, 0x03e0);
+        snes.bus.write(0x2101, 0xc0);
+        writeObject(snes, 0, 0x00, 0x00, 0x00, 0xb0);
+        snes.ppu.vram.write(0x020e, 0x80);
+        snes.ppu.vram.write(0x060f, 0x80);
+        snes.bus.write(0x212c, 0x10);
+
+        snes.ppu.renderMainAndSubScreen();
+
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), snes.ppu.mainScreen()[16][0]);
+    }
+
+    @Test
     void updateDrawsComposedScreenToRenderer() {
         TestRenderer renderer = new TestRenderer();
         SNES snes = init(renderer);
