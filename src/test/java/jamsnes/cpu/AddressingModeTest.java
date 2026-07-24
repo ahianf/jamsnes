@@ -691,7 +691,7 @@ class AddressingModeTest {
     }
 
     @Test
-    void stackRelativeAddressesWrapWithinPageOneInEmulationMode() {
+    void stackRelativeAddressesCarryAcrossPagesInEmulationMode() {
         SparseBus bus = new SparseBus();
         CPU cpu = new CPU(bus, new Header());
         cpu.setEmulationMode(true);
@@ -704,10 +704,37 @@ class AddressingModeTest {
         bus.write(0x000200, 0x9a);
 
         cpu.registers().setPac(0x008000);
-        assertEquals(0x0101, cpu._getStackRelativeAddr());
+        assertEquals(0x0201, cpu._getStackRelativeAddr());
 
         cpu.registers().setPac(0x008001);
-        assertEquals(0x345678, cpu._getStackRelativeIndirectIndexedYAddr());
+        assertEquals(0x349a78, cpu._getStackRelativeIndirectIndexedYAddr());
+    }
+
+    @Test
+    void stackRelativeOpcodesCarryAcrossPagesInEmulationMode() {
+        SparseBus bus = new SparseBus();
+        CPU cpu = new CPU(bus, new Header());
+        cpu.setEmulationMode(true);
+        cpu.registers().s = 0x01ff;
+        cpu.registers().dbr = 0x34;
+        bus.write(0x008000, 0xa3);
+        bus.write(0x008001, 0x02);
+        bus.write(0x000101, 0x5a);
+        bus.write(0x000201, 0xa5);
+        bus.write(0x008010, 0xb3);
+        bus.write(0x008011, 0x00);
+        bus.write(0x0001ff, 0x78);
+        bus.write(0x000100, 0x56);
+        bus.write(0x000200, 0x9a);
+        bus.write(0x349a78, 0xbc);
+
+        cpu.registers().setPac(0x008000);
+        assertEquals(4, cpu.executeInstruction());
+        assertEquals(0xa5, cpu.registers().a);
+
+        cpu.registers().setPac(0x008010);
+        assertEquals(7, cpu.executeInstruction());
+        assertEquals(0xbc, cpu.registers().a);
     }
 
     private static SNES init() {

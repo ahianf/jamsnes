@@ -817,14 +817,12 @@ public class CPU extends AMemory {
     }
 
     private int stackRelativeAddress(int offset) {
-        if (emulationMode) {
-            return 0x0100 | u8(registers.sl() + offset);
-        }
-        return u16(registers.s + offset);
+        int stackPointer = emulationMode ? (0x0100 | registers.sl()) : registers.s;
+        return u16(stackPointer + offset);
     }
 
     private int nextStackRelativeAddress(int address) {
-        return emulationMode ? (0x0100 | u8(address + 1)) : u16(address + 1);
+        return u16(address + 1);
     }
 
     private void pushWordAcrossEmulationStackBoundary(int value) {
