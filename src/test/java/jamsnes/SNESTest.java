@@ -1086,8 +1086,8 @@ class SNESTest {
         snes.ppu.cgram.write(0x105, 0x03);
         snes.ppu.vram.write(0x0000, 0x80);
         snes.ppu.vram.write(0x0002, 0x80);
-        snes.ppu.vram.write(0x2001, 0x80);
-        snes.ppu.vram.write(0x2003, 0x80);
+        snes.ppu.vram.write(0x4001, 0x80);
+        snes.ppu.vram.write(0x4003, 0x80);
         snes.wram.data()[0x0200] = 0x01;
         snes.wram.data()[0x0201] = 0x01;
         snes.wram.data()[0x0202] = 0x00;

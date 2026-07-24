@@ -913,6 +913,56 @@ class PpuRenderIntegrationTest {
     }
 
     @Test
+    void objectNameBaseUsesVramWordAddresses() {
+        SNES snes = init(new TestRenderer());
+        hideAllObjects(snes);
+        writeColor(snes, 129, 0x001f);
+        writeColor(snes, 130, 0x03e0);
+        snes.bus.write(0x2101, 0x01);
+        writeObject(snes, 0, 0x00, 0x00, 0x00, 0x30);
+        snes.ppu.vram.write(0x4000, 0x80);
+        snes.ppu.vram.write(0x2001, 0x80);
+        snes.bus.write(0x212c, 0x10);
+
+        snes.ppu.renderMainAndSubScreen();
+
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][0]);
+    }
+
+    @Test
+    void objectNameSelectionUsesVramWordAddresses() {
+        SNES snes = init(new TestRenderer());
+        hideAllObjects(snes);
+        writeColor(snes, 129, 0x001f);
+        writeColor(snes, 130, 0x03e0);
+        writeObject(snes, 0, 0x00, 0x00, 0x00, 0x31);
+        snes.ppu.vram.write(0x2000, 0x80);
+        snes.ppu.vram.write(0x1001, 0x80);
+        snes.bus.write(0x212c, 0x10);
+
+        snes.ppu.renderMainAndSubScreen();
+
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][0]);
+    }
+
+    @Test
+    void largeObjectsWrapHighTileNibbleWithinTheirCharacterTable() {
+        SNES snes = init(new TestRenderer());
+        hideAllObjects(snes);
+        writeColor(snes, 129, 0x001f);
+        writeColor(snes, 130, 0x03e0);
+        writeObject(snes, 0, 0x00, 0x00, 0xff, 0x30);
+        snes.ppu.oamram.write(0x200, 0x02);
+        snes.ppu.vram.write(0x01e0, 0x80);
+        snes.ppu.vram.write(0x21e1, 0x80);
+        snes.bus.write(0x212c, 0x10);
+
+        snes.ppu.renderMainAndSubScreen();
+
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[8][0]);
+    }
+
+    @Test
     void objectSizeModeSixRendersSmallObjectsAsSixteenByThirtyTwo() {
         SNES snes = init(new TestRenderer());
         hideAllObjects(snes);

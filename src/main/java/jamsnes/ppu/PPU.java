@@ -1210,9 +1210,9 @@ public class PPU extends AMemory {
     }
 
     private int objectTileBaseAddress(int attributes, int objectSelection) {
-        int base = (objectSelection & 0x07) << 13;
+        int base = (objectSelection & 0x07) << 14;
         if ((attributes & 0x01) != 0) {
-            base += (((objectSelection >>> 3) & 0x03) + 1) << 12;
+            base += (((objectSelection >>> 3) & 0x03) + 1) << 13;
         }
         return u16(base);
     }
@@ -1239,7 +1239,9 @@ public class PPU extends AMemory {
     }
 
     private int objectTileNumber(int tile, int tileX, int tileY) {
-        return (tile & 0xf0) + ((tile + tileX) & 0x0f) + tileY * 16;
+        int column = (tile + tileX) & 0x0f;
+        int row = ((tile & 0xf0) + tileY * 16) & 0xf0;
+        return row | column;
     }
 
     private int readObjectPixelReference(int rowAddress, int pixelX) {
