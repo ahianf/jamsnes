@@ -896,9 +896,7 @@ public class APU extends AMemory {
         while (total < remainingCycles && state == StateMode.RUNNING) {
             total += executeInstruction();
         }
-        if (state == StateMode.RUNNING) {
-            paddingCycles = total - remainingCycles;
-        }
+        paddingCycles = Math.max(0, total - remainingCycles);
         advanceDsp(cycles);
     }
 

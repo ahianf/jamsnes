@@ -85,6 +85,30 @@ class UpdateLoopTest {
     }
 
     @Test
+    void updateCarriesRemainingSleepInstructionCyclesIntoStandby() {
+        SNES snes = init();
+        snes.apu.internalRegisters().pc = 0x200;
+        snes.apu._internalWrite(0x200, 0xef);
+
+        snes.apu.update(1);
+
+        assertEquals(APU.StateMode.SLEEPING, snes.apu.getState());
+        assertEquals(0x201, snes.apu.internalRegisters().pc);
+        assertEquals(2, snes.apu.paddingCycles());
+        assertEquals(1, snes.apu.dsp().voicePhase());
+
+        snes.apu.update(1);
+
+        assertEquals(1, snes.apu.paddingCycles());
+        assertEquals(2, snes.apu.dsp().voicePhase());
+
+        snes.apu.update(1);
+
+        assertEquals(0, snes.apu.paddingCycles());
+        assertEquals(3, snes.apu.dsp().voicePhase());
+    }
+
+    @Test
     void disabledApuDoesNotExecuteInstructions() {
         SNES snes = init();
         snes.apu.internalRegisters().pc = 0x200;
