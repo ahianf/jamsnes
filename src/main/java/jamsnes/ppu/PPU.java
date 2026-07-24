@@ -21,6 +21,8 @@ public class PPU extends AMemory {
     private static final int SOURCE_OBJ = 5;
     private static final int SOURCE_OBJ_COLOR_MATH = 6;
     private static final int OBJ_COUNT = 128;
+    private static final int OBJ_SCANLINE_LIMIT = 32;
+    private static final int OBJ_SLIVER_LIMIT = 34;
     private static final int OBJ_LOW_TABLE_SIZE = 0x200;
     private static final int OBJ_TILE_BPP = 4;
     private static final int OBJ_TILE_BYTE_SIZE = 32;
@@ -45,6 +47,7 @@ public class PPU extends AMemory {
     public static final int V_COUNTER_SCANLINES = 262;
     public static final int V_BLANK_START_SCANLINE = 225;
     public static final int OVERSCAN_V_BLANK_START_SCANLINE = 240;
+    private static final int OBJ_EVALUATED_SCANLINES = OVERSCAN_V_BLANK_START_SCANLINE;
     private static final int PPU1_VERSION = 1;
     private static final int PPU2_VERSION = 3;
 
@@ -62,6 +65,9 @@ public class PPU extends AMemory {
     private final int[][] subScreenLevelMap = new int[Background.BUFFER_SIZE][Background.BUFFER_SIZE];
     private final int[][] mainScreenSourceMap = new int[Background.BUFFER_SIZE][Background.BUFFER_SIZE];
     private final int[][] subScreenSourceMap = new int[Background.BUFFER_SIZE][Background.BUFFER_SIZE];
+    private final int[][] evaluatedObjectIndices = new int[OBJ_EVALUATED_SCANLINES][OBJ_SCANLINE_LIMIT];
+    private final int[][] evaluatedObjectSliverMasks = new int[OBJ_EVALUATED_SCANLINES][OBJ_SCANLINE_LIMIT];
+    private final int[] evaluatedObjectCounts = new int[OBJ_EVALUATED_SCANLINES];
     private int vramAddress;
     private int vmain;
     private int vramIncrementAmount = 1;
@@ -76,6 +82,8 @@ public class PPU extends AMemory {
     private boolean hCounterHighByte;
     private boolean vCounterHighByte;
     private boolean counterLatchFlag;
+    private boolean objectRangeOver;
+    private boolean objectTimeOver;
     private int ppu1OpenBus;
     private int ppu2OpenBus;
 
@@ -239,6 +247,8 @@ public class PPU extends AMemory {
         hvSharedScrollPreviousValue = 0;
         hScrollPreviousValue = 0;
         oamLowTableLatch = 0;
+        objectRangeOver = false;
+        objectTimeOver = false;
         ppu1OpenBus = 0;
         ppu2OpenBus = 0;
         updateBackgroundModes();
@@ -544,7 +554,14 @@ public class PPU extends AMemory {
     }
 
     private int readStat77() {
-        return readPpu1((ppu1OpenBus & 0x10) | PPU1_VERSION);
+        int value = (ppu1OpenBus & 0x10) | PPU1_VERSION;
+        if (objectRangeOver) {
+            value |= 0x40;
+        }
+        if (objectTimeOver) {
+            value |= 0x80;
+        }
+        return readPpu1(value);
     }
 
     private int readStat78() {
@@ -724,6 +741,7 @@ public class PPU extends AMemory {
     }
 
     private void addObjectsToMainSubScreen() {
+        evaluateObjectScanlines();
         if (ppuRegisters.screenDesignationObj(0)) {
             renderObjectsToBuffer(mainScreen, mainScreenLevelMap, mainScreenSourceMap, objectWindowMask(0));
         }
@@ -732,65 +750,150 @@ public class PPU extends AMemory {
         }
     }
 
-    private void renderObjectsToBuffer(int[][] destination, int[][] levelMap, int[][] sourceMap, boolean[] windowMask) {
+    private void evaluateObjectScanlines() {
+        objectRangeOver = false;
+        objectTimeOver = false;
         int firstObject = ppuRegisters.oamObjPriorityActivationBit() ? ppuRegisters.oamPriorityObjectNumber() : 0;
-        for (int offset = OBJ_COUNT - 1; offset >= 0; offset--) {
-            int objectIndex = (firstObject + offset) % OBJ_COUNT;
-            renderObjectToBuffer(objectIndex, destination, levelMap, sourceMap, windowMask);
+        int scanlineCount = vBlankStartScanline();
+
+        for (int screenY = 0; screenY < scanlineCount; screenY++) {
+            int objectCount = 0;
+            for (int offset = 0; offset < OBJ_COUNT; offset++) {
+                int objectIndex = (firstObject + offset) % OBJ_COUNT;
+                ObjectDimensions dimensions = objectDimensionsForObject(objectIndex);
+                if (!objectIntersectsScanline(objectIndex, dimensions, screenY)
+                        || !objectIntersectsHorizontalScreen(objectIndex, dimensions)) {
+                    continue;
+                }
+                if (objectCount == OBJ_SCANLINE_LIMIT) {
+                    objectRangeOver = true;
+                    break;
+                }
+                evaluatedObjectIndices[screenY][objectCount] = objectIndex;
+                evaluatedObjectSliverMasks[screenY][objectCount] = 0;
+                objectCount++;
+            }
+            evaluatedObjectCounts[screenY] = objectCount;
+            evaluateObjectSlivers(screenY, objectCount);
         }
     }
 
-    private void renderObjectToBuffer(
+    private void evaluateObjectSlivers(int screenY, int objectCount) {
+        int sliverCount = 0;
+        for (int objectSlot = objectCount - 1; objectSlot >= 0; objectSlot--) {
+            int objectIndex = evaluatedObjectIndices[screenY][objectSlot];
+            ObjectDimensions dimensions = objectDimensionsForObject(objectIndex);
+            int x = objectX(objectIndex);
+            int sliverMask = 0;
+            for (int sliver = 0; sliver < dimensions.width() / Tile.NB_PIXELS_WIDTH; sliver++) {
+                if (!objectSliverCountsTowardLimit(x, sliver)) {
+                    continue;
+                }
+                if (sliverCount == OBJ_SLIVER_LIMIT) {
+                    objectTimeOver = true;
+                    continue;
+                }
+                sliverMask |= 1 << sliver;
+                sliverCount++;
+            }
+            evaluatedObjectSliverMasks[screenY][objectSlot] = sliverMask;
+        }
+    }
+
+    private boolean objectIntersectsScanline(
             int objectIndex,
+            ObjectDimensions dimensions,
+            int screenY) {
+        int objectY = oamram.read(objectIndex * 4 + 1);
+        return u8(screenY - objectY) < dimensions.height();
+    }
+
+    private boolean objectIntersectsHorizontalScreen(int objectIndex, ObjectDimensions dimensions) {
+        int x = objectX(objectIndex);
+        return x == -256 || (x < H_BLANK_START_DOT && x + dimensions.width() > 0);
+    }
+
+    private boolean objectSliverCountsTowardLimit(int objectX, int sliver) {
+        if (objectX == -256) {
+            return true;
+        }
+        int sliverX = objectX + sliver * Tile.NB_PIXELS_WIDTH;
+        return sliverX < H_BLANK_START_DOT && sliverX + Tile.NB_PIXELS_WIDTH > 0;
+    }
+
+    private void renderObjectsToBuffer(int[][] destination, int[][] levelMap, int[][] sourceMap, boolean[] windowMask) {
+        for (int screenY = 0; screenY < vBlankStartScanline(); screenY++) {
+            for (int objectSlot = evaluatedObjectCounts[screenY] - 1; objectSlot >= 0; objectSlot--) {
+                renderObjectScanlineToBuffer(
+                        evaluatedObjectIndices[screenY][objectSlot],
+                        evaluatedObjectSliverMasks[screenY][objectSlot],
+                        screenY,
+                        destination,
+                        levelMap,
+                        sourceMap,
+                        windowMask);
+            }
+        }
+    }
+
+    private void renderObjectScanlineToBuffer(
+            int objectIndex,
+            int sliverMask,
+            int screenY,
             int[][] destination,
             int[][] levelMap,
             int[][] sourceMap,
             boolean[] windowMask) {
         int objectAddress = objectIndex * 4;
-        int x = oamram.read(objectAddress);
         int y = oamram.read(objectAddress + 1);
         int tile = oamram.read(objectAddress + 2);
         int attributes = oamram.read(objectAddress + 3);
-        int highTable = oamram.read(OBJ_LOW_TABLE_SIZE + objectIndex / 4);
-        int highShift = (objectIndex % 4) * 2;
-        if (((highTable >>> highShift) & 0x01) != 0) {
-            x |= 0x100;
-        }
-        if (x >= 256) {
-            x -= 512;
-        }
-
-        ObjectDimensions dimensions = objectDimensions((highTable >>> (highShift + 1)) & 0x01);
+        int x = objectX(objectIndex);
+        ObjectDimensions dimensions = objectDimensionsForObject(objectIndex);
         int level = objectPriorityLevel((attributes >>> 4) & 0x03);
         int palette = (attributes >>> 1) & 0x07;
         boolean horizontalFlip = (attributes & 0x40) != 0;
         boolean verticalFlip = (attributes & 0x80) != 0;
         int baseAddress = objectTileBaseAddress(attributes);
+        int pixelY = u8(screenY - y);
+        int sourceY = verticalFlip ? verticallyFlippedObjectY(pixelY, dimensions) : pixelY;
 
-        for (int pixelY = 0; pixelY < dimensions.height(); pixelY++) {
-            int screenY = u8(y + pixelY);
-            if (screenY >= destination.length) {
+        for (int pixelX = 0; pixelX < dimensions.width(); pixelX++) {
+            if ((sliverMask & (1 << (pixelX / Tile.NB_PIXELS_WIDTH))) == 0) {
                 continue;
             }
-            int sourceY = verticalFlip ? verticallyFlippedObjectY(pixelY, dimensions) : pixelY;
-            for (int pixelX = 0; pixelX < dimensions.width(); pixelX++) {
-                int screenX = x + pixelX;
-                if (screenX < 0 || screenX >= destination[screenY].length) {
-                    continue;
-                }
-                if (windowMask != null && screenX < windowMask.length && windowMask[screenX]) {
-                    continue;
-                }
-                int sourceX = horizontalFlip ? dimensions.width() - 1 - pixelX : pixelX;
-                int color = readObjectPixel(baseAddress, tile, palette, sourceX, sourceY);
-                if (Integer.compareUnsigned(color, 0xff) <= 0 || level < levelMap[screenY][screenX]) {
-                    continue;
-                }
-                destination[screenY][screenX] = color;
-                levelMap[screenY][screenX] = level;
-                sourceMap[screenY][screenX] = palette >= 4 ? SOURCE_OBJ_COLOR_MATH : SOURCE_OBJ;
+            int screenX = x + pixelX;
+            if (screenX < 0 || screenX >= destination[screenY].length) {
+                continue;
             }
+            if (windowMask != null && screenX < windowMask.length && windowMask[screenX]) {
+                continue;
+            }
+            int sourceX = horizontalFlip ? dimensions.width() - 1 - pixelX : pixelX;
+            int color = readObjectPixel(baseAddress, tile, palette, sourceX, sourceY);
+            if (Integer.compareUnsigned(color, 0xff) <= 0 || level < levelMap[screenY][screenX]) {
+                continue;
+            }
+            destination[screenY][screenX] = color;
+            levelMap[screenY][screenX] = level;
+            sourceMap[screenY][screenX] = palette >= 4 ? SOURCE_OBJ_COLOR_MATH : SOURCE_OBJ;
         }
+    }
+
+    private int objectX(int objectIndex) {
+        int x = oamram.read(objectIndex * 4);
+        int highTable = oamram.read(OBJ_LOW_TABLE_SIZE + objectIndex / 4);
+        int highShift = (objectIndex % 4) * 2;
+        if (((highTable >>> highShift) & 0x01) != 0) {
+            x |= 0x100;
+        }
+        return x >= 256 ? x - 512 : x;
+    }
+
+    private ObjectDimensions objectDimensionsForObject(int objectIndex) {
+        int highTable = oamram.read(OBJ_LOW_TABLE_SIZE + objectIndex / 4);
+        int highShift = (objectIndex % 4) * 2;
+        return objectDimensions((highTable >>> (highShift + 1)) & 0x01);
     }
 
     private ObjectDimensions objectDimensions(int sizeBit) {

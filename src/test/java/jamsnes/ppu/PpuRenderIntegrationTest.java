@@ -652,8 +652,84 @@ class PpuRenderIntegrationTest {
     }
 
     @Test
+    void objectRangeLimitDropsTheThirtyThirdObjectAndSetsStat77() {
+        SNES snes = init(new TestRenderer());
+        hideAllObjects(snes);
+        writeColor(snes, 129, 0x001f);
+        snes.ppu.vram.write(0x0000, 0x80);
+        for (int objectIndex = 0; objectIndex < 32; objectIndex++) {
+            writeObject(snes, objectIndex, 0x08, 0x00, 0x00, 0x30);
+        }
+        writeObject(snes, 32, 0x00, 0x00, 0x00, 0x30);
+        snes.bus.write(0x212c, 0x10);
+
+        snes.ppu.renderMainAndSubScreen();
+
+        assertEquals(0, snes.ppu.mainScreen()[0][0]);
+        assertEquals(0x40, snes.ppu.read(0x3e) & 0xc0);
+    }
+
+    @Test
+    void objectRangeLimitStartsAtThePriorityRotationObject() {
+        SNES snes = init(new TestRenderer());
+        hideAllObjects(snes);
+        writeColor(snes, 129, 0x001f);
+        snes.ppu.vram.write(0x0000, 0x80);
+        for (int objectIndex = 0; objectIndex < 32; objectIndex++) {
+            writeObject(snes, objectIndex, 0x08, 0x00, 0x00, 0x30);
+        }
+        writeObject(snes, 32, 0x00, 0x00, 0x00, 0x30);
+        snes.bus.write(0x2102, 0x02);
+        snes.bus.write(0x2103, 0x80);
+        snes.bus.write(0x212c, 0x10);
+
+        snes.ppu.renderMainAndSubScreen();
+
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][0]);
+        assertEquals(0x40, snes.ppu.read(0x3e) & 0xc0);
+    }
+
+    @Test
+    void objectsAtNegativeTwoHundredFiftySixStillCountTowardTheRangeLimit() {
+        SNES snes = init(new TestRenderer());
+        hideAllObjects(snes);
+        for (int objectIndex = 0; objectIndex < 33; objectIndex++) {
+            writeObject(snes, objectIndex, 0x00, 0x00, 0x00, 0x00);
+            int highTableAddress = 0x200 + objectIndex / 4;
+            int xHighBit = 1 << ((objectIndex % 4) * 2);
+            snes.ppu.oamram.write(
+                    highTableAddress,
+                    snes.ppu.oamram.read(highTableAddress) | xHighBit);
+        }
+
+        snes.ppu.renderMainAndSubScreen();
+
+        assertEquals(0x40, snes.ppu.read(0x3e) & 0xc0);
+    }
+
+    @Test
+    void objectTimeLimitDropsTheThirtyFifthSliverAndSetsStat77() {
+        SNES snes = init(new TestRenderer());
+        hideAllObjects(snes);
+        writeColor(snes, 129, 0x001f);
+        snes.ppu.vram.write(0x0000, 0x80);
+        snes.bus.write(0x2101, 0x60);
+        writeObject(snes, 0, 0x00, 0x00, 0x00, 0x30);
+        for (int objectIndex = 1; objectIndex < 18; objectIndex++) {
+            writeObject(snes, objectIndex, 0x20, 0x00, 0x00, 0x30);
+        }
+        snes.bus.write(0x212c, 0x10);
+
+        snes.ppu.renderMainAndSubScreen();
+
+        assertEquals(0, snes.ppu.mainScreen()[0][0]);
+        assertEquals(0x80, snes.ppu.read(0x3e) & 0xc0);
+    }
+
+    @Test
     void largeObjectsWrapLowTileNibbleHorizontally() {
         SNES snes = init(new TestRenderer());
+        hideAllObjects(snes);
         writeColor(snes, 129, 0x001f);
         writeColor(snes, 130, 0x03e0);
         snes.ppu.oamram.write(0x000, 0x00);
@@ -674,6 +750,7 @@ class PpuRenderIntegrationTest {
     @Test
     void objectSizeModeSixRendersSmallObjectsAsSixteenByThirtyTwo() {
         SNES snes = init(new TestRenderer());
+        hideAllObjects(snes);
         writeColor(snes, 129, 0x001f);
         snes.bus.write(0x2101, 0xc0);
         writeObject(snes, 0, 0x00, 0x00, 0x00, 0x30);
@@ -688,6 +765,7 @@ class PpuRenderIntegrationTest {
     @Test
     void objectSizeModeSixRendersLargeObjectsAsThirtyTwoBySixtyFour() {
         SNES snes = init(new TestRenderer());
+        hideAllObjects(snes);
         writeColor(snes, 129, 0x001f);
         snes.bus.write(0x2101, 0xc0);
         writeObject(snes, 0, 0x00, 0x00, 0x00, 0x30);
@@ -703,6 +781,7 @@ class PpuRenderIntegrationTest {
     @Test
     void objectSizeModeSevenRendersSmallObjectsAsSixteenByThirtyTwo() {
         SNES snes = init(new TestRenderer());
+        hideAllObjects(snes);
         writeColor(snes, 129, 0x001f);
         snes.bus.write(0x2101, 0xe0);
         writeObject(snes, 0, 0x00, 0x00, 0x00, 0x30);
@@ -717,6 +796,7 @@ class PpuRenderIntegrationTest {
     @Test
     void verticallyFlippedRectangularObjectsFlipEachSquareHalf() {
         SNES snes = init(new TestRenderer());
+        hideAllObjects(snes);
         writeColor(snes, 129, 0x001f);
         writeColor(snes, 130, 0x03e0);
         snes.bus.write(0x2101, 0xc0);
@@ -734,6 +814,7 @@ class PpuRenderIntegrationTest {
     @Test
     void objectsWrapVerticallyAcrossEightBitCoordinates() {
         SNES snes = init(new TestRenderer());
+        hideAllObjects(snes);
         writeColor(snes, 129, 0x001f);
         snes.bus.write(0x2101, 0x60);
         writeObject(snes, 0, 0x00, 0xfa, 0x00, 0x30);
@@ -748,6 +829,7 @@ class PpuRenderIntegrationTest {
     @Test
     void rectangularObjectsWrapTheirLowerHalfToTheTop() {
         SNES snes = init(new TestRenderer());
+        hideAllObjects(snes);
         writeColor(snes, 129, 0x001f);
         snes.bus.write(0x2101, 0xc0);
         writeObject(snes, 0, 0x00, 0xf0, 0x00, 0x30);
@@ -1072,15 +1154,20 @@ class PpuRenderIntegrationTest {
     }
 
     private static void setupObjFirstPixel(SNES snes, int color, int palette, int priority) {
+        hideAllObjects(snes);
         writeColor(snes, 128 + palette * 16 + 1, color);
-        snes.ppu.oamram.write(0x000, 0x00);
-        snes.ppu.oamram.write(0x001, 0x00);
-        snes.ppu.oamram.write(0x002, 0x00);
-        snes.ppu.oamram.write(0x003, ((priority & 0x03) << 4) | ((palette & 0x07) << 1));
+        writeObject(
+                snes,
+                0,
+                0x00,
+                0x00,
+                0x00,
+                ((priority & 0x03) << 4) | ((palette & 0x07) << 1));
         snes.ppu.vram.write(0x0000, 0x80);
     }
 
     private static void setupOverlappingObjectPixels(SNES snes) {
+        hideAllObjects(snes);
         writeColor(snes, 129, 0x001f);
         writeColor(snes, 145, 0x03e0);
         writeObject(snes, 0, 0x00, 0x00, 0x00, 0x30);
@@ -1089,12 +1176,24 @@ class PpuRenderIntegrationTest {
         snes.ppu.vram.write(0x0020, 0x80);
     }
 
+    private static void hideAllObjects(SNES snes) {
+        for (int objectIndex = 0; objectIndex < 128; objectIndex++) {
+            writeObject(snes, objectIndex, 0x80, 0x00, 0x00, 0x00);
+        }
+        for (int highTableAddress = 0x200; highTableAddress < 0x220; highTableAddress++) {
+            snes.ppu.oamram.write(highTableAddress, 0x55);
+        }
+    }
+
     private static void writeObject(SNES snes, int objectIndex, int x, int y, int tile, int attributes) {
         int address = objectIndex * 4;
         snes.ppu.oamram.write(address, x);
         snes.ppu.oamram.write(address + 1, y);
         snes.ppu.oamram.write(address + 2, tile);
         snes.ppu.oamram.write(address + 3, attributes);
+        int highTableAddress = 0x200 + objectIndex / 4;
+        int xHighBit = 1 << ((objectIndex % 4) * 2);
+        snes.ppu.oamram.write(highTableAddress, snes.ppu.oamram.read(highTableAddress) & ~xHighBit);
     }
 
     private static void writeMode7Register(SNES snes, int address, int value) {
