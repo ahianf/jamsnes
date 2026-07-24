@@ -444,7 +444,7 @@ public class APU extends AMemory {
             case 0x3a:
                 return INCW(_getDirectAddr());
             case 0x3b:
-                return ROL(_getAbsoluteAddrByX(), 5);
+                return ROL(_getDirectAddrByX(), 5);
             case 0x3c:
                 return ROL(internalRegisters.a, 2, true);
             case 0x3d:

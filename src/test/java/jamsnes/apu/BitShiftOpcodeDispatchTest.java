@@ -123,14 +123,14 @@ class BitShiftOpcodeDispatchTest {
         snes.apu.internalRegisters().x = 0x02;
         snes.apu._internalWrite(0x50, 0x80);
         snes.apu._internalWrite(0x0300, 0x7f);
-        snes.apu._internalWrite(0x0302, 0x01);
+        snes.apu._internalWrite(0x52, 0x01);
         snes.apu._internalWrite(0x200, 0x2b);
         snes.apu._internalWrite(0x201, 0x50);
         snes.apu._internalWrite(0x202, 0x2c);
         writeAbsoluteOperand(snes, 0x203, 0x0300);
         snes.apu._internalWrite(0x205, 0x3b);
-        writeAbsoluteOperand(snes, 0x206, 0x0300);
-        snes.apu._internalWrite(0x208, 0x3c);
+        snes.apu._internalWrite(0x206, 0x50);
+        snes.apu._internalWrite(0x207, 0x3c);
 
         assertEquals(4, snes.apu.executeInstruction());
         assertEquals(0x00, snes.apu._internalRead(0x50));
@@ -141,7 +141,8 @@ class BitShiftOpcodeDispatchTest {
         assertFalse(snes.apu.internalRegisters().c);
 
         assertEquals(5, snes.apu.executeInstruction());
-        assertEquals(0x02, snes.apu._internalRead(0x0302));
+        assertEquals(0x02, snes.apu._internalRead(0x52));
+        assertEquals(0x207, snes.apu.internalRegisters().pc);
 
         snes.apu.internalRegisters().a = 0x40;
         snes.apu.internalRegisters().c = true;
