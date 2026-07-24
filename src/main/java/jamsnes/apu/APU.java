@@ -877,26 +877,31 @@ public class APU extends AMemory {
     }
 
     public void update(int cycles) {
-        if (isDisabled) {
+        if (isDisabled || cycles <= 0) {
             return;
         }
 
-        advanceTimers(cycles);
         int remainingCycles = cycles;
-        int total = 0;
-
-        if (paddingCycles > remainingCycles) {
-            paddingCycles -= remainingCycles;
-            advanceDsp(cycles);
-            return;
+        if (paddingCycles > 0) {
+            int elapsedCycles = Math.min(paddingCycles, remainingCycles);
+            paddingCycles -= elapsedCycles;
+            remainingCycles -= elapsedCycles;
+            advancePeripherals(elapsedCycles);
         }
 
-        remainingCycles -= paddingCycles;
-        paddingCycles = 0;
-        while (total < remainingCycles && state == StateMode.RUNNING) {
-            total += executeInstruction();
+        while (remainingCycles > 0 && state == StateMode.RUNNING) {
+            int instructionCycles = executeInstruction();
+            int elapsedCycles = Math.min(instructionCycles, remainingCycles);
+            remainingCycles -= elapsedCycles;
+            paddingCycles = instructionCycles - elapsedCycles;
+            advancePeripherals(elapsedCycles);
         }
-        paddingCycles = Math.max(0, total - remainingCycles);
+
+        advancePeripherals(remainingCycles);
+    }
+
+    private void advancePeripherals(int cycles) {
+        advanceTimers(cycles);
         advanceDsp(cycles);
     }
 

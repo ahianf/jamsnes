@@ -224,6 +224,41 @@ class UpdateLoopTest {
         assertEquals(1, snes.apu._internalRead(0x00fd));
     }
 
+    @Test
+    void timerDisableInstructionTakesEffectWithinUpdateSlice() {
+        SNES snes = init();
+        snes.apu.internalRegisters().pc = 0x0300;
+        snes.apu._internalWrite(0x00fa, 0x01);
+        snes.apu._internalWrite(0x00f1, 0x01);
+        snes.apu.update(120);
+
+        snes.apu.internalRegisters().pc = 0x0200;
+        snes.apu._internalWrite(0x0200, 0x8f);
+        snes.apu._internalWrite(0x0201, 0x00);
+        snes.apu._internalWrite(0x0202, 0xf1);
+
+        snes.apu.update(130);
+
+        assertEquals(0, snes.apu._internalRead(0x00fd));
+    }
+
+    @Test
+    void timerEnableInstructionTakesEffectWithinUpdateSlice() {
+        SNES snes = init();
+        snes.apu.internalRegisters().pc = 0x0300;
+        snes.apu._internalWrite(0x00fa, 0x01);
+        snes.apu.update(120);
+
+        snes.apu.internalRegisters().pc = 0x0200;
+        snes.apu._internalWrite(0x0200, 0x8f);
+        snes.apu._internalWrite(0x0201, 0x01);
+        snes.apu._internalWrite(0x0202, 0xf1);
+
+        snes.apu.update(130);
+
+        assertEquals(1, snes.apu._internalRead(0x00fd));
+    }
+
     private static SNES init() {
         return new SNES(new NoRenderer(0, 0, 0));
     }
