@@ -101,7 +101,7 @@ public class APU extends AMemory {
         validateInternalAddress(address, "APU Registers read");
         return switch (address) {
             case 0x00f0, 0x00f1, 0x00fa, 0x00fb, 0x00fc -> 0;
-            case 0x00f2 -> dspRegisterAddress;
+            case 0x00f2 -> dspRegisterAddress & 0x7f;
             case 0x00f3 -> dsp.read(dspRegisterAddress);
             case 0x00f4, 0x00f5, 0x00f6, 0x00f7 -> apuReadPorts[address - 0x00f4];
             case 0x00f8 -> registerMemory1;
