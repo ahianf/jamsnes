@@ -271,6 +271,17 @@ public class DSP {
         write(normalized, data);
     }
 
+    public void finishSnapshotRestore() {
+        for (Voice voice : voices) {
+            int envelope = Math.min((voice.envx & 0x7f) << 4, 0x7ff);
+            voice.envelope = envelope;
+            voice.hiddenEnvelope = envelope;
+            voice.envelopeMode = envelope != 0 && !voice.kof
+                    ? EnvelopeMode.SUSTAIN
+                    : EnvelopeMode.RELEASE;
+        }
+    }
+
     public void update() {
         switch (voicePhase) {
             case 0 -> {

@@ -95,6 +95,23 @@ class DSPTest {
     }
 
     @Test
+    void snapshotRestoreSeedsVisibleEnvelopeIntoVoiceState() {
+        DSP dsp = new DSP();
+        dsp.restoreRegister(0x08, 0x42);
+        dsp.restoreRegister(0x18, 0x24);
+        dsp.restoreRegister(0x5c, 0x02);
+
+        dsp.finishSnapshotRestore();
+
+        assertEquals(0x420, dsp.voiceEnvelope(0));
+        assertEquals(0x420, dsp.voiceHiddenEnvelope(0));
+        assertEquals(DSP.EnvelopeMode.SUSTAIN, dsp.voiceEnvelopeMode(0));
+        assertEquals(0x240, dsp.voiceEnvelope(1));
+        assertEquals(0x240, dsp.voiceHiddenEnvelope(1));
+        assertEquals(DSP.EnvelopeMode.RELEASE, dsp.voiceEnvelopeMode(1));
+    }
+
+    @Test
     void flagsRegisterPreservesTheFiveBitNoiseClock() {
         DSP dsp = new DSP();
 

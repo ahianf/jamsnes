@@ -969,6 +969,7 @@ public class APU extends AMemory {
         for (int register = 0x0f; register < 0x80; register += 0x10) {
             dsp.restoreRegister(register, cartridge.read(0x10100 + register));
         }
+        dsp.finishSnapshotRestore();
     }
 
     public int NOP() {
