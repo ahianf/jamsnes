@@ -1169,7 +1169,7 @@ public class CPU extends AMemory {
 
     public int TAX(int valueAddr) {
         if (registers.p.x_b) {
-            registers.x = u16((registers.x & 0xff00) | registers.al());
+            registers.x = registers.al();
             registers.p.z = registers.xl() == 0;
             registers.p.n = (registers.x & 0x80) != 0;
         } else {
@@ -1182,7 +1182,7 @@ public class CPU extends AMemory {
 
     public int TAY(int valueAddr) {
         if (registers.p.x_b) {
-            registers.y = u16((registers.y & 0xff00) | registers.al());
+            registers.y = registers.al();
             registers.p.z = registers.yl() == 0;
             registers.p.n = (registers.y & 0x80) != 0;
         } else {
@@ -1268,7 +1268,7 @@ public class CPU extends AMemory {
 
     public int TXY(int valueAddr) {
         if (registers.p.x_b) {
-            registers.y = u16((registers.y & 0xff00) | registers.xl());
+            registers.y = registers.xl();
         } else {
             registers.y = u16(registers.x);
         }
@@ -1278,7 +1278,7 @@ public class CPU extends AMemory {
 
     public int TYX(int valueAddr) {
         if (registers.p.x_b) {
-            registers.x = u16((registers.x & 0xff00) | registers.yl());
+            registers.x = registers.yl();
         } else {
             registers.x = u16(registers.y);
         }

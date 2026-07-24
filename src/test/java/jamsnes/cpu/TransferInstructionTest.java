@@ -23,7 +23,7 @@ class TransferInstructionTest {
         snes.cpu.registers().x = 0xfe12;
         snes.cpu.registers().a = 0xab00;
         snes.cpu.TAX(0);
-        assertEquals(0xfe00, snes.cpu.registers().x);
+        assertEquals(0x0000, snes.cpu.registers().x);
         assertTrue(snes.cpu.registers().p.z);
         assertFalse(snes.cpu.registers().p.n);
     }
@@ -35,7 +35,7 @@ class TransferInstructionTest {
         snes.cpu.registers().y = 0xfe12;
         snes.cpu.registers().a = 0x00ab;
         snes.cpu.TAY(0);
-        assertEquals(0xfeab, snes.cpu.registers().y);
+        assertEquals(0x00ab, snes.cpu.registers().y);
         assertTrue(snes.cpu.registers().p.n);
     }
 
@@ -168,7 +168,7 @@ class TransferInstructionTest {
     }
 
     @Test
-    void indexTransfersPreserveHighByteInEightBitMode() {
+    void indexTransfersClearHighByteInEightBitMode() {
         SNES snes = init();
         snes.cpu.registers().p.x_b = true;
         snes.cpu.registers().x = 0x1200;
@@ -176,14 +176,14 @@ class TransferInstructionTest {
 
         snes.cpu.TXY(0);
 
-        assertEquals(0x3400, snes.cpu.registers().y);
+        assertEquals(0x0000, snes.cpu.registers().y);
         assertTrue(snes.cpu.registers().p.z);
         assertFalse(snes.cpu.registers().p.n);
 
         snes.cpu.registers().y = 0x3480;
         snes.cpu.TYX(0);
 
-        assertEquals(0x1280, snes.cpu.registers().x);
+        assertEquals(0x0080, snes.cpu.registers().x);
         assertFalse(snes.cpu.registers().p.z);
         assertTrue(snes.cpu.registers().p.n);
     }
