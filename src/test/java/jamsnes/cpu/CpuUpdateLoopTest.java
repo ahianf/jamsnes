@@ -223,6 +223,8 @@ class CpuUpdateLoopTest {
     void updateRunsDmaBeforeInstructions() {
         SNES snes = init();
         snes.wram.data()[0] = 0x34;
+        snes.wram.data()[1] = 0x56;
+        snes.wram.data()[2] = 0x78;
         snes.bus.write(0x2100, 0x80);
         snes.bus.write(0x2115, 0b1000_0000);
         snes.bus.write(0x4301, 0x18);
@@ -230,17 +232,30 @@ class CpuUpdateLoopTest {
         snes.bus.write(0x4303, 0x00);
         snes.bus.write(0x4302, 0x00);
         snes.bus.write(0x4306, 0x00);
-        snes.bus.write(0x4305, 0x01);
-        snes.bus.write(0x4300, DMA.ONE_TO_ONE);
+        snes.bus.write(0x4305, 0x03);
+        snes.bus.write(0x4300, DMA.TWO_TO_TWO);
         snes.bus.write(0x420b, 0x01);
         snes.cpu.registers().setPc(0x0200);
         snes.wram.data()[0x0200] = 0xea;
+        snes.wram.data()[0x0201] = 0xea;
 
-        assertEquals(16, snes.cpu.update(1));
-        assertFalse(snes.cpu.dmaChannels()[0].isEnabled());
-        assertEquals(0x00, snes.cpu.internalRegisters()[0x0b]);
+        assertEquals(8, snes.cpu.update(1));
+        assertTrue(snes.cpu.dmaChannels()[0].isEnabled());
+        assertEquals(0x01, snes.cpu.internalRegisters()[0x0b]);
+        assertEquals(0x0200, snes.cpu.registers().pc);
+        assertEquals(0x00, snes.ppu.vram.data()[0]);
+
+        assertEquals(16, snes.cpu.update(12));
+        assertTrue(snes.cpu.dmaChannels()[0].isEnabled());
         assertEquals(0x0200, snes.cpu.registers().pc);
         assertEquals(0x34, snes.ppu.vram.data()[0]);
+        assertEquals(0x56, snes.ppu.vram.data()[1]);
+
+        assertEquals(12, snes.cpu.update(12));
+        assertFalse(snes.cpu.dmaChannels()[0].isEnabled());
+        assertEquals(0x00, snes.cpu.internalRegisters()[0x0b]);
+        assertEquals(0x0202, snes.cpu.registers().pc);
+        assertEquals(0x78, snes.ppu.vram.data()[2]);
     }
 
     @Test

@@ -287,9 +287,14 @@ public class CPU extends AMemory {
             if (!dmaChannel.isEnabled()) {
                 continue;
             }
+            if (cycles >= maxCycles) {
+                break;
+            }
             cycles += dmaChannel.run(maxCycles - cycles);
             if (!dmaChannel.isEnabled()) {
                 internalRegisters[0x0b] &= ~(1 << i);
+            } else {
+                break;
             }
         }
         return cycles;

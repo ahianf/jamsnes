@@ -34,6 +34,8 @@ public class DMA {
     private boolean hdmaDoTransfer;
     private boolean hdmaRepeat;
     private int hdmaLineRemaining;
+    private boolean dmaStartupPending;
+    private int dmaModeIndex;
 
     public DMA(IMemoryBus bus) {
         this.bus = bus;
@@ -50,6 +52,8 @@ public class DMA {
         hdmaDoTransfer = false;
         hdmaRepeat = false;
         hdmaLineRemaining = 0;
+        dmaStartupPending = false;
+        dmaModeIndex = 0;
     }
 
     public IMemoryBus getBus() {
@@ -96,18 +100,27 @@ public class DMA {
     }
 
     public int run(int maxCycles) {
-        int cycles = 8;
-        int i = 0;
+        if (!enabled || maxCycles <= 0) {
+            return 0;
+        }
 
-        do {
-            cycles += writeOneByte(aAddress, 0x2100 | u8(port + getModeOffset(i)), getDirection());
+        int cycles = 0;
+        if (dmaStartupPending) {
+            cycles += 8;
+            dmaStartupPending = false;
+        }
+
+        while (enabled && cycles < maxCycles) {
+            cycles += writeOneByte(aAddress, 0x2100 | u8(port + getModeOffset(dmaModeIndex)), getDirection());
             if (!isFixed()) {
                 setAddressPage(getAddressPage() + (isIncrement() ? -1 : 1));
             }
             count = u16(count - 1);
-            i++;
-        } while (count > 0 && enabled);
-        enabled = false;
+            dmaModeIndex++;
+            if (count == 0) {
+                enabled = false;
+            }
+        }
         return cycles;
     }
 
@@ -293,6 +306,12 @@ public class DMA {
     }
 
     public void setEnabled(boolean enabled) {
+        if (enabled && !this.enabled) {
+            dmaStartupPending = true;
+            dmaModeIndex = 0;
+        } else if (!enabled) {
+            dmaStartupPending = false;
+        }
         this.enabled = enabled;
     }
 

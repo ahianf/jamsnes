@@ -427,6 +427,39 @@ class DmaTest {
     }
 
     @Test
+    void dmaResumesWithinCycleBudgetWithoutRestartingModePhase() {
+        SNES snes = init();
+        snes.wram.data()[0x40] = 0x11;
+        snes.wram.data()[0x41] = 0x22;
+        snes.wram.data()[0x42] = 0x33;
+        snes.wram.data()[0x43] = 0x44;
+        setupDma(snes, DMA.TWO_TO_TWO, 0x26, 0x7e0040, 0x0004);
+        snes.bus.write(0x420b, 0x01);
+
+        DMA dma = snes.cpu.dmaChannels()[0];
+        assertEquals(8, dma.run(8));
+        assertEquals(0x0004, dma.getCount());
+        assertEquals(0x00, snes.ppu.registers()[0x26]);
+        assertEquals(0x00, snes.ppu.registers()[0x27]);
+        assertTrue(dma.isEnabled());
+
+        assertEquals(8, dma.run(8));
+        assertEquals(0x11, snes.ppu.registers()[0x26]);
+        assertEquals(0x00, snes.ppu.registers()[0x27]);
+
+        assertEquals(8, dma.run(8));
+        assertEquals(0x11, snes.ppu.registers()[0x26]);
+        assertEquals(0x22, snes.ppu.registers()[0x27]);
+
+        assertEquals(16, dma.run(16));
+        assertEquals(0x33, snes.ppu.registers()[0x26]);
+        assertEquals(0x44, snes.ppu.registers()[0x27]);
+        assertEquals(0, dma.getCount());
+        assertEquals(0x7e0044, dma.getAAddress());
+        assertFalse(dma.isEnabled());
+    }
+
+    @Test
     void wramToOamDmaCommitsDuringForcedBlank() {
         SNES snes = init();
         snes.wram.data()[0x40] = 0x12;

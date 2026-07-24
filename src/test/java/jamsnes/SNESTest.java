@@ -659,6 +659,44 @@ class SNESTest {
     }
 
     @Test
+    void updateSpreadsNormalDmaAcrossHblankAccessWindow() {
+        SNES snes = new SNES(new TestRenderer());
+        snes.bus.mapComponents(snes);
+        snes.apu.isDisabled = true;
+        snes.cpu.registers().setPc(0x0200);
+        snes.wram.data()[0x0200] = 0xea;
+        snes.wram.data()[0x0201] = 0xea;
+        snes.wram.data()[0x0040] = 0x11;
+        snes.wram.data()[0x0041] = 0x22;
+        snes.wram.data()[0x0042] = 0x33;
+        snes.wram.data()[0x0043] = 0x44;
+        snes.ppu.advanceCountersOnly(250);
+        snes.bus.write(0x2121, 0x00);
+        setupDma(snes, DMA.TWO_TO_ONE, 0x22, 0x7e0040, 4);
+        snes.bus.write(0x420b, 0x01);
+
+        snes.update();
+
+        assertEquals(266, snes.ppu.hCounter());
+        assertEquals(0x00, snes.ppu.cgram.read(0));
+        assertEquals(true, snes.cpu.dmaChannels()[0].isEnabled());
+
+        snes.update();
+
+        assertEquals(0x11, snes.ppu.cgram.read(0));
+        assertEquals(0x22, snes.ppu.cgram.read(1));
+        assertEquals(0x00, snes.ppu.cgram.read(2));
+        assertEquals(true, snes.cpu.dmaChannels()[0].isEnabled());
+
+        snes.update();
+
+        assertEquals(0x33, snes.ppu.cgram.read(2));
+        assertEquals(0x44, snes.ppu.cgram.read(3));
+        assertEquals(false, snes.cpu.dmaChannels()[0].isEnabled());
+        assertEquals(0x00, snes.cpu.internalRegisters()[0x0b]);
+    }
+
+    @Test
     void loadRomClearsSmcOffsetBeforeLoadingAudioCartridge() throws IOException {
         SNES snes = new SNES(new TestRenderer());
 
@@ -802,6 +840,12 @@ class SNESTest {
         snes.bus.write(0x4302, tableAddress);
         snes.bus.write(0x4303, tableAddress >>> 8);
         snes.bus.write(0x4304, tableAddress >>> 16);
+    }
+
+    private static void setupDma(SNES snes, int control, int port, int address, int count) {
+        setupHdma(snes, control, port, address);
+        snes.bus.write(0x4305, count);
+        snes.bus.write(0x4306, count >>> 8);
     }
 
     private static final class TestRenderer implements IRenderer {
