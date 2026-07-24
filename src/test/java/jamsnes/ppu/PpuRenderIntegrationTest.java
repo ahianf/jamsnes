@@ -765,6 +765,23 @@ class PpuRenderIntegrationTest {
     }
 
     @Test
+    void objectOverflowFlagsClearAtEndOfVblank() {
+        SNES snes = init(new TestRenderer());
+        hideAllObjects(snes);
+        for (int objectIndex = 0; objectIndex < 33; objectIndex++) {
+            writeObject(snes, objectIndex, 0x08, 0x00, 0x00, 0x30);
+        }
+        snes.ppu.renderMainAndSubScreen();
+        assertEquals(0x40, snes.ppu.read(0x3e) & 0xc0);
+
+        snes.ppu.advanceCountersOnly(PPU.H_COUNTER_DOTS * PPU.V_COUNTER_SCANLINES - 1);
+        assertEquals(0x40, snes.ppu.read(0x3e) & 0xc0);
+
+        snes.ppu.advanceCountersOnly(1);
+        assertEquals(0x00, snes.ppu.read(0x3e) & 0xc0);
+    }
+
+    @Test
     void objectRangeLimitStartsAtThePriorityRotationObject() {
         SNES snes = init(new TestRenderer());
         hideAllObjects(snes);

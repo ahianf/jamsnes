@@ -738,6 +738,8 @@ public class PPU extends AMemory {
                 vCounter = 0;
                 frameCounter++;
                 secondField = !secondField;
+                objectRangeOver = false;
+                objectTimeOver = false;
             }
             if (vCounter == vBlankStartScanline()) {
                 reloadOamAddressAtVBlankEntry();
