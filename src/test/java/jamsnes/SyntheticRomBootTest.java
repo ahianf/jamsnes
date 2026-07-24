@@ -1,5 +1,6 @@
 package jamsnes;
 
+import jamsnes.cartridge.MappingMode;
 import jamsnes.input.Joypad;
 import jamsnes.ppu.Background;
 import jamsnes.ppu.PPUUtils;
@@ -30,6 +31,23 @@ class SyntheticRomBootTest {
         }
 
         assertTrue(renderer.drawScreenCalls() > 0, "Synthetic ROM should reach VBlank and present a frame");
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.pixel(0, 0));
+        assertEquals(0x8015, snes.cpu.registers().pc);
+    }
+
+    @Test
+    void loadedHiRomUsesBankZeroResetMirrorAndPresentsAFrame() throws IOException {
+        FrameBufferRenderer renderer =
+                new FrameBufferRenderer(Background.BUFFER_SIZE, Background.BUFFER_SIZE, 60);
+        SNES snes = new SNES(writeHiRomBootRom().toString(), renderer);
+
+        for (int updates = 0; renderer.drawScreenCalls() == 0 && updates < 10_000; updates++) {
+            snes.update();
+        }
+
+        assertTrue(snes.cartridge.header.hasMappingMode(MappingMode.HIROM));
+        assertEquals(0x78, snes.bus.read(0x008000), "Bank-zero reset mirror should expose the HiROM program");
+        assertTrue(renderer.drawScreenCalls() > 0, "Synthetic HiROM should reach VBlank and present a frame");
         assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.pixel(0, 0));
         assertEquals(0x8015, snes.cpu.registers().pc);
     }
@@ -109,6 +127,34 @@ class SyntheticRomBootTest {
         rom[0x7ffc] = 0x00;
         rom[0x7ffd] = (byte) 0x80;
         Path path = tempDir.resolve("synthetic-boot.sfc");
+        Files.write(path, rom);
+        return path;
+    }
+
+    private Path writeHiRomBootRom() throws IOException {
+        byte[] rom = new byte[0x10000];
+        byte[] program = {
+                (byte) 0x78,                         // SEI
+                (byte) 0xa9, 0x00,                   // LDA #$00
+                (byte) 0x8d, 0x21, 0x21,             // STA $2121 (CGADD)
+                (byte) 0xa9, 0x1f,                   // LDA #$1f
+                (byte) 0x8d, 0x22, 0x21,             // STA $2122 (CGDATA low)
+                (byte) 0xa9, 0x00,                   // LDA #$00
+                (byte) 0x8d, 0x22, 0x21,             // STA $2122 (CGDATA high)
+                (byte) 0xa9, 0x0f,                   // LDA #$0f
+                (byte) 0x8d, 0x00, 0x21,             // STA $2100 (INIDISP)
+                (byte) 0x80, (byte) 0xfe             // BRA *
+        };
+        System.arraycopy(program, 0, rom, 0x8000, program.length);
+        byte[] title = "JAMSNES HIROM BOOT".getBytes(StandardCharsets.ISO_8859_1);
+        System.arraycopy(title, 0, rom, 0xffc0, title.length);
+        rom[0xffd5] = 0x21;
+        rom[0xffd6] = 0x00;
+        rom[0xffd7] = 0x06;
+        rom[0xffd8] = 0x00;
+        rom[0xfffc] = 0x00;
+        rom[0xfffd] = (byte) 0x80;
+        Path path = tempDir.resolve("synthetic-hirom-boot.sfc");
         Files.write(path, rom);
         return path;
     }
