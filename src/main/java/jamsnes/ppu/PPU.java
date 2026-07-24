@@ -369,6 +369,7 @@ public class PPU extends AMemory {
         }
         return new LayerState(
                 registers[0x05],
+                registers[0x01],
                 registers[0x06],
                 registers[0x23],
                 registers[0x24],
@@ -927,12 +928,16 @@ public class PPU extends AMemory {
         objectTimeOver = false;
         int firstObject = ppuRegisters.oamObjPriorityActivationBit() ? ppuRegisters.oamPriorityObjectNumber() : 0;
         int scanlineCount = vBlankStartScanline();
+        LayerState currentState = currentLayerState();
 
         for (int screenY = 0; screenY < scanlineCount; screenY++) {
+            LayerState state = scanlineDisplayControlCaptured[screenY]
+                    ? scanlineLayerStates[screenY]
+                    : currentState;
             int objectCount = 0;
             for (int offset = 0; offset < OBJ_COUNT; offset++) {
                 int objectIndex = (firstObject + offset) % OBJ_COUNT;
-                ObjectDimensions dimensions = objectDimensionsForObject(objectIndex);
+                ObjectDimensions dimensions = objectDimensionsForObject(objectIndex, state.objectSelection());
                 if (!objectIntersectsScanline(objectIndex, dimensions, screenY)
                         || !objectIntersectsHorizontalScreen(objectIndex, dimensions)) {
                     continue;
@@ -946,15 +951,15 @@ public class PPU extends AMemory {
                 objectCount++;
             }
             evaluatedObjectCounts[screenY] = objectCount;
-            evaluateObjectSlivers(screenY, objectCount);
+            evaluateObjectSlivers(screenY, objectCount, state.objectSelection());
         }
     }
 
-    private void evaluateObjectSlivers(int screenY, int objectCount) {
+    private void evaluateObjectSlivers(int screenY, int objectCount, int objectSelection) {
         int sliverCount = 0;
         for (int objectSlot = objectCount - 1; objectSlot >= 0; objectSlot--) {
             int objectIndex = evaluatedObjectIndices[screenY][objectSlot];
-            ObjectDimensions dimensions = objectDimensionsForObject(objectIndex);
+            ObjectDimensions dimensions = objectDimensionsForObject(objectIndex, objectSelection);
             int x = objectX(objectIndex);
             int sliverMask = 0;
             for (int sliver = 0; sliver < dimensions.width() / Tile.NB_PIXELS_WIDTH; sliver++) {
@@ -1021,7 +1026,8 @@ public class PPU extends AMemory {
                         levelMap,
                         sourceMap,
                         windowMask,
-                        palette);
+                        palette,
+                        state.objectSelection());
             }
         }
     }
@@ -1034,18 +1040,19 @@ public class PPU extends AMemory {
             int[][] levelMap,
             int[][] sourceMap,
             boolean[] windowMask,
-            int[] paletteColors) {
+            int[] paletteColors,
+            int objectSelection) {
         int objectAddress = objectIndex * 4;
         int y = oamram.read(objectAddress + 1);
         int tile = oamram.read(objectAddress + 2);
         int attributes = oamram.read(objectAddress + 3);
         int x = objectX(objectIndex);
-        ObjectDimensions dimensions = objectDimensionsForObject(objectIndex);
+        ObjectDimensions dimensions = objectDimensionsForObject(objectIndex, objectSelection);
         int level = objectPriorityLevel((attributes >>> 4) & 0x03);
         int palette = (attributes >>> 1) & 0x07;
         boolean horizontalFlip = (attributes & 0x40) != 0;
         boolean verticalFlip = (attributes & 0x80) != 0;
-        int baseAddress = objectTileBaseAddress(attributes);
+        int baseAddress = objectTileBaseAddress(attributes, objectSelection);
         int pixelY = u8(screenY - y);
         int sourceY = verticalFlip ? verticallyFlippedObjectY(pixelY, dimensions) : pixelY;
 
@@ -1081,14 +1088,14 @@ public class PPU extends AMemory {
         return x >= 256 ? x - 512 : x;
     }
 
-    private ObjectDimensions objectDimensionsForObject(int objectIndex) {
+    private ObjectDimensions objectDimensionsForObject(int objectIndex, int objectSelection) {
         int highTable = oamram.read(OBJ_LOW_TABLE_SIZE + objectIndex / 4);
         int highShift = (objectIndex % 4) * 2;
-        return objectDimensions((highTable >>> (highShift + 1)) & 0x01);
+        return objectDimensions((highTable >>> (highShift + 1)) & 0x01, objectSelection);
     }
 
-    private ObjectDimensions objectDimensions(int sizeBit) {
-        return OBJ_SIZE_PRESETS[ppuRegisters.obselObjectSize()][sizeBit];
+    private ObjectDimensions objectDimensions(int sizeBit, int objectSelection) {
+        return OBJ_SIZE_PRESETS[(objectSelection >>> 5) & 0x07][sizeBit];
     }
 
     private int verticallyFlippedObjectY(int pixelY, ObjectDimensions dimensions) {
@@ -1109,10 +1116,10 @@ public class PPU extends AMemory {
         };
     }
 
-    private int objectTileBaseAddress(int attributes) {
-        int base = ppuRegisters.obselNameBaseSelect() << 13;
+    private int objectTileBaseAddress(int attributes, int objectSelection) {
+        int base = (objectSelection & 0x07) << 13;
         if ((attributes & 0x01) != 0) {
-            base += (ppuRegisters.obselNameSelect() + 1) << 12;
+            base += (((objectSelection >>> 3) & 0x03) + 1) << 12;
         }
         return u16(base);
     }
@@ -1391,6 +1398,7 @@ public class PPU extends AMemory {
 
     private record LayerState(
             int backgroundMode,
+            int objectSelection,
             int mosaic,
             int windowSelection12,
             int windowSelection34,
