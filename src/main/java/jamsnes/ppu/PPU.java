@@ -1529,10 +1529,39 @@ public class PPU extends AMemory {
     }
 
     private int composeSubscreenPixel(int x, int y, ColorMathState colorMathState) {
-        if (subScreenSourceMap[y][x] == SOURCE_BACKDROP) {
+        int pixel = subScreenSourceMap[y][x] == SOURCE_BACKDROP
+                ? PPUUtils.cgramColorToRGBA(colorMathState.backdropColor())
+                : subScreen[y][x];
+        int mainSource = mainScreenSourceMap[y][x];
+        if (mainSource == SOURCE_NONE) {
+            mainSource = SOURCE_BACKDROP;
+        }
+        boolean mainClippedToBlack = isColorClippedToBlack(x, colorMathState);
+        if (mainClippedToBlack) {
+            return 0x000000ff;
+        }
+        if (isColorMathPrevented(x, colorMathState)
+                || !isColorMathEnabledForSource(mainSource, colorMathState)) {
+            return pixel;
+        }
+        boolean addMainScreen = (colorMathState.selection() & 0x02) != 0;
+        int other = addMainScreen
+                ? unblendedMainPixel(x, y, colorMathState)
+                : PPUUtils.cgramColorToRGBA(colorMathState.fixedColor());
+        boolean half = (colorMathState.designation() & 0x40) != 0;
+        return (colorMathState.designation() & 0x80) != 0
+                ? subtractColor(pixel, other, half)
+                : addColor(pixel, other, half);
+    }
+
+    private int unblendedMainPixel(
+            int x,
+            int y,
+            ColorMathState colorMathState) {
+        if (mainScreenSourceMap[y][x] == SOURCE_NONE) {
             return PPUUtils.cgramColorToRGBA(colorMathState.backdropColor());
         }
-        return subScreen[y][x];
+        return mainScreen[y][x];
     }
 
     private boolean highResolutionEnabled(LayerState state) {
