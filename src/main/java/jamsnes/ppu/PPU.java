@@ -218,24 +218,32 @@ public class PPU extends AMemory {
         renderMainAndSubScreen();
         ColorMathState currentColorMathState = currentColorMathState();
         LayerState currentLayerState = currentLayerState();
+        boolean interlaced = ppuRegisters.setiniScreenInterlace();
 
-        for (int y = 0; y < screen.length; y++) {
-            int displayControl = scanlineDisplayControlCaptured[y]
-                    ? scanlineDisplayControl[y]
+        for (int outputY = 0; outputY < screen.length; outputY++) {
+            if (interlaced && (outputY & 1) != (secondField ? 1 : 0)) {
+                continue;
+            }
+            int sourceY = outputY >>> 1;
+            int displayControl = scanlineDisplayControlCaptured[sourceY]
+                    ? scanlineDisplayControl[sourceY]
                     : registers[0x00];
-            ColorMathState colorMathState = scanlineDisplayControlCaptured[y]
-                    ? scanlineColorMathStates[y]
+            ColorMathState colorMathState = scanlineDisplayControlCaptured[sourceY]
+                    ? scanlineColorMathStates[sourceY]
                     : currentColorMathState;
-            LayerState layerState = scanlineDisplayControlCaptured[y]
-                    ? scanlineLayerStates[y]
+            LayerState layerState = scanlineDisplayControlCaptured[sourceY]
+                    ? scanlineLayerStates[sourceY]
                     : currentLayerState;
             boolean highResolution = highResolutionEnabled(layerState);
-            for (int x = 0; x < screen[y].length; x++) {
+            for (int x = 0; x < screen[outputY].length; x++) {
                 int sourceX = x >>> 1;
-                screen[y][x] = highResolution && (x & 1) == 0
-                        ? composeSubscreenPixel(sourceX, y, colorMathState)
-                        : composePixel(sourceX, y, colorMathState);
-                renderer.putPixel(y, x, applyDisplayControl(screen[y][x], displayControl));
+                screen[outputY][x] = highResolution && (x & 1) == 0
+                        ? composeSubscreenPixel(sourceX, sourceY, colorMathState)
+                        : composePixel(sourceX, sourceY, colorMathState);
+                renderer.putPixel(
+                        outputY,
+                        x,
+                        applyDisplayControl(screen[outputY][x], displayControl));
             }
         }
         renderer.drawScreen();

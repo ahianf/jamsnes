@@ -1318,7 +1318,7 @@ class SNESTest {
             putPixelCalls++;
             if (x == 0 && y == 0) {
                 firstScanlinePixel = rgba;
-            } else if (x == 0 && y == 1) {
+            } else if (x == 0 && y == 2) {
                 secondScanlinePixel = rgba;
             }
         }

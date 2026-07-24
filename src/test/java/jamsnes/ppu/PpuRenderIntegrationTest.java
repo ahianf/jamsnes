@@ -1085,6 +1085,53 @@ class PpuRenderIntegrationTest {
     }
 
     @Test
+    void progressiveOutputDuplicatesEachSourceScanline() {
+        TestRenderer renderer = new TestRenderer();
+        SNES snes = init(renderer);
+        writeColor(snes, 1, 0x001f);
+        writeColor(snes, 2, 0x03e0);
+        snes.bus.write(0x2100, 0x0f);
+        snes.bus.write(0x210b, 0x01);
+        snes.bus.write(0x212c, 0x01);
+        snes.ppu.vram.write(0x0000, 0x00);
+        snes.ppu.vram.write(0x0001, 0x00);
+        snes.ppu.vram.write(0x2000, 0x80);
+        snes.ppu.vram.write(0x2003, 0x80);
+
+        snes.ppu.renderFrame();
+
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.outputRows[0][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.outputRows[1][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), renderer.outputRows[2][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), renderer.outputRows[3][0]);
+    }
+
+    @Test
+    void screenInterlaceWeavesFieldsIntoAlternatingOutputRows() {
+        TestRenderer renderer = new TestRenderer();
+        SNES snes = init(renderer);
+        writeColor(snes, 1, 0x001f);
+        snes.bus.write(0x2100, 0x0f);
+        snes.bus.write(0x210b, 0x01);
+        snes.bus.write(0x212c, 0x01);
+        snes.bus.write(0x2133, 0x01);
+        snes.ppu.vram.write(0x0000, 0x00);
+        snes.ppu.vram.write(0x0001, 0x00);
+        snes.ppu.vram.write(0x2000, 0x80);
+
+        snes.ppu.renderFrame();
+
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.outputRows[0][0]);
+        assertEquals(0, renderer.outputRows[1][0]);
+
+        snes.ppu.advanceCountersOnly(PPU.H_COUNTER_DOTS * (PPU.V_COUNTER_SCANLINES + 1));
+        snes.ppu.renderFrame();
+
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.outputRows[0][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.outputRows[1][0]);
+    }
+
+    @Test
     void updateDrawsComposedScreenToRenderer() {
         TestRenderer renderer = new TestRenderer();
         SNES snes = init(renderer);
@@ -1473,6 +1520,7 @@ class PpuRenderIntegrationTest {
         private int firstPixel;
         private final int[] firstRowPixels = new int[4];
         private final int[] secondRowPixels = new int[4];
+        private final int[][] outputRows = new int[4][4];
         private long putPixelCalls;
         private int drawScreenCalls;
 
@@ -1487,10 +1535,13 @@ class PpuRenderIntegrationTest {
 
         @Override
         public void putPixel(int y, int x, int rgba) {
+            if (y < outputRows.length && x < outputRows[y].length) {
+                outputRows[y][x] = rgba;
+            }
             if (x < firstRowPixels.length) {
                 if (y == 0) {
                     firstRowPixels[x] = rgba;
-                } else if (y == 1) {
+                } else if (y == 2) {
                     secondRowPixels[x] = rgba;
                 }
             }

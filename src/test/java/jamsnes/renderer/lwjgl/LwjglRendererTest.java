@@ -16,9 +16,10 @@ class LwjglRendererTest {
 
         assertEquals(1024, renderer.height());
         assertEquals(1024, renderer.width());
-        assertEquals(224, renderer.displayHeight());
+        assertEquals(448, renderer.displayHeight());
         assertEquals(512, renderer.displayWidth());
         assertEquals(256, renderer.windowWidth());
+        assertEquals(224, renderer.windowHeight());
         assertEquals(3, renderer.windowScale());
     }
 
