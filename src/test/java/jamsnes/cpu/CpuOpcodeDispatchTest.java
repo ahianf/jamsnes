@@ -129,7 +129,7 @@ class CpuOpcodeDispatchTest {
         snes.wram.data()[0x0400] = 0x78;
         snes.wram.data()[0x0401] = 0x56;
         snes.wram.data()[0x0402] = 0x34;
-        assertEquals(7, snes.cpu.executeInstruction());
+        assertEquals(6, snes.cpu.executeInstruction());
         assertEquals(0x345678, snes.cpu.registers().pac);
     }
 
@@ -669,6 +669,39 @@ class CpuOpcodeDispatchTest {
         assertEquals(7, snes.cpu.executeInstruction());
         assertEquals(0x03, snes.cpu.registers().a);
         assertEquals(0x0208, snes.cpu.registers().pc);
+    }
+
+    @Test
+    void eorStackRelativeIndirectIndexedYUsesSevenBaseCycles() {
+        SNES snes = init();
+        snes.cpu.setEmulationMode(false);
+        snes.cpu.registers().setPc(0x0200);
+        snes.cpu.registers().s = 0x0300;
+        snes.cpu.registers().y = 0x03;
+        snes.cpu.registers().a = 0x0f;
+        snes.wram.data()[0x0305] = 0x00;
+        snes.wram.data()[0x0306] = 0x04;
+        snes.wram.data()[0x0403] = 0xf0;
+        writeProgram(snes, 0x0200, 0x53, 0x05);
+
+        assertEquals(7, snes.cpu.executeInstruction());
+        assertEquals(0xff, snes.cpu.registers().a);
+        assertEquals(0x0202, snes.cpu.registers().pc);
+    }
+
+    @Test
+    void cmpAbsoluteLongUsesFiveBaseCycles() {
+        SNES snes = init();
+        snes.cpu.setEmulationMode(false);
+        snes.cpu.registers().setPc(0x0200);
+        snes.cpu.registers().a = 0x42;
+        snes.wram.data()[0x0400] = 0x42;
+        writeProgram(snes, 0x0200, 0xcf, 0x00, 0x04, 0x7e);
+
+        assertEquals(5, snes.cpu.executeInstruction());
+        assertTrue(snes.cpu.registers().p.z);
+        assertTrue(snes.cpu.registers().p.c);
+        assertEquals(0x0204, snes.cpu.registers().pc);
     }
 
     @Test
