@@ -615,8 +615,7 @@ public class CPU extends AMemory {
     }
 
     public int _getDirectAddr() {
-        int address = readPC();
-        return u16(registers.d + address);
+        return directPageAddress(readPC());
     }
 
     public int _getAbsoluteAddr() {
@@ -634,9 +633,9 @@ public class CPU extends AMemory {
     }
 
     public int _getDirectIndirectIndexedYAddr() {
-        int dp = u16(readPC() + registers.d);
+        int dp = directPageAddress(readPC());
         int base = bus.read(dp);
-        base += bus.read(u16(dp + 1)) << 8;
+        base += bus.read(nextDirectPageAddress(dp)) << 8;
         base += registers.dbr << 16;
         int index = indexYValue();
         markIndexBoundary(base, index);
@@ -644,7 +643,7 @@ public class CPU extends AMemory {
     }
 
     public int _getDirectIndirectIndexedYLongAddr() {
-        int dp = u16(readPC() + registers.d);
+        int dp = directPageAddress(readPC());
         int base = bus.read(dp);
         base += bus.read(u16(dp + 1)) << 8;
         base += bus.read(u16(dp + 2)) << 16;
@@ -652,22 +651,19 @@ public class CPU extends AMemory {
     }
 
     public int _getDirectIndirectIndexedXAddr() {
-        int dp = u16(readPC() + registers.d);
-        dp = u16(dp + indexXValue());
+        int dp = directPageAddress(readPC() + indexXValue());
         int base = bus.read(dp);
-        base += bus.read(u16(dp + 1)) << 8;
+        base += bus.read(nextDirectPageAddress(dp)) << 8;
         base += registers.dbr << 16;
         return u24(base);
     }
 
     public int _getDirectIndexedByXAddr() {
-        int dp = u16(readPC() + registers.d);
-        return u16(dp + indexXValue());
+        return directPageAddress(readPC() + indexXValue());
     }
 
     public int _getDirectIndexedByYAddr() {
-        int dp = u16(readPC() + registers.d);
-        return u16(dp + indexYValue());
+        return directPageAddress(readPC() + indexYValue());
     }
 
     public int _getAbsoluteIndexedByXAddr() {
@@ -723,15 +719,15 @@ public class CPU extends AMemory {
     }
 
     public int _getDirectIndirectAddr() {
-        int dp = u16(readPC() + registers.d);
+        int dp = directPageAddress(readPC());
         int effective = bus.read(dp);
-        effective += bus.read(u16(dp + 1)) << 8;
+        effective += bus.read(nextDirectPageAddress(dp)) << 8;
         effective += registers.dbr << 16;
         return u24(effective);
     }
 
     public int _getDirectIndirectLongAddr() {
-        int dp = u16(readPC() + registers.d);
+        int dp = directPageAddress(readPC());
         int effective = bus.read(dp);
         dp = u16(dp + 1);
         effective += bus.read(dp) << 8;
@@ -741,12 +737,12 @@ public class CPU extends AMemory {
     }
 
     public int _getStackRelativeAddr() {
-        return u16(readPC() + stackAddress());
+        return stackRelativeAddress(readPC());
     }
 
     public int _getStackRelativeIndirectIndexedYAddr() {
-        int pointer = u16(readPC() + stackAddress());
-        int base = bus.read(pointer) | (bus.read(u16(pointer + 1)) << 8);
+        int pointer = stackRelativeAddress(readPC());
+        int base = bus.read(pointer) | (bus.read(nextStackRelativeAddress(pointer)) << 8);
         return u24((registers.dbr << 16) + base + indexYValue());
     }
 
@@ -777,6 +773,17 @@ public class CPU extends AMemory {
 
     private int stackAddress() {
         return emulationMode ? (0x0100 | registers.sl()) : registers.s;
+    }
+
+    private int stackRelativeAddress(int offset) {
+        if (emulationMode) {
+            return 0x0100 | u8(registers.sl() + offset);
+        }
+        return u16(registers.s + offset);
+    }
+
+    private int nextStackRelativeAddress(int address) {
+        return emulationMode ? (0x0100 | u8(address + 1)) : u16(address + 1);
     }
 
     private void decrementStackPointer() {
@@ -1701,6 +1708,20 @@ public class CPU extends AMemory {
 
     private int directPageExtraCycle() {
         return registers.dl() != 0 ? 1 : 0;
+    }
+
+    private int directPageAddress(int offset) {
+        if (emulationMode && registers.dl() == 0) {
+            return (registers.d & 0xff00) | u8(offset);
+        }
+        return u16(registers.d + offset);
+    }
+
+    private int nextDirectPageAddress(int address) {
+        if (emulationMode && registers.dl() == 0) {
+            return (address & 0xff00) | u8(address + 1);
+        }
+        return u16(address + 1);
     }
 
     private int indexBoundaryExtraCycle() {

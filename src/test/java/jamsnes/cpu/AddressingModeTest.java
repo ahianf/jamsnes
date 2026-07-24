@@ -179,14 +179,15 @@ class AddressingModeTest {
     }
 
     @Test
-    void directIndexedIndirectXWrapsDirectPagePointerBytes() {
+    void directIndexedIndirectXWrapsPointerWithinAlignedDirectPageInEmulationMode() {
         SNES snes = init();
         snes.cartridge.setSize(0x8000);
         snes.cartridge.data()[0] = 0xfe;
         snes.cpu.registers().d = 0xff00;
         snes.cpu.registers().x = 0x0001;
         snes.cartridge.data()[0x7fff] = 0xef;
-        snes.wram.data()[0x0000] = 0x01;
+        snes.cartridge.data()[0x7f00] = 0x01;
+        snes.wram.data()[0x0000] = 0x56;
         snes.cpu.registers().dbr = 0x88;
         snes.cpu.registers().setPac(0x808000);
 
@@ -232,6 +233,38 @@ class AddressingModeTest {
     }
 
     @Test
+    void directIndexedAddressesWrapWithinAlignedPageInEmulationMode() {
+        SNES snes = init();
+        snes.cpu.setEmulationMode(true);
+        snes.cpu.registers().d = 0x1200;
+        snes.cpu.registers().x = 0x02;
+        snes.cpu.registers().y = 0x03;
+        snes.cartridge.data()[0] = 0xff;
+
+        snes.cpu.registers().setPac(0x808000);
+        assertEquals(0x1201, snes.cpu._getDirectIndexedByXAddr());
+
+        snes.cpu.registers().setPac(0x808000);
+        assertEquals(0x1202, snes.cpu._getDirectIndexedByYAddr());
+    }
+
+    @Test
+    void directIndexedAddressesCarryAcrossPagesInNativeMode() {
+        SNES snes = init();
+        snes.cpu.setEmulationMode(false);
+        snes.cpu.registers().d = 0x1200;
+        snes.cpu.registers().x = 0x0002;
+        snes.cpu.registers().y = 0x0003;
+        snes.cartridge.data()[0] = 0xff;
+
+        snes.cpu.registers().setPac(0x808000);
+        assertEquals(0x1301, snes.cpu._getDirectIndexedByXAddr());
+
+        snes.cpu.registers().setPac(0x808000);
+        assertEquals(0x1302, snes.cpu._getDirectIndexedByYAddr());
+    }
+
+    @Test
     void directIndexedIndirectXUsesEightBitIndexWidth() {
         SNES snes = init();
         snes.cartridge.data()[0] = 0xfe;
@@ -241,7 +274,8 @@ class AddressingModeTest {
         snes.cpu.registers().dbr = 0x80;
         snes.cpu.registers().setPac(0x808000);
         snes.wram.data()[0x01ff] = 0x34;
-        snes.wram.data()[0x0200] = 0x12;
+        snes.wram.data()[0x0100] = 0x12;
+        snes.wram.data()[0x0200] = 0x56;
         snes.wram.data()[0x13ff] = 0xaa;
         snes.wram.data()[0x1400] = 0xbb;
 
@@ -450,6 +484,38 @@ class AddressingModeTest {
     }
 
     @Test
+    void directIndirectPointersWrapWithinAlignedPageInEmulationMode() {
+        SparseBus bus = new SparseBus();
+        CPU cpu = new CPU(bus, new Header());
+        cpu.setEmulationMode(true);
+        cpu.registers().setPac(0x008000);
+        cpu.registers().d = 0x1200;
+        cpu.registers().dbr = 0x34;
+        bus.write(0x008000, 0xff);
+        bus.write(0x0012ff, 0x78);
+        bus.write(0x001200, 0x56);
+        bus.write(0x001300, 0x9a);
+
+        assertEquals(0x345678, cpu._getDirectIndirectAddr());
+    }
+
+    @Test
+    void directIndirectLongPointersCanCrossAlignedPageInEmulationMode() {
+        SparseBus bus = new SparseBus();
+        CPU cpu = new CPU(bus, new Header());
+        cpu.setEmulationMode(true);
+        cpu.registers().setPac(0x008000);
+        cpu.registers().d = 0x1200;
+        bus.write(0x008000, 0xff);
+        bus.write(0x0012ff, 0x78);
+        bus.write(0x001300, 0x56);
+        bus.write(0x001301, 0x34);
+        bus.write(0x001200, 0xab);
+
+        assertEquals(0x345678, cpu._getDirectIndirectLongAddr());
+    }
+
+    @Test
     void directIndirectLong() {
         SNES snes = init();
         snes.cpu.registers().setPac(0x808000);
@@ -529,6 +595,26 @@ class AddressingModeTest {
 
         assertEquals(0x8801f4, snes.cpu._getStackRelativeIndirectIndexedYAddr());
         assertEquals(0x808001, snes.cpu.registers().pac);
+    }
+
+    @Test
+    void stackRelativeAddressesWrapWithinPageOneInEmulationMode() {
+        SparseBus bus = new SparseBus();
+        CPU cpu = new CPU(bus, new Header());
+        cpu.setEmulationMode(true);
+        cpu.registers().s = 0x01ff;
+        cpu.registers().dbr = 0x34;
+        bus.write(0x008000, 0x02);
+        bus.write(0x008001, 0x00);
+        bus.write(0x0001ff, 0x78);
+        bus.write(0x000100, 0x56);
+        bus.write(0x000200, 0x9a);
+
+        cpu.registers().setPac(0x008000);
+        assertEquals(0x0101, cpu._getStackRelativeAddr());
+
+        cpu.registers().setPac(0x008001);
+        assertEquals(0x345678, cpu._getStackRelativeIndirectIndexedYAddr());
     }
 
     private static SNES init() {
