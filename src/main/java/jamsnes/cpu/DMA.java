@@ -127,6 +127,7 @@ public class DMA {
             hdmaActive = false;
             return 0;
         }
+        setEnabled(false);
         hdmaActive = true;
         tableAddress = getAddressPage();
         return loadNextHdmaLine(lastActiveChannel);
@@ -140,6 +141,7 @@ public class DMA {
         if (!hdmaEnabled || !hdmaActive) {
             return 0;
         }
+        setEnabled(false);
         if (hdmaDoTransfer) {
             return transferHdmaBytes();
         }

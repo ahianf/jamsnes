@@ -348,6 +348,7 @@ public class CPU extends AMemory {
         for (int i = 0; i < dmaChannels.length; i++) {
             cycles += dmaChannels[i].initializeHDMA(!hasEnabledHdmaChannelAfter(i));
         }
+        synchronizeDmaEnableRegister();
         advanceMathUnit(cycles);
         return cycles;
     }
@@ -357,6 +358,7 @@ public class CPU extends AMemory {
         for (DMA dmaChannel : dmaChannels) {
             cycles += dmaChannel.transferHDMALine();
         }
+        synchronizeDmaEnableRegister();
         for (int i = 0; i < dmaChannels.length; i++) {
             cycles += dmaChannels[i].completeHDMALine(!hasActiveHdmaChannelAfter(i));
         }
@@ -371,6 +373,19 @@ public class CPU extends AMemory {
             }
         }
         return false;
+    }
+
+    private void synchronizeDmaEnableRegister() {
+        int enabledChannels = 0;
+        for (int i = 0; i < dmaChannels.length; i++) {
+            if (dmaChannels[i].isEnabled()) {
+                enabledChannels |= 1 << i;
+            }
+        }
+        internalRegisters[0x0b] = enabledChannels;
+        if (enabledChannels == 0) {
+            dmaStartupPending = false;
+        }
     }
 
     private boolean hasActiveHdmaChannel() {

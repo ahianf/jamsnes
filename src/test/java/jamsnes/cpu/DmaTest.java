@@ -172,6 +172,62 @@ class DmaTest {
     }
 
     @Test
+    void hdmaInitializationCancelsNormalDmaOnTheSameChannel() {
+        SNES snes = init();
+        DMA hdmaChannel = snes.cpu.dmaChannels()[0];
+        DMA dmaOnlyChannel = snes.cpu.dmaChannels()[1];
+        snes.wram.data()[0x0200] = 0x00;
+        snes.wram.data()[0x0300] = 0x8f;
+        setupHdma(snes, DMA.ONE_TO_ONE, 0x26, 0x7e0200);
+        snes.bus.write(0x4305, 0x01);
+        snes.bus.write(0x4306, 0x00);
+        setupHdmaChannel(snes, 1, DMA.ONE_TO_ONE, 0x00, 0x7e0300);
+        snes.bus.write(0x4315, 0x01);
+        snes.bus.write(0x4316, 0x00);
+        snes.bus.write(0x420b, 0x03);
+        snes.bus.write(0x420c, 0x01);
+
+        assertTrue(hdmaChannel.isEnabled());
+        assertTrue(dmaOnlyChannel.isEnabled());
+        assertEquals(16, snes.cpu.initializeHDMA());
+
+        assertFalse(hdmaChannel.isEnabled());
+        assertTrue(dmaOnlyChannel.isEnabled());
+        assertEquals(0x02, snes.cpu.internalRegisters()[0x0b]);
+
+        assertEquals(24, snes.cpu.runDMA(100));
+        assertFalse(dmaOnlyChannel.isEnabled());
+        assertEquals(0x00, snes.cpu.internalRegisters()[0x0b]);
+        assertEquals(0x8f, snes.ppu.registers()[0x00]);
+    }
+
+    @Test
+    void skippedHdmaLineCancelsNewNormalDmaOnTheSameChannel() {
+        SNES snes = init();
+        DMA dma = snes.cpu.dmaChannels()[0];
+        snes.wram.data()[0x0200] = 0x02;
+        snes.wram.data()[0x0201] = 0x5a;
+        snes.wram.data()[0x0202] = 0x00;
+        setupHdma(snes, DMA.ONE_TO_ONE, 0x26, 0x7e0200);
+        snes.bus.write(0x420c, 0x01);
+        assertEquals(16, snes.cpu.initializeHDMA());
+        assertEquals(16, snes.cpu.runHDMALine());
+        assertEquals(0x01, dma.getLineCounter());
+
+        snes.bus.write(0x4305, 0x01);
+        snes.bus.write(0x4306, 0x00);
+        snes.bus.write(0x420b, 0x01);
+        assertTrue(dma.isEnabled());
+
+        assertEquals(16, snes.cpu.runHDMALine());
+
+        assertFalse(dma.isEnabled());
+        assertFalse(dma.isHdmaActive());
+        assertEquals(0x00, snes.cpu.internalRegisters()[0x0b]);
+        assertEquals(0, snes.cpu.runDMA(8));
+    }
+
+    @Test
     void directHdmaTransfersFirstLineThenSkipsUntilNextDescriptor() {
         SNES snes = init();
         DMA dma = snes.cpu.dmaChannels()[0];
