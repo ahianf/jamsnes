@@ -1012,6 +1012,24 @@ class CpuOpcodeDispatchTest {
         assertEquals(0xabcd, snes.cpu._pop16());
     }
 
+    @Test
+    void peiChargesMisalignedDirectPageCycle() {
+        SNES snes = init();
+        snes.cpu.setEmulationMode(false);
+        snes.cpu.registers().setPc(0x0200);
+        snes.cpu.registers().d = 0x0101;
+        snes.cpu.registers().s = 0x1fff;
+        snes.wram.data()[0x0121] = 0xcd;
+        snes.wram.data()[0x0122] = 0xab;
+        writeProgram(snes, 0x0200, 0xd4, 0x20);
+
+        assertEquals(7, snes.cpu.executeInstruction());
+
+        assertEquals(0x0202, snes.cpu.registers().pc);
+        assertEquals(0x1ffd, snes.cpu.registers().s);
+        assertEquals(0xabcd, snes.cpu._pop16());
+    }
+
     private static void writeProgram(SNES snes, int start, int... opcodes) {
         for (int i = 0; i < opcodes.length; i++) {
             snes.wram.data()[start + i] = opcodes[i];

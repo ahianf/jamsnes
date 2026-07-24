@@ -533,7 +533,7 @@ public class CPU extends AMemory {
             case 0xd1 -> 5 + CMP(_getDirectIndirectIndexedYAddr()) + directPageIndexedYExtraCycle();
             case 0xd2 -> 5 + CMP(_getDirectIndirectAddr()) + directPageExtraCycle();
             case 0xd3 -> 7 + CMP(_getStackRelativeIndirectIndexedYAddr());
-            case 0xd4 -> 6 + PEI(_getDirectAddr());
+            case 0xd4 -> 6 + PEI(_getDirectAddr()) + directPageExtraCycle();
             case 0xd5 -> 4 + CMP(_getDirectIndexedByXAddr()) + directPageExtraCycle();
             case 0xd6 -> 6 + DEC(_getDirectIndexedByXAddr()) + directPageExtraCycle();
             case 0xd7 -> 6 + CMP(_getDirectIndirectIndexedYLongAddr()) + directPageExtraCycle();
