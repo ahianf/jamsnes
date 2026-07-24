@@ -562,6 +562,13 @@ public class PPU extends AMemory {
         return H_COUNTER_DOTS;
     }
 
+    public int scanlinesInField(boolean field) {
+        if (!field && ppuRegisters.setiniScreenInterlace()) {
+            return V_COUNTER_SCANLINES + 1;
+        }
+        return V_COUNTER_SCANLINES;
+    }
+
     public boolean isInHBlank() {
         return hCounter >= H_BLANK_START_DOT;
     }
@@ -727,7 +734,7 @@ public class PPU extends AMemory {
         while (hCounter >= scanlineDots) {
             hCounter -= scanlineDots;
             vCounter++;
-            if (vCounter >= V_COUNTER_SCANLINES) {
+            if (vCounter >= scanlinesInField(secondField)) {
                 vCounter = 0;
                 frameCounter++;
                 secondField = !secondField;

@@ -282,7 +282,7 @@ public class SNES {
         if (hTimerEnabled && hTarget >= PPU.H_COUNTER_DOTS) {
             return null;
         }
-        if (vTimerEnabled && vTarget >= PPU.V_COUNTER_SCANLINES) {
+        if (vTimerEnabled && vTarget > PPU.V_COUNTER_SCANLINES) {
             return null;
         }
         int targetH = hTimerEnabled ? hTarget : 0;
@@ -307,7 +307,7 @@ public class SNES {
             elapsed += toNextScanline;
             hCounter = 0;
             vCounter++;
-            if (vCounter >= PPU.V_COUNTER_SCANLINES) {
+            if (vCounter >= ppu.scanlinesInField(secondField)) {
                 vCounter = 0;
                 secondField = !secondField;
             }

@@ -323,16 +323,32 @@ class PpuReadTest {
     @Test
     void interlaceSecondFieldKeepsFullScanline240() {
         SNES snes = init();
-        int frameDots = PPU.H_COUNTER_DOTS * PPU.V_COUNTER_SCANLINES;
+        int firstFieldDots = PPU.H_COUNTER_DOTS * (PPU.V_COUNTER_SCANLINES + 1);
         snes.bus.write(0x2133, 0x01);
 
-        snes.ppu.advanceCountersOnly(frameDots + PPU.H_COUNTER_DOTS * 240 + 340);
+        snes.ppu.advanceCountersOnly(firstFieldDots + PPU.H_COUNTER_DOTS * 240 + 340);
         assertEquals(240, snes.ppu.vCounter());
         assertEquals(340, snes.ppu.hCounter());
 
         snes.ppu.advanceCountersOnly(1);
         assertEquals(241, snes.ppu.vCounter());
         assertEquals(0, snes.ppu.hCounter());
+    }
+
+    @Test
+    void interlaceFirstFieldIncludesExtraScanline262() {
+        SNES snes = init();
+        snes.bus.write(0x2133, 0x01);
+
+        snes.ppu.advanceCountersOnly(PPU.H_COUNTER_DOTS * PPU.V_COUNTER_SCANLINES);
+        assertEquals(262, snes.ppu.vCounter());
+        assertEquals(0, snes.ppu.hCounter());
+        assertEquals(0x00, snes.bus.read(0x213f) & 0x80);
+
+        snes.ppu.advanceCountersOnly(PPU.H_COUNTER_DOTS);
+        assertEquals(0, snes.ppu.vCounter());
+        assertEquals(0, snes.ppu.hCounter());
+        assertEquals(0x80, snes.bus.read(0x213f) & 0x80);
     }
 
     @Test

@@ -636,6 +636,45 @@ class SNESTest {
     }
 
     @Test
+    void updateTimerIrqMatchesExtraInterlaceScanline() {
+        SNES snes = new SNES(new TestRenderer());
+        snes.bus.mapComponents(snes);
+        snes.cpu.isDisabled = true;
+        snes.apu.isDisabled = true;
+        snes.bus.write(0x2133, 0x01);
+        snes.bus.write(0x4200, 0x20);
+        snes.bus.write(0x4209, 0x06);
+        snes.bus.write(0x420a, 0x01);
+        snes.ppu.advanceCountersOnly(PPU.H_COUNTER_DOTS * 261 + 330);
+
+        snes.update();
+
+        assertEquals(262, snes.ppu.vCounter());
+        assertEquals(244, snes.ppu.hCounter());
+        assertEquals(0x80, snes.bus.read(0x4211));
+    }
+
+    @Test
+    void updateTimerIrqSkipsExtraLineTargetOnSecondInterlaceField() {
+        SNES snes = new SNES(new TestRenderer());
+        snes.bus.mapComponents(snes);
+        snes.cpu.isDisabled = true;
+        snes.apu.isDisabled = true;
+        snes.bus.write(0x2133, 0x01);
+        int firstFieldDots = PPU.H_COUNTER_DOTS * (PPU.V_COUNTER_SCANLINES + 1);
+        snes.ppu.advanceCountersOnly(firstFieldDots + PPU.H_COUNTER_DOTS * 261 + 330);
+        snes.bus.write(0x4200, 0x20);
+        snes.bus.write(0x4209, 0x06);
+        snes.bus.write(0x420a, 0x01);
+
+        snes.update();
+
+        assertEquals(0, snes.ppu.vCounter());
+        assertEquals(244, snes.ppu.hCounter());
+        assertEquals(0x00, snes.bus.read(0x4211) & 0x80);
+    }
+
+    @Test
     void updateTimerIrqCanReassertAfterTimersAreDisabledAndReenabled() {
         SNES snes = new SNES(new TestRenderer());
         snes.bus.mapComponents(snes);
