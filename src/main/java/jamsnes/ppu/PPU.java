@@ -68,6 +68,7 @@ public class PPU extends AMemory {
     private final int[][] evaluatedObjectSliverMasks = new int[OBJ_EVALUATED_SCANLINES][OBJ_SCANLINE_LIMIT];
     private final int[] evaluatedObjectCounts = new int[OBJ_EVALUATED_SCANLINES];
     private final int[] scanlineDisplayControl = new int[Background.BUFFER_SIZE];
+    private final ColorMathState[] scanlineColorMathStates = new ColorMathState[Background.BUFFER_SIZE];
     private final boolean[] scanlineDisplayControlCaptured = new boolean[Background.BUFFER_SIZE];
     private int vramAddress;
     private int vmain;
@@ -209,17 +210,22 @@ public class PPU extends AMemory {
 
     public void renderFrame() {
         renderMainAndSubScreen();
+        ColorMathState currentColorMathState = currentColorMathState();
 
         for (int y = 0; y < screen.length; y++) {
             int displayControl = scanlineDisplayControlCaptured[y]
                     ? scanlineDisplayControl[y]
                     : registers[0x00];
+            ColorMathState colorMathState = scanlineDisplayControlCaptured[y]
+                    ? scanlineColorMathStates[y]
+                    : currentColorMathState;
             for (int x = 0; x < screen[y].length; x++) {
-                screen[y][x] = composePixel(x, y);
+                screen[y][x] = composePixel(x, y, colorMathState);
                 renderer.putPixel(y, x, applyDisplayControl(screen[y][x], displayControl));
             }
         }
         renderer.drawScreen();
+        Arrays.fill(scanlineColorMathStates, null);
         Arrays.fill(scanlineDisplayControlCaptured, false);
         clearBuffer(mainScreen);
         clearBuffer(subScreen);
@@ -257,6 +263,7 @@ public class PPU extends AMemory {
         ppu1OpenBus = 0;
         ppu2OpenBus = 0;
         Arrays.fill(scanlineDisplayControl, 0);
+        Arrays.fill(scanlineColorMathStates, null);
         Arrays.fill(scanlineDisplayControlCaptured, false);
         updateBackgroundModes();
         for (int i = 0; i < backgrounds.length; i++) {
@@ -315,7 +322,21 @@ public class PPU extends AMemory {
             return;
         }
         scanlineDisplayControl[scanline] = registers[0x00];
+        scanlineColorMathStates[scanline] = currentColorMathState();
         scanlineDisplayControlCaptured[scanline] = true;
+    }
+
+    private ColorMathState currentColorMathState() {
+        return new ColorMathState(
+                registers[0x25],
+                registers[0x26],
+                registers[0x27],
+                registers[0x28],
+                registers[0x29],
+                registers[0x2b],
+                registers[0x30],
+                registers[0x31],
+                ppuRegisters.fixedColor());
     }
 
     public int getBpp(int backgroundNumber) {
@@ -1171,6 +1192,18 @@ public class PPU extends AMemory {
         private static final Mode7Pixel TRANSPARENT = new Mode7Pixel(0, false);
     }
 
+    private record ColorMathState(
+            int windowSelection,
+            int window1Left,
+            int window1Right,
+            int window2Left,
+            int window2Right,
+            int windowLogic,
+            int selection,
+            int designation,
+            int fixedColor) {
+    }
+
     private record ObjectDimensions(int width, int height) {
     }
 
@@ -1184,7 +1217,7 @@ public class PPU extends AMemory {
         }
     }
 
-    private int composePixel(int x, int y) {
+    private int composePixel(int x, int y, ColorMathState colorMathState) {
         int pixel = mainScreen[y][x];
         int source = mainScreenSourceMap[y][x];
         if (source == SOURCE_NONE) {
@@ -1192,68 +1225,81 @@ public class PPU extends AMemory {
             pixel = PPUUtils.cgramColorToRGBA(backdrop);
             source = SOURCE_BACKDROP;
         }
-        boolean clippedToBlack = isColorClippedToBlack(x);
+        boolean clippedToBlack = isColorClippedToBlack(x, colorMathState);
         if (clippedToBlack) {
             pixel = 0x000000ff;
         }
-        return applyColorMath(pixel, source, x, y, clippedToBlack);
+        return applyColorMath(pixel, source, x, y, clippedToBlack, colorMathState);
     }
 
-    private int applyColorMath(int pixel, int source, int x, int y, boolean clippedToBlack) {
-        if (isColorMathPrevented(x) || !isColorMathEnabledForSource(source)) {
+    private int applyColorMath(
+            int pixel,
+            int source,
+            int x,
+            int y,
+            boolean clippedToBlack,
+            ColorMathState colorMathState) {
+        if (isColorMathPrevented(x, colorMathState)
+                || !isColorMathEnabledForSource(source, colorMathState)) {
             return pixel;
         }
-        boolean addSubscreen = ppuRegisters.cgwselAddSubscreen();
+        boolean addSubscreen = (colorMathState.selection() & 0x02) != 0;
         int other = addSubscreen
                 ? subScreen[y][x]
-                : PPUUtils.cgramColorToRGBA(ppuRegisters.fixedColor());
-        boolean half = ppuRegisters.cgadsubHalfColorMath()
+                : PPUUtils.cgramColorToRGBA(colorMathState.fixedColor());
+        boolean half = (colorMathState.designation() & 0x40) != 0
                 && !clippedToBlack
                 && (!addSubscreen || subScreenSourceMap[y][x] != SOURCE_BACKDROP);
-        return ppuRegisters.cgadsubAddSubtractSelect()
+        return (colorMathState.designation() & 0x80) != 0
                 ? subtractColor(pixel, other, half)
                 : addColor(pixel, other, half);
     }
 
-    private boolean isColorMathEnabledForSource(int source) {
+    private boolean isColorMathEnabledForSource(int source, ColorMathState colorMathState) {
+        int designation = colorMathState.designation();
         if (source == SOURCE_BACKDROP) {
-            return ppuRegisters.cgadsubEnableColorMathBackdrop();
+            return (designation & 0x20) != 0;
         }
         if (source >= 1 && source <= 4) {
-            return ppuRegisters.cgadsubEnableColorMathBg(source - 1);
+            return (designation & (1 << (source - 1))) != 0;
         }
         if (source == SOURCE_OBJ_COLOR_MATH) {
-            return ppuRegisters.cgadsubEnableColorMathObj();
+            return (designation & 0x10) != 0;
         }
         return false;
     }
 
-    private boolean isColorClippedToBlack(int x) {
-        return isColorWindowModeActive(ppuRegisters.cgwselClipColorToBlackBeforeMath(), x);
+    private boolean isColorClippedToBlack(int x, ColorMathState colorMathState) {
+        return isColorWindowModeActive((colorMathState.selection() >>> 6) & 0x03, x, colorMathState);
     }
 
-    private boolean isColorMathPrevented(int x) {
-        return isColorWindowModeActive(ppuRegisters.cgwselPreventColorMath(), x);
+    private boolean isColorMathPrevented(int x, ColorMathState colorMathState) {
+        return isColorWindowModeActive((colorMathState.selection() >>> 4) & 0x03, x, colorMathState);
     }
 
-    private boolean isColorWindowModeActive(int mode, int x) {
+    private boolean isColorWindowModeActive(int mode, int x, ColorMathState colorMathState) {
         return switch (mode) {
             case 0b00 -> false;
-            case 0b01 -> !isInsideColorWindow(x);
-            case 0b10 -> isInsideColorWindow(x);
+            case 0b01 -> !isInsideColorWindow(x, colorMathState);
+            case 0b10 -> isInsideColorWindow(x, colorMathState);
             case 0b11 -> true;
             default -> false;
         };
     }
 
-    private boolean isInsideColorWindow(int x) {
+    private boolean isInsideColorWindow(int x, ColorMathState colorMathState) {
+        int selection = colorMathState.windowSelection();
         return isInsideWindowMask(
-                ppuRegisters.windowEnableWindow1ForBg2Bg4Color(2),
-                ppuRegisters.window1InversionForBg2Bg4Color(2),
-                ppuRegisters.windowEnableWindow2ForBg2Bg4Color(2),
-                ppuRegisters.window2InversionForBg2Bg4Color(2),
-                ppuRegisters.windowMaskLogicColor(),
-                x);
+                (selection & 0x20) != 0,
+                (selection & 0x10) != 0,
+                (selection & 0x80) != 0,
+                (selection & 0x40) != 0,
+                (colorMathState.windowLogic() >>> 2) & 0x03,
+                x,
+                colorMathState.window1Left(),
+                colorMathState.window1Right(),
+                colorMathState.window2Left(),
+                colorMathState.window2Right());
     }
 
     private boolean isInsideWindowMask(
@@ -1263,8 +1309,32 @@ public class PPU extends AMemory {
             boolean window2Inverted,
             int maskLogic,
             int x) {
-        boolean window1 = window1Enabled && isInsideWindow(x, 0);
-        boolean window2 = window2Enabled && isInsideWindow(x, 2);
+        return isInsideWindowMask(
+                window1Enabled,
+                window1Inverted,
+                window2Enabled,
+                window2Inverted,
+                maskLogic,
+                x,
+                ppuRegisters.windowPosition(0),
+                ppuRegisters.windowPosition(1),
+                ppuRegisters.windowPosition(2),
+                ppuRegisters.windowPosition(3));
+    }
+
+    private boolean isInsideWindowMask(
+            boolean window1Enabled,
+            boolean window1Inverted,
+            boolean window2Enabled,
+            boolean window2Inverted,
+            int maskLogic,
+            int x,
+            int window1Left,
+            int window1Right,
+            int window2Left,
+            int window2Right) {
+        boolean window1 = window1Enabled && isInsideWindow(x, window1Left, window1Right);
+        boolean window2 = window2Enabled && isInsideWindow(x, window2Left, window2Right);
 
         if (window1Enabled && window1Inverted) {
             window1 = !window1;
@@ -1288,8 +1358,13 @@ public class PPU extends AMemory {
     }
 
     private boolean isInsideWindow(int x, int positionIndex) {
-        int left = ppuRegisters.windowPosition(positionIndex);
-        int right = ppuRegisters.windowPosition(positionIndex + 1);
+        return isInsideWindow(
+                x,
+                ppuRegisters.windowPosition(positionIndex),
+                ppuRegisters.windowPosition(positionIndex + 1));
+    }
+
+    private boolean isInsideWindow(int x, int left, int right) {
         return left <= right && x >= left && x <= right;
     }
 

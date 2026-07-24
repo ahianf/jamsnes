@@ -685,6 +685,30 @@ class SNESTest {
     }
 
     @Test
+    void updatePreservesFixedColorFromBeforeEachScanlineHdmaTransfer() {
+        TestRenderer renderer = new TestRenderer();
+        SNES snes = new SNES(renderer);
+        snes.bus.mapComponents(snes);
+        snes.cpu.isDisabled = true;
+        snes.apu.isDisabled = true;
+        snes.bus.write(0x2100, 0x0f);
+        snes.bus.write(0x2131, 0x20);
+        snes.wram.data()[0x0200] = 0x01;
+        snes.wram.data()[0x0201] = 0x3f;
+        snes.wram.data()[0x0202] = 0x00;
+        setupHdma(snes, DMA.ONE_TO_ONE, 0x32, 0x7e0200);
+        snes.bus.write(0x420c, 0x01);
+
+        for (int updates = 0; renderer.drawScreenCalls == 0 && updates < 400; updates++) {
+            snes.update();
+        }
+
+        assertEquals(1, renderer.drawScreenCalls);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x0000), renderer.firstScanlinePixel);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.secondScanlinePixel);
+    }
+
+    @Test
     void updateSpreadsNormalDmaAcrossHblankAccessWindow() {
         SNES snes = new SNES(new TestRenderer());
         snes.bus.mapComponents(snes);
