@@ -283,6 +283,56 @@ class TransferInstructionTest {
     }
 
     @Test
+    void mvnInNativeEightBitIndexModeCarriesAcrossPage() {
+        SNES snes = init();
+        snes.cpu.setEmulationMode(false);
+        snes.cpu.registers().p.x_b = true;
+        snes.cpu.registers().a = 0x0001;
+        snes.cpu.registers().x = 0x00ff;
+        snes.cpu.registers().y = 0x00fe;
+        snes.wram.data()[0x1ff0] = 0x7f;
+        snes.wram.data()[0x1ff1] = 0x7e;
+        snes.wram.data()[0x00ff] = 0xaa;
+        snes.wram.data()[0x0100] = 0xbb;
+
+        int cycles = 0;
+        do {
+            cycles += snes.cpu.MVN(0x1ff0);
+        } while (snes.cpu.registers().a != 0xffff);
+
+        assertEquals(14, cycles);
+        assertEquals(0xaa, snes.wram.data()[0x100fe]);
+        assertEquals(0xbb, snes.wram.data()[0x100ff]);
+        assertEquals(0x0101, snes.cpu.registers().x);
+        assertEquals(0x0100, snes.cpu.registers().y);
+    }
+
+    @Test
+    void mvpInNativeEightBitIndexModeBorrowsAcrossPage() {
+        SNES snes = init();
+        snes.cpu.setEmulationMode(false);
+        snes.cpu.registers().p.x_b = true;
+        snes.cpu.registers().a = 0x0001;
+        snes.cpu.registers().x = 0x0000;
+        snes.cpu.registers().y = 0x0001;
+        snes.wram.data()[0x1ff0] = 0x7f;
+        snes.wram.data()[0x1ff1] = 0x7e;
+        snes.wram.data()[0x0000] = 0xaa;
+        snes.wram.data()[0xffff] = 0xbb;
+
+        int cycles = 0;
+        do {
+            cycles += snes.cpu.MVP(0x1ff0);
+        } while (snes.cpu.registers().a != 0xffff);
+
+        assertEquals(14, cycles);
+        assertEquals(0xaa, snes.wram.data()[0x10001]);
+        assertEquals(0xbb, snes.wram.data()[0x10000]);
+        assertEquals(0xfffe, snes.cpu.registers().x);
+        assertEquals(0xffff, snes.cpu.registers().y);
+    }
+
+    @Test
     void mvnInEmulationModeUsesLowIndexBytes() {
         SNES snes = init();
         snes.cpu.setEmulationMode(true);

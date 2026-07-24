@@ -1319,7 +1319,7 @@ public class CPU extends AMemory {
     }
 
     private boolean blockMoveUsesEightBitIndex() {
-        return emulationMode || registers.p.x_b;
+        return emulationMode;
     }
 
     public int INX(int valueAddr) {
