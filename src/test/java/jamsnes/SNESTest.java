@@ -734,6 +734,141 @@ class SNESTest {
     }
 
     @Test
+    void updatePreservesBackgroundPaletteFromBeforeEachScanlineHdmaTransfer() {
+        TestRenderer renderer = new TestRenderer();
+        SNES snes = new SNES(renderer);
+        snes.bus.mapComponents(snes);
+        snes.cpu.isDisabled = true;
+        snes.apu.isDisabled = true;
+        snes.bus.write(0x2100, 0x0f);
+        snes.bus.write(0x210b, 0x01);
+        snes.bus.write(0x212c, 0x01);
+        snes.bus.write(0x2121, 0x01);
+        snes.ppu.cgram.write(0x02, 0x1f);
+        snes.ppu.cgram.write(0x03, 0x00);
+        snes.ppu.vram.write(0x0000, 0x00);
+        snes.ppu.vram.write(0x0001, 0x00);
+        snes.ppu.vram.write(0x2000, 0x80);
+        snes.ppu.vram.write(0x2002, 0x80);
+        snes.wram.data()[0x0200] = 0x01;
+        snes.wram.data()[0x0201] = 0xe0;
+        snes.wram.data()[0x0202] = 0x03;
+        snes.wram.data()[0x0203] = 0x00;
+        setupHdma(snes, DMA.TWO_TO_ONE, 0x22, 0x7e0200);
+        snes.bus.write(0x420c, 0x01);
+
+        for (int updates = 0; renderer.drawScreenCalls == 0 && updates < 400; updates++) {
+            snes.update();
+        }
+
+        assertEquals(1, renderer.drawScreenCalls);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.firstScanlinePixel);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), renderer.secondScanlinePixel);
+    }
+
+    @Test
+    void updatePreservesObjectPaletteFromBeforeEachScanlineHdmaTransfer() {
+        TestRenderer renderer = new TestRenderer();
+        SNES snes = new SNES(renderer);
+        snes.bus.mapComponents(snes);
+        snes.cpu.isDisabled = true;
+        snes.apu.isDisabled = true;
+        snes.bus.write(0x2100, 0x0f);
+        snes.bus.write(0x212c, 0x10);
+        snes.bus.write(0x2121, 0x81);
+        snes.ppu.cgram.write(0x102, 0x1f);
+        snes.ppu.cgram.write(0x103, 0x00);
+        snes.ppu.vram.write(0x0000, 0x80);
+        snes.ppu.vram.write(0x0002, 0x80);
+        snes.wram.data()[0x0200] = 0x01;
+        snes.wram.data()[0x0201] = 0xe0;
+        snes.wram.data()[0x0202] = 0x03;
+        snes.wram.data()[0x0203] = 0x00;
+        setupHdma(snes, DMA.TWO_TO_ONE, 0x22, 0x7e0200);
+        snes.bus.write(0x420c, 0x01);
+
+        for (int updates = 0; renderer.drawScreenCalls == 0 && updates < 400; updates++) {
+            snes.update();
+        }
+
+        assertEquals(1, renderer.drawScreenCalls);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.firstScanlinePixel);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), renderer.secondScanlinePixel);
+    }
+
+    @Test
+    void updatePreservesModeSevenPaletteFromBeforeEachScanlineHdmaTransfer() {
+        TestRenderer renderer = new TestRenderer();
+        SNES snes = new SNES(renderer);
+        snes.bus.mapComponents(snes);
+        snes.cpu.isDisabled = true;
+        snes.apu.isDisabled = true;
+        snes.bus.write(0x2100, 0x0f);
+        snes.bus.write(0x2105, 0x07);
+        snes.bus.write(0x212c, 0x01);
+        snes.bus.write(0x2121, 0x05);
+        writeMode7Register(snes, 0x211b, 0x0100);
+        writeMode7Register(snes, 0x211c, 0x0000);
+        writeMode7Register(snes, 0x211d, 0x0000);
+        writeMode7Register(snes, 0x211e, 0x0100);
+        snes.ppu.cgram.write(0x0a, 0x1f);
+        snes.ppu.cgram.write(0x0b, 0x00);
+        snes.ppu.vram.write(0x0000, 0x01);
+        snes.ppu.vram.write(0x0081, 0x05);
+        snes.ppu.vram.write(0x0091, 0x05);
+        snes.wram.data()[0x0200] = 0x01;
+        snes.wram.data()[0x0201] = 0xe0;
+        snes.wram.data()[0x0202] = 0x03;
+        snes.wram.data()[0x0203] = 0x00;
+        setupHdma(snes, DMA.TWO_TO_ONE, 0x22, 0x7e0200);
+        snes.bus.write(0x420c, 0x01);
+
+        for (int updates = 0; renderer.drawScreenCalls == 0 && updates < 400; updates++) {
+            snes.update();
+        }
+
+        assertEquals(1, renderer.drawScreenCalls);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.firstScanlinePixel);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), renderer.secondScanlinePixel);
+    }
+
+    @Test
+    void updatePreservesBackgroundDirectColorFromBeforeEachScanlineHdmaTransfer() {
+        TestRenderer renderer = new TestRenderer();
+        SNES snes = new SNES(renderer);
+        snes.bus.mapComponents(snes);
+        snes.cpu.isDisabled = true;
+        snes.apu.isDisabled = true;
+        snes.bus.write(0x2100, 0x0f);
+        snes.bus.write(0x2105, 0x03);
+        snes.bus.write(0x210b, 0x01);
+        snes.bus.write(0x212c, 0x01);
+        snes.ppu.cgram.write(0x0e, 0xe0);
+        snes.ppu.cgram.write(0x0f, 0x03);
+        snes.ppu.vram.write(0x0000, 0x00);
+        snes.ppu.vram.write(0x0001, 0x00);
+        snes.ppu.vram.write(0x2000, 0x80);
+        snes.ppu.vram.write(0x2001, 0x80);
+        snes.ppu.vram.write(0x2010, 0x80);
+        snes.ppu.vram.write(0x2002, 0x80);
+        snes.ppu.vram.write(0x2003, 0x80);
+        snes.ppu.vram.write(0x2012, 0x80);
+        snes.wram.data()[0x0200] = 0x01;
+        snes.wram.data()[0x0201] = 0x01;
+        snes.wram.data()[0x0202] = 0x00;
+        setupHdma(snes, DMA.ONE_TO_ONE, 0x30, 0x7e0200);
+        snes.bus.write(0x420c, 0x01);
+
+        for (int updates = 0; renderer.drawScreenCalls == 0 && updates < 400; updates++) {
+            snes.update();
+        }
+
+        assertEquals(1, renderer.drawScreenCalls);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), renderer.firstScanlinePixel);
+        assertEquals(PPUUtils.directColorToRGBA(0, 0x07), renderer.secondScanlinePixel);
+    }
+
+    @Test
     void updatePreservesBackgroundScrollFromBeforeEachScanlineHdmaTransfer() {
         TestRenderer renderer = new TestRenderer();
         SNES snes = new SNES(renderer);

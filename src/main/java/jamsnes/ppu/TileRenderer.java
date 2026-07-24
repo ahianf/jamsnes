@@ -10,6 +10,7 @@ public class TileRenderer {
     private int bpp = 2;
     private int paletteIndex;
     public final int[][] buffer = new int[8][8];
+    final int[][] pixelReferences = new int[8][8];
 
     public TileRenderer(Ram vram, Ram cgram) {
         this.ram = vram;
@@ -93,11 +94,12 @@ public class TileRenderer {
     }
 
     public void render(int tileAddress, boolean directColor) {
-        int[] palette = getPalette(paletteIndex);
+        int[] palette = directColor ? null : getPalette(bpp == 8 ? 0 : paletteIndex);
         int pixelIndex = 0;
         for (int y = 0; y < buffer.length; y++) {
             for (int x = 0; x < buffer[y].length; x++) {
                 int pixelReference = getPixelReferenceFromTile(tileAddress, pixelIndex++);
+                pixelReferences[y][x] = pixelReference;
                 if (pixelReference == 0) {
                     buffer[y][x] = 0;
                 } else if (directColor) {

@@ -21,7 +21,18 @@ public class Background {
             int scrollY,
             int mosaicSize,
             boolean[] windowMask,
-            int horizontalScale) {
+            int horizontalScale,
+            int[] palette,
+            boolean directColor) {
+        public ScanlineState(
+                boolean enabled,
+                int scrollX,
+                int scrollY,
+                int mosaicSize,
+                boolean[] windowMask,
+                int horizontalScale) {
+            this(enabled, scrollX, scrollY, mosaicSize, windowMask, horizontalScale, null, false);
+        }
     }
 
     private final PPU ppu;
@@ -34,6 +45,8 @@ public class Background {
     private int tileMapStartAddress;
     private int tilesetAddress;
     private final int[][] tileBuffer = new int[16][16];
+    private final short[][] tilePixelDescriptors = new short[16][16];
+    private final short[][] pixelDescriptors = new short[BUFFER_SIZE][BUFFER_SIZE];
     public final int[][] buffer = new int[BUFFER_SIZE][BUFFER_SIZE];
     public final boolean[][] tilesPriority = new boolean[PRIORITY_SIZE][PRIORITY_SIZE];
     public Vector2<Integer> backgroundSize = new Vector2<>(0, 0);
@@ -248,7 +261,7 @@ public class Background {
                 }
                 int sourceX = Math.floorMod(sourceCoordinateX * state.horizontalScale(), sourceWidth);
                 int sourceY = Math.floorMod(mosaicY + sourceScrollY, sourceHeight);
-                int pixel = backgroundSrc.buffer[sourceY][sourceX];
+                int pixel = backgroundSrc.resolvePixel(sourceX, sourceY, state);
                 if (Integer.compareUnsigned(pixel, 0xff) <= 0) {
                     continue;
                 }
@@ -262,6 +275,25 @@ public class Background {
                 }
             }
         }
+    }
+
+    private int resolvePixel(int x, int y, ScanlineState state) {
+        if (state.palette() == null) {
+            return buffer[y][x];
+        }
+        int descriptor = pixelDescriptors[y][x] & 0xffff;
+        int pixelReference = descriptor & 0xff;
+        if (pixelReference == 0) {
+            return 0;
+        }
+        int paletteIndex = descriptor >>> 8;
+        if (bpp == 8 && state.directColor()) {
+            return PPUUtils.directColorToRGBA(paletteIndex, pixelReference);
+        }
+        int colorIndex = bpp == 8
+                ? pixelReference
+                : paletteIndex * (1 << bpp) + pixelReference;
+        return PPUUtils.cgramColorToRGBA(state.palette()[colorIndex & 0xff]);
     }
 
     private void drawBasicTileMap(int baseAddress, int offsetX, int offsetY) {
@@ -299,6 +331,12 @@ public class Background {
         int pixelY = indexY * characterNbPixels.y;
         for (int y = 0; y < characterNbPixels.y; y++) {
             System.arraycopy(tileBuffer[y], 0, buffer[pixelY + y], pixelX, characterNbPixels.x);
+            System.arraycopy(
+                    tilePixelDescriptors[y],
+                    0,
+                    pixelDescriptors[pixelY + y],
+                    pixelX,
+                    characterNbPixels.x);
         }
     }
 
@@ -324,6 +362,11 @@ public class Background {
     private void mergeTileRendererBuffer(int offsetX, int offsetY) {
         for (int y = 0; y < Tile.NB_PIXELS_HEIGHT; y++) {
             System.arraycopy(tileRenderer.buffer[y], 0, tileBuffer[offsetY + y], offsetX, Tile.NB_PIXELS_WIDTH);
+            for (int x = 0; x < Tile.NB_PIXELS_WIDTH; x++) {
+                int pixelReference = tileRenderer.pixelReferences[y][x];
+                tilePixelDescriptors[offsetY + y][offsetX + x] =
+                        (short) ((tileRenderer.getPaletteIndex() << 8) | pixelReference);
+            }
         }
     }
 
@@ -332,10 +375,14 @@ public class Background {
             int[] tmp = tileBuffer[y];
             tileBuffer[y] = tileBuffer[height - 1 - y];
             tileBuffer[height - 1 - y] = tmp;
+            short[] descriptorTmp = tilePixelDescriptors[y];
+            tilePixelDescriptors[y] = tilePixelDescriptors[height - 1 - y];
+            tilePixelDescriptors[height - 1 - y] = descriptorTmp;
         }
         if (width < tileBuffer[0].length) {
             for (int y = 0; y < height; y++) {
                 Arrays.fill(tileBuffer[y], width, tileBuffer[y].length, 0);
+                Arrays.fill(tilePixelDescriptors[y], width, tilePixelDescriptors[y].length, (short) 0);
             }
         }
     }
@@ -346,6 +393,9 @@ public class Background {
                 int tmp = tileBuffer[y][x];
                 tileBuffer[y][x] = tileBuffer[y][width - 1 - x];
                 tileBuffer[y][width - 1 - x] = tmp;
+                short descriptorTmp = tilePixelDescriptors[y][x];
+                tilePixelDescriptors[y][x] = tilePixelDescriptors[y][width - 1 - x];
+                tilePixelDescriptors[y][width - 1 - x] = descriptorTmp;
             }
         }
     }
@@ -353,6 +403,9 @@ public class Background {
     private void clearBuffers() {
         for (int[] row : buffer) {
             Arrays.fill(row, 0);
+        }
+        for (short[] row : pixelDescriptors) {
+            Arrays.fill(row, (short) 0);
         }
         for (boolean[] row : tilesPriority) {
             Arrays.fill(row, false);
@@ -362,6 +415,9 @@ public class Background {
     private void clearTileBuffer() {
         for (int[] row : tileBuffer) {
             Arrays.fill(row, 0);
+        }
+        for (short[] row : tilePixelDescriptors) {
+            Arrays.fill(row, (short) 0);
         }
     }
 

@@ -217,6 +217,23 @@ class TileRendererTest {
     }
 
     @Test
+    void render8bppIgnoresTilePaletteBitsForCgramLookup() {
+        Ram vram = new Ram(100, Component.VRAM, "vramTest");
+        Ram cgram = new Ram(512, Component.CGRAM, "cgramTest");
+        TileRenderer renderer = new TileRenderer(vram, cgram);
+        renderer.setBpp(8);
+        renderer.setPaletteIndex(7);
+        vram.write(0x00, 0x80);
+        vram.write(0x01, 0x80);
+        vram.write(0x10, 0x80);
+        writeCgramColor(cgram, 7, 0x03e0);
+
+        renderer.render(0);
+
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), renderer.buffer[0][0]);
+    }
+
+    @Test
     void render8bppCanUseDirectColorInsteadOfCgram() {
         Ram vram = new Ram(100, Component.VRAM, "vramTest");
         Ram cgram = new Ram(512, Component.CGRAM, "cgramTest");
