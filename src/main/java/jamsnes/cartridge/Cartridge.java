@@ -10,6 +10,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import static jamsnes.models.Unsigned.u24;
 import static jamsnes.models.Unsigned.u8;
 
 public class Cartridge extends Ram {
@@ -37,7 +38,7 @@ public class Cartridge extends Ram {
     @Override
     public int read(int address) {
         int romSize = getSize();
-        int mirroredAddress = romSize == 0 ? 0 : Math.floorMod(address, romSize);
+        int mirroredAddress = mirrorAddress(address, romSize);
         return super.read(romStart + mirroredAddress);
     }
 
@@ -214,6 +215,24 @@ public class Cartridge extends Ram {
             bytes[i] = (byte) u8(data()[start + i]);
         }
         return bytes;
+    }
+
+    private static int mirrorAddress(int address, int size) {
+        if (size == 0) {
+            return 0;
+        }
+        int mirroredAddress = u24(address);
+        int mirroredBase = 0;
+        int mirroredSize = size;
+        while (mirroredAddress >= mirroredSize) {
+            int mask = Integer.highestOneBit(mirroredAddress);
+            mirroredAddress -= mask;
+            if (mirroredSize > mask) {
+                mirroredSize -= mask;
+                mirroredBase += mask;
+            }
+        }
+        return mirroredBase + mirroredAddress;
     }
 
     private static void copyHeader(Header from, Header to) {

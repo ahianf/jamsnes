@@ -52,6 +52,33 @@ class CartridgeTest {
         assertEquals(0x78, cartridge.read(0));
     }
 
+    @Test
+    void threeMegabyteRomMirrorsItsTrailingMegabyteIntoTheFourth() {
+        Cartridge cartridge = new Cartridge();
+        cartridge.setSize(0x300000);
+        cartridge.data()[0x000000] = 0x11;
+        cartridge.data()[0x200000] = 0x22;
+        cartridge.data()[0x280000] = 0x33;
+
+        assertEquals(0x22, cartridge.read(0x300000));
+        assertEquals(0x33, cartridge.read(0x380000));
+        assertEquals(0x11, cartridge.read(0x400000));
+    }
+
+    @Test
+    void twoAndAHalfMegabyteRomRepeatsItsTrailingHalfMegabyte() {
+        Cartridge cartridge = new Cartridge();
+        cartridge.setSize(0x280000);
+        cartridge.data()[0x000000] = 0x11;
+        cartridge.data()[0x200000] = 0x22;
+        cartridge.data()[0x27ffff] = 0x33;
+
+        assertEquals(0x22, cartridge.read(0x280000));
+        assertEquals(0x33, cartridge.read(0x2fffff));
+        assertEquals(0x22, cartridge.read(0x300000));
+        assertEquals(0x33, cartridge.read(0x37ffff));
+    }
+
     private static void writeLoRomHeader(byte[] rom, int base, String title) {
         byte[] name = title.getBytes(StandardCharsets.ISO_8859_1);
         System.arraycopy(name, 0, rom, base + 0xc0, name.length);

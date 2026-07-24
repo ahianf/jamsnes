@@ -316,6 +316,19 @@ class MemoryBusTest {
     }
 
     @Test
+    void mappedThreeMegabyteLoromMirrorsItsTrailingMegabyte() {
+        SNES snes = init();
+        snes.cartridge.setSize(0x300000);
+        snes.bus.mapComponents(snes);
+        snes.cartridge.data()[0x000000] = 0x11;
+        snes.cartridge.data()[0x200000] = 0x22;
+        snes.cartridge.data()[0x280000] = 0x33;
+
+        assertEquals(0x22, snes.bus.read(0xe08000));
+        assertEquals(0x33, snes.bus.read(0xf08000));
+    }
+
+    @Test
     void mappedHiromReadsMirrorPhysicalRomSize() {
         SNES snes = initHirom();
         snes.cartridge.setSize(0x10000);
