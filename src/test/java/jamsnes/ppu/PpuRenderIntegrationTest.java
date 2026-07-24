@@ -499,6 +499,26 @@ class PpuRenderIntegrationTest {
     }
 
     @Test
+    void modeSevenAppliesBackgroundOneMosaicBeforeTransformingCoordinates() {
+        SNES snes = init(new TestRenderer());
+        writeColor(snes, 5, 0x001f);
+        writeColor(snes, 6, 0x03e0);
+        setupMode7Identity(snes);
+        snes.bus.write(0x2106, 0x11);
+        snes.ppu.vram.write(0x0000, 0x01);
+        snes.ppu.vram.write(0x4040, 0x05);
+        snes.ppu.vram.write(0x4041, 0x06);
+        snes.ppu.vram.write(0x4048, 0x06);
+
+        snes.ppu.renderMainAndSubScreen();
+
+        int mosaicColor = PPUUtils.cgramColorToRGBA(0x001f);
+        assertEquals(mosaicColor, snes.ppu.mainScreen()[0][0]);
+        assertEquals(mosaicColor, snes.ppu.mainScreen()[0][1]);
+        assertEquals(mosaicColor, snes.ppu.mainScreen()[1][0]);
+    }
+
+    @Test
     void modeSevenDirectColorBypassesCgramForBackgroundOne() {
         SNES snes = init(new TestRenderer());
         writeColor(snes, 0xe7, 0x001f);
@@ -582,6 +602,26 @@ class PpuRenderIntegrationTest {
         snes.ppu.renderMainAndSubScreen();
 
         assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][0]);
+    }
+
+    @Test
+    void modeSevenExtBgUsesBg1ForVerticalMosaicAndBg2ForHorizontalMosaic() {
+        SNES snes = init(new TestRenderer());
+        writeColor(snes, 5, 0x001f);
+        writeColor(snes, 6, 0x03e0);
+        setupMode7Identity(snes);
+        snes.bus.write(0x2133, 0x40);
+        snes.bus.write(0x212c, 0x02);
+        snes.bus.write(0x2106, 0x11);
+        snes.ppu.vram.write(0x0000, 0x01);
+        snes.ppu.vram.write(0x4040, 0x05);
+        snes.ppu.vram.write(0x4041, 0x06);
+        snes.ppu.vram.write(0x4048, 0x06);
+
+        snes.ppu.renderMainAndSubScreen();
+
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[1][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), snes.ppu.mainScreen()[0][1]);
     }
 
     @Test

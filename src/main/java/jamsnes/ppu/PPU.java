@@ -1032,11 +1032,18 @@ public class PPU extends AMemory {
         int centerX = signed13(ppuRegisters.m7CenterValue(0));
         int centerY = signed13(ppuRegisters.m7CenterValue(1));
         Vector2<Integer> scroll = getBgScroll(1);
+        int mosaicSize = ppuRegisters.mosaicPixelSize() + 1;
+        boolean horizontalMosaic = ppuRegisters.mosaicAffectsBackground(source - 1);
+        boolean verticalMosaic = ppuRegisters.mosaicAffectsBackground(0);
 
         for (int y = 0; y < destination.length; y++) {
+            int screenY = verticalMosaic ? (y / mosaicSize) * mosaicSize : y;
             for (int x = 0; x < destination[y].length; x++) {
-                int sourceX = (((a * (x - centerX)) + (b * (y - centerY))) >> 8) + centerX + scroll.x;
-                int sourceY = (((c * (x - centerX)) + (d * (y - centerY))) >> 8) + centerY + scroll.y;
+                int screenX = horizontalMosaic ? (x / mosaicSize) * mosaicSize : x;
+                int sourceX = (((a * (screenX - centerX)) + (b * (screenY - centerY))) >> 8)
+                        + centerX + scroll.x;
+                int sourceY = (((c * (screenX - centerX)) + (d * (screenY - centerY))) >> 8)
+                        + centerY + scroll.y;
                 if (ppuRegisters.m7HorizontalMirroring()) {
                     sourceX = MODE7_SIZE - 1 - sourceX;
                 }
