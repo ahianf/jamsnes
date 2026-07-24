@@ -20,7 +20,7 @@ public class CPU extends AMemory {
     private IMemoryBus bus;
     private int timerEnableGeneration;
     private boolean hasIndexCrossedPageBoundary;
-    private boolean programOperandWrapsBank;
+    private boolean operandWrapsBank;
     private boolean emulationMode = true;
     private boolean stopped;
     private boolean waitingForInterrupt;
@@ -317,7 +317,7 @@ public class CPU extends AMemory {
     }
 
     public int executeInstruction() {
-        programOperandWrapsBank = false;
+        operandWrapsBank = false;
         int opcode = readPC();
         hasIndexCrossedPageBoundary = false;
         int cycles = switch (opcode) {
@@ -579,7 +579,7 @@ public class CPU extends AMemory {
             case 0xff -> 5 + SBC(_getAbsoluteIndexedByXLongAddr());
             default -> throw new InvalidOpcode("CPU opcode 0x%02x is not implemented".formatted(opcode));
         };
-        programOperandWrapsBank = false;
+        operandWrapsBank = false;
         return cycles;
     }
 
@@ -602,19 +602,20 @@ public class CPU extends AMemory {
 
     public int _getImmediateAddrForA() {
         int effective = registers.pac;
-        programOperandWrapsBank = true;
+        operandWrapsBank = true;
         registers.incrementPc(registers.p.m ? 1 : 2);
         return effective;
     }
 
     public int _getImmediateAddrForX() {
         int effective = registers.pac;
-        programOperandWrapsBank = true;
+        operandWrapsBank = true;
         registers.incrementPc(registers.p.x_b ? 1 : 2);
         return effective;
     }
 
     public int _getDirectAddr() {
+        operandWrapsBank = true;
         return directPageAddress(readPC());
     }
 
@@ -659,10 +660,12 @@ public class CPU extends AMemory {
     }
 
     public int _getDirectIndexedByXAddr() {
+        operandWrapsBank = true;
         return directPageAddress(readPC() + indexXValue());
     }
 
     public int _getDirectIndexedByYAddr() {
+        operandWrapsBank = true;
         return directPageAddress(readPC() + indexYValue());
     }
 
@@ -737,6 +740,7 @@ public class CPU extends AMemory {
     }
 
     public int _getStackRelativeAddr() {
+        operandWrapsBank = true;
         return stackRelativeAddress(readPC());
     }
 
@@ -1373,7 +1377,7 @@ public class CPU extends AMemory {
     public int STA(int address) {
         bus.write(address, registers.al());
         if (!registers.p.m) {
-            bus.write(address + 1, registers.ah());
+            bus.write(nextOperandAddress(address), registers.ah());
         }
         return registers.p.m ? 0 : 1;
     }
@@ -1381,7 +1385,7 @@ public class CPU extends AMemory {
     public int STX(int address) {
         bus.write(address, registers.xl());
         if (!registers.p.x_b) {
-            bus.write(address + 1, registers.xh());
+            bus.write(nextOperandAddress(address), registers.xh());
         }
         return registers.p.x_b ? 0 : 1;
     }
@@ -1389,7 +1393,7 @@ public class CPU extends AMemory {
     public int STY(int address) {
         bus.write(address, registers.yl());
         if (!registers.p.x_b) {
-            bus.write(address + 1, registers.yh());
+            bus.write(nextOperandAddress(address), registers.yh());
         }
         return registers.p.x_b ? 0 : 1;
     }
@@ -1397,7 +1401,7 @@ public class CPU extends AMemory {
     public int STZ(int address) {
         bus.write(address, 0);
         if (!registers.p.m) {
-            bus.write(address + 1, 0);
+            bus.write(nextOperandAddress(address), 0);
         }
         return registers.p.m ? 0 : 1;
     }
@@ -1506,10 +1510,11 @@ public class CPU extends AMemory {
             result = (bus.read(valueAddr) + 1) & 0xff;
             bus.write(valueAddr, result);
         } else {
-            result = (bus.read(valueAddr) | (bus.read(valueAddr + 1) << 8)) + 1;
+            int highAddress = nextOperandAddress(valueAddr);
+            result = (bus.read(valueAddr) | (bus.read(highAddress) << 8)) + 1;
             result &= 0xffff;
             bus.write(valueAddr, result);
-            bus.write(valueAddr + 1, result >>> 8);
+            bus.write(highAddress, result >>> 8);
         }
         setZNAccumulator(result);
         return registers.p.m ? 0 : 2;
@@ -1521,10 +1526,11 @@ public class CPU extends AMemory {
             result = (bus.read(valueAddr) - 1) & 0xff;
             bus.write(valueAddr, result);
         } else {
-            result = (bus.read(valueAddr) | (bus.read(valueAddr + 1) << 8)) - 1;
+            int highAddress = nextOperandAddress(valueAddr);
+            result = (bus.read(valueAddr) | (bus.read(highAddress) << 8)) - 1;
             result &= 0xffff;
             bus.write(valueAddr, result);
-            bus.write(valueAddr + 1, result >>> 8);
+            bus.write(highAddress, result >>> 8);
         }
         setZNAccumulator(result);
         return registers.p.m ? 0 : 2;
@@ -1557,7 +1563,7 @@ public class CPU extends AMemory {
         int newValue = normalizeAccumulator(value | accumulator);
         bus.write(valueAddr, newValue);
         if (!registers.p.m) {
-            bus.write(valueAddr + 1, newValue >>> 8);
+            bus.write(nextOperandAddress(valueAddr), newValue >>> 8);
         }
         registers.p.z = (value & accumulator) == 0;
         return registers.p.m ? 0 : 2;
@@ -1569,7 +1575,7 @@ public class CPU extends AMemory {
         int newValue = normalizeAccumulator(value & ~accumulator);
         bus.write(valueAddr, newValue);
         if (!registers.p.m) {
-            bus.write(valueAddr + 1, newValue >>> 8);
+            bus.write(nextOperandAddress(valueAddr), newValue >>> 8);
         }
         registers.p.z = (value & accumulator) == 0;
         return registers.p.m ? 0 : 2;
@@ -1882,7 +1888,7 @@ public class CPU extends AMemory {
     private void writeAccumulatorWidth(int valueAddr, int value) {
         bus.write(valueAddr, value);
         if (!registers.p.m) {
-            bus.write(valueAddr + 1, value >>> 8);
+            bus.write(nextOperandAddress(valueAddr), value >>> 8);
         }
     }
 
@@ -1912,8 +1918,11 @@ public class CPU extends AMemory {
     }
 
     private int readOperandWord(int address) {
-        int highAddress = programOperandWrapsBank ? nextProgramAddress(address) : u24(address + 1);
-        return bus.read(address) | (bus.read(highAddress) << 8);
+        return bus.read(address) | (bus.read(nextOperandAddress(address)) << 8);
+    }
+
+    private int nextOperandAddress(int address) {
+        return operandWrapsBank ? nextProgramAddress(address) : u24(address + 1);
     }
 
     private void markIndexBoundary(int base, int index) {

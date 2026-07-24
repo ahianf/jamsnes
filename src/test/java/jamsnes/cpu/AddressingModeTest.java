@@ -49,6 +49,99 @@ class AddressingModeTest {
     }
 
     @Test
+    void directWordReadsWrapWithinBankZeroWhileAbsoluteReadsCrossBanks() {
+        SparseBus bus = new SparseBus();
+        CPU cpu = new CPU(bus, new Header());
+        cpu.setEmulationMode(false);
+        cpu.registers().p.m = false;
+        cpu.registers().d = 0xffff;
+        cpu.registers().setPac(0x008000);
+        bus.write(0x008000, 0xa5);
+        bus.write(0x008001, 0x00);
+        bus.write(0x00ffff, 0x34);
+        bus.write(0x000000, 0x12);
+        bus.write(0x010000, 0x56);
+
+        assertEquals(5, cpu.executeInstruction());
+        assertEquals(0x1234, cpu.registers().a);
+
+        cpu.registers().setPac(0x008010);
+        bus.write(0x008010, 0xad);
+        bus.write(0x008011, 0xff);
+        bus.write(0x008012, 0xff);
+
+        assertEquals(5, cpu.executeInstruction());
+        assertEquals(0x5634, cpu.registers().a);
+    }
+
+    @Test
+    void directIndexedAndStackRelativeWordReadsWrapWithinBankZero() {
+        SparseBus bus = new SparseBus();
+        CPU cpu = new CPU(bus, new Header());
+        cpu.setEmulationMode(false);
+        cpu.registers().p.m = false;
+        cpu.registers().p.x_b = false;
+        cpu.registers().d = 0xfffe;
+        cpu.registers().x = 0x0001;
+        cpu.registers().setPac(0x008000);
+        bus.write(0x008000, 0xb5);
+        bus.write(0x008001, 0x00);
+        bus.write(0x00ffff, 0x34);
+        bus.write(0x000000, 0x12);
+        bus.write(0x010000, 0x56);
+
+        assertEquals(6, cpu.executeInstruction());
+        assertEquals(0x1234, cpu.registers().a);
+
+        cpu.registers().s = 0xffff;
+        cpu.registers().setPac(0x008010);
+        bus.write(0x008010, 0xa3);
+        bus.write(0x008011, 0x00);
+
+        assertEquals(5, cpu.executeInstruction());
+        assertEquals(0x1234, cpu.registers().a);
+    }
+
+    @Test
+    void directWordStoresWrapWithinBankZero() {
+        SparseBus bus = new SparseBus();
+        CPU cpu = new CPU(bus, new Header());
+        cpu.setEmulationMode(false);
+        cpu.registers().p.m = false;
+        cpu.registers().a = 0xabcd;
+        cpu.registers().d = 0xffff;
+        cpu.registers().setPac(0x008000);
+        bus.write(0x008000, 0x85);
+        bus.write(0x008001, 0x00);
+        bus.write(0x010000, 0x7e);
+
+        assertEquals(5, cpu.executeInstruction());
+        assertEquals(0xcd, bus.read(0x00ffff));
+        assertEquals(0xab, bus.read(0x000000));
+        assertEquals(0x7e, bus.read(0x010000));
+    }
+
+    @Test
+    void directWordReadModifyWriteWrapsWithinBankZero() {
+        SparseBus bus = new SparseBus();
+        CPU cpu = new CPU(bus, new Header());
+        cpu.setEmulationMode(false);
+        cpu.registers().p.m = false;
+        cpu.registers().d = 0xffff;
+        cpu.registers().setPac(0x008000);
+        bus.write(0x008000, 0xe6);
+        bus.write(0x008001, 0x00);
+        bus.write(0x00ffff, 0xff);
+        bus.write(0x000000, 0x00);
+        bus.write(0x010000, 0x7e);
+
+        assertEquals(8, cpu.executeInstruction());
+        assertEquals(0x00, bus.read(0x00ffff));
+        assertEquals(0x01, bus.read(0x000000));
+        assertEquals(0x7e, bus.read(0x010000));
+    }
+
+    @Test
     void absolute() {
         SNES snes = init();
         snes.cartridge.data()[0] = 0x1c;
