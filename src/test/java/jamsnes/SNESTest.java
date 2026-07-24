@@ -624,6 +624,35 @@ class SNESTest {
     }
 
     @Test
+    void cpuNmitimenWriteRequestsLateNmiBeforeFollowingInstruction() {
+        SNES snes = new SNES(new TestRenderer());
+        snes.bus.mapComponents(snes);
+        snes.cpu.isDisabled = true;
+        snes.apu.isDisabled = true;
+        snes.ppu.advanceCountersOnly(PPU.H_COUNTER_DOTS * PPU.V_BLANK_START_SCANLINE + 12);
+        snes.update();
+
+        snes.cpu.isDisabled = false;
+        snes.cpu.registers().setPc(0x0200);
+        snes.cartridge.header.emulationInterrupts.nmi = 0x0300;
+        snes.wram.data()[0x0200] = 0xa9;
+        snes.wram.data()[0x0201] = 0x80;
+        snes.wram.data()[0x0202] = 0x8d;
+        snes.wram.data()[0x0203] = 0x00;
+        snes.wram.data()[0x0204] = 0x42;
+        snes.wram.data()[0x0205] = 0xe6;
+        snes.wram.data()[0x0206] = 0x10;
+        snes.wram.data()[0x0300] = 0xea;
+
+        snes.update();
+
+        assertEquals(0x00, snes.wram.data()[0x0010]);
+        assertEquals(0x0300, snes.cpu.registers().pc);
+        assertFalse(snes.cpu.isNMIRequested);
+        assertEquals(0x80, snes.cpu.internalRegisters()[0x10]);
+    }
+
+    @Test
     void updateLatchesRdnmiAtVBlankEntryWhenNmiIsDisabled() {
         SNES snes = new SNES(new TestRenderer());
         snes.bus.mapComponents(snes);

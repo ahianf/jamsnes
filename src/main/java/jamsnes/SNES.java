@@ -66,6 +66,7 @@ public class SNES {
         this.joypad = new Joypad(bus);
         this.ppu = new PPU(renderer);
         this.cpu.setIoPortLatchListener(this.ppu::latchCounters);
+        this.cpu.setNmiControlListener(this::updateNmiControl);
         this.ppu.setExternalCounterLatchEnabled(() -> (cpu.internalRegisters()[0x01] & 0x80) != 0);
         this.apu = new APU(renderer);
     }
@@ -280,6 +281,14 @@ public class SNES {
         wasInVBlank = inVBlank;
         wasNmiEnabled = nmiEnabled;
         return enteredVBlank;
+    }
+
+    private void updateNmiControl(int value) {
+        boolean enabled = (value & 0x80) != 0;
+        if (enabled && !wasNmiEnabled && cpu.isNmiStatusLatched()) {
+            cpu.requestNMI();
+        }
+        wasNmiEnabled = enabled;
     }
 
     private void updateAutoJoypadRegisters() {

@@ -9,6 +9,7 @@ import jamsnes.memory.IMemoryBus;
 import jamsnes.models.Component;
 
 import java.util.OptionalInt;
+import java.util.function.IntConsumer;
 
 import static jamsnes.models.Unsigned.u16;
 import static jamsnes.models.Unsigned.u24;
@@ -46,6 +47,8 @@ public class CPU extends AMemory {
     private IMemoryBus rawBus;
     private Runnable ioPortLatchListener = () -> {
     };
+    private IntConsumer nmiControlListener = value -> {
+    };
     public boolean isNMIRequested;
     public boolean isIRQRequested;
     public boolean isAbortRequested;
@@ -81,6 +84,11 @@ public class CPU extends AMemory {
     public void setIoPortLatchListener(Runnable ioPortLatchListener) {
         this.ioPortLatchListener = ioPortLatchListener == null ? () -> {
         } : ioPortLatchListener;
+    }
+
+    public void setNmiControlListener(IntConsumer nmiControlListener) {
+        this.nmiControlListener = nmiControlListener == null ? value -> {
+        } : nmiControlListener;
     }
 
     public Registers registers() {
@@ -186,7 +194,9 @@ public class CPU extends AMemory {
             ioPortLatchListener.run();
         }
         internalRegisters[address] = value;
-        if (address == 0x03) {
+        if (address == 0x00) {
+            nmiControlListener.accept(value);
+        } else if (address == 0x03) {
             startMultiplication();
         } else if (address == 0x06) {
             startDivision();
