@@ -298,6 +298,23 @@ class SNESTest {
     }
 
     @Test
+    void gameUpdatesClockApuFromCpuMasterClocks() {
+        SNES snes = new SNES(new TestRenderer());
+        snes.cartridge.setSize(0x10000);
+        snes.cartridge.header.addMappingMode(MappingMode.LOROM);
+        snes.sram.setSize(0x10000);
+        snes.bus.mapComponents(snes);
+        snes.cpu.registers().setPc(0x0200);
+        snes.wram.data()[0x0200] = 0xcb;
+
+        snes.update();
+        snes.update();
+
+        int expectedCycles = (int) ((144L * SNES.APU_CLOCK_HZ) / SNES.MASTER_CLOCK_HZ);
+        assertEquals(expectedCycles % 32, snes.apu.dsp().voicePhase());
+    }
+
+    @Test
     void updateAdvancesRequestedCyclesWhileCpuWaitsForInterrupt() {
         SNES snes = new SNES(new TestRenderer());
         snes.cartridge.setSize(0x10000);
@@ -311,7 +328,7 @@ class SNESTest {
         snes.update();
         snes.update();
 
-        assertEquals(24, snes.ppu.hCounter());
+        assertEquals(36, snes.ppu.hCounter());
         assertEquals(0, snes.ppu.vCounter());
         assertEquals(0x0201, snes.cpu.registers().pc);
     }
@@ -332,7 +349,13 @@ class SNESTest {
 
         snes.update();
 
-        assertEquals(13, snes.ppu.hCounter());
+        assertEquals(19, snes.ppu.hCounter());
+        assertEquals(0x0303, snes.cpu.registers().pc);
+
+        snes.cpu.requestNMI();
+        snes.update();
+
+        assertEquals(39, snes.ppu.hCounter());
         assertEquals(0x0303, snes.cpu.registers().pc);
     }
 
@@ -788,7 +811,7 @@ class SNESTest {
 
         assertEquals(0x12, snes.ppu.cgram.read(0x40));
         assertEquals(0x34, snes.ppu.cgram.read(0x41));
-        assertEquals(303, snes.ppu.hCounter());
+        assertEquals(267, snes.ppu.hCounter());
         assertEquals(0, snes.ppu.vCounter());
         assertEquals(0, snes.cpu.internalRegisters()[0x0b]);
         assertEquals(0x01, snes.cpu.internalRegisters()[0x0c]);
@@ -1156,14 +1179,14 @@ class SNESTest {
         snes.wram.data()[0x0041] = 0x22;
         snes.wram.data()[0x0042] = 0x33;
         snes.wram.data()[0x0043] = 0x44;
-        snes.ppu.advanceCountersOnly(250);
+        snes.ppu.advanceCountersOnly(252);
         snes.bus.write(0x2121, 0x00);
         setupDma(snes, DMA.TWO_TO_ONE, 0x22, 0x7e0040, 4);
         snes.bus.write(0x420b, 0x01);
 
         snes.update();
 
-        assertEquals(266, snes.ppu.hCounter());
+        assertEquals(PPU.H_BLANK_START_DOT, snes.ppu.hCounter());
         assertEquals(0x00, snes.ppu.cgram.read(0));
         assertEquals(true, snes.cpu.dmaChannels()[0].isEnabled());
 

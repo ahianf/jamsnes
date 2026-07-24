@@ -17,6 +17,7 @@ class CpuUpdateLoopTest {
         writeProgram(snes, 0x0200, 0xea, 0xea, 0xea);
 
         assertEquals(4, snes.cpu.update(4));
+        assertEquals(24, snes.cpu.elapsedMasterClocks());
         assertEquals(0x0202, snes.cpu.registers().pc);
     }
 
@@ -38,10 +39,12 @@ class CpuUpdateLoopTest {
         snes.wram.data()[0x0200] = 0xcb;
 
         assertEquals(10, snes.cpu.update(10));
+        assertEquals(60, snes.cpu.elapsedMasterClocks());
         assertTrue(snes.cpu.isWaitingForInterrupt());
         assertEquals(0x0201, snes.cpu.registers().pc);
 
         assertEquals(6, snes.cpu.update(6));
+        assertEquals(36, snes.cpu.elapsedMasterClocks());
         assertEquals(0x0201, snes.cpu.registers().pc);
     }
 
@@ -265,6 +268,7 @@ class CpuUpdateLoopTest {
         snes.wram.data()[0x0201] = 0xea;
 
         assertEquals(8, snes.cpu.update(1));
+        assertEquals(8, snes.cpu.elapsedMasterClocks());
         assertTrue(snes.cpu.dmaChannels()[0].isEnabled());
         assertEquals(0x01, snes.cpu.internalRegisters()[0x0b]);
         assertEquals(0x0200, snes.cpu.registers().pc);

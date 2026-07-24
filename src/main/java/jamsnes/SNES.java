@@ -16,6 +16,7 @@ import jamsnes.renderer.IRenderer;
 public class SNES {
     static final int APU_CLOCK_HZ = 1_024_000;
     static final int PPU_DOT_CLOCK_HZ = 5_369_318;
+    static final int MASTER_CLOCK_HZ = PPU_DOT_CLOCK_HZ * 4;
     private static final int APU_CYCLES_PER_AUDIO_UPDATE = 32;
     private static final int NMITIMEN_AUTO_JOYPAD_ENABLE = 0x01;
     private static final int NMITIMEN_H_IRQ_ENABLE = 0x10;
@@ -43,6 +44,7 @@ public class SNES {
     private int autoJoypadReadDotsElapsed;
     private int autoJoypadBitsRead;
     private boolean autoJoypadLatchReleased;
+    private int ppuMasterClockRemainder;
     private long apuClockRemainder;
 
     public SNES(IRenderer renderer) {
@@ -93,6 +95,7 @@ public class SNES {
         autoJoypadReadDotsElapsed = 0;
         autoJoypadBitsRead = 0;
         autoJoypadLatchReleased = true;
+        ppuMasterClockRemainder = 0;
         apuClockRemainder = 0;
     }
 
@@ -106,24 +109,24 @@ public class SNES {
         int timerStartVCounter = ppu.vCounter();
         boolean timerStartSecondField = ppu.isSecondField();
         long startFrameCounter = ppu.frameCounter();
-        int hdmaInitCycles = initializeHdmaAtFrameStart();
-        if (hdmaInitCycles > 0) {
-            ppu.advanceCountersOnly(hdmaInitCycles);
-            advanceApuForPpuDots(hdmaInitCycles);
+        int hdmaInitMasterClocks = initializeHdmaAtFrameStart();
+        int hdmaInitDots = advancePpuForMasterClocks(hdmaInitMasterClocks);
+        if (hdmaInitMasterClocks > 0) {
+            advanceApuForMasterClocks(hdmaInitMasterClocks);
         }
 
         int startHCounter = ppu.hCounter();
         int startVCounter = ppu.vCounter();
-        int cycleCount = cpu.update(0x0c);
-        boolean entersHBlank = entersHBlank(startHCounter, startVCounter, cycleCount);
-        ppu.advanceCountersOnly(cycleCount);
-        int hdmaCycles = 0;
+        cpu.update(0x0c);
+        int cpuMasterClocks = cpu.elapsedMasterClocks();
+        int cpuDots = advancePpuForMasterClocks(cpuMasterClocks);
+        boolean entersHBlank = entersHBlank(startHCounter, startVCounter, cpuDots);
+        int hdmaMasterClocks = 0;
+        int hdmaDots = 0;
         if (entersHBlank && !ppu.isInVBlank()) {
             ppu.captureScanlineState(startVCounter);
-            hdmaCycles = cpu.runHDMALine();
-            if (hdmaCycles > 0) {
-                ppu.advanceCountersOnly(hdmaCycles);
-            }
+            hdmaMasterClocks = cpu.runHDMALine();
+            hdmaDots = advancePpuForMasterClocks(hdmaMasterClocks);
         }
         if (ppu.frameCounter() != startFrameCounter) {
             hdmaInitializedThisFrame = false;
@@ -133,23 +136,34 @@ public class SNES {
             ppu.renderFrame();
         }
         updateAutoJoypadBusy(enteredVBlank, timerStartHCounter, timerStartVCounter,
-                hdmaInitCycles + cycleCount + hdmaCycles);
+                hdmaInitDots + cpuDots + hdmaDots);
         updateVideoStatusRegisters();
         updateTimerIrq(timerStartHCounter, timerStartVCounter, timerStartSecondField,
-                hdmaInitCycles + cycleCount + hdmaCycles);
-        advanceApuForPpuDots(cycleCount);
-        if (hdmaCycles > 0) {
-            advanceApuForPpuDots(hdmaCycles);
+                hdmaInitDots + cpuDots + hdmaDots);
+        advanceApuForMasterClocks(cpuMasterClocks);
+        if (hdmaMasterClocks > 0) {
+            advanceApuForMasterClocks(hdmaMasterClocks);
         }
     }
 
-    private void advanceApuForPpuDots(int dots) {
-        if (dots <= 0) {
+    private int advancePpuForMasterClocks(int masterClocks) {
+        if (masterClocks <= 0) {
+            return 0;
+        }
+        int totalMasterClocks = ppuMasterClockRemainder + masterClocks;
+        int dots = totalMasterClocks / MASTER_CLOCKS_PER_PPU_DOT;
+        ppuMasterClockRemainder = totalMasterClocks % MASTER_CLOCKS_PER_PPU_DOT;
+        ppu.advanceCountersOnly(dots);
+        return dots;
+    }
+
+    private void advanceApuForMasterClocks(int masterClocks) {
+        if (masterClocks <= 0) {
             return;
         }
-        long scaledCycles = apuClockRemainder + (long) dots * APU_CLOCK_HZ;
-        int apuCycles = (int) (scaledCycles / PPU_DOT_CLOCK_HZ);
-        apuClockRemainder = scaledCycles % PPU_DOT_CLOCK_HZ;
+        long scaledCycles = apuClockRemainder + (long) masterClocks * APU_CLOCK_HZ;
+        int apuCycles = (int) (scaledCycles / MASTER_CLOCK_HZ);
+        apuClockRemainder = scaledCycles % MASTER_CLOCK_HZ;
         if (apuCycles > 0) {
             apu.update(apuCycles);
         }

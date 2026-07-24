@@ -16,6 +16,7 @@ public class CPU extends AMemory {
     private static final int MULTIPLICATION_CYCLES = 8;
     private static final int DIVISION_CYCLES = 16;
     private static final int DMA_SHARED_OVERHEAD_CYCLES = 8;
+    private static final int MASTER_CLOCKS_PER_CPU_CYCLE = 6;
     private static final int MATH_OPERATION_NONE = 0;
     private static final int MATH_OPERATION_MULTIPLY = 1;
     private static final int MATH_OPERATION_DIVIDE = 2;
@@ -35,6 +36,7 @@ public class CPU extends AMemory {
     private int mathCyclesRemaining;
     private int pendingQuotient;
     private int pendingProductOrRemainder;
+    private int elapsedMasterClocks;
     private Runnable ioPortLatchListener = () -> {
     };
     public boolean isNMIRequested;
@@ -268,6 +270,10 @@ public class CPU extends AMemory {
         return timerEnableGeneration;
     }
 
+    public int elapsedMasterClocks() {
+        return elapsedMasterClocks;
+    }
+
     public void requestNMI() {
         isNMIRequested = true;
         internalRegisters[0x10] |= 0x80;
@@ -284,24 +290,30 @@ public class CPU extends AMemory {
 
     public int update(int maxCycles) {
         if (isDisabled) {
+            elapsedMasterClocks = 0xff * 4;
             return 0xff;
         }
         int cycles = 0;
+        elapsedMasterClocks = 0;
 
         while (cycles < maxCycles) {
-            cycles += runDMA(maxCycles - cycles);
+            int dmaMasterClocks = runDMA(maxCycles - cycles);
+            cycles += dmaMasterClocks;
+            elapsedMasterClocks += dmaMasterClocks;
             if (cycles >= maxCycles) {
                 continue;
             }
 
             if (stopped) {
                 cycles++;
+                elapsedMasterClocks += MASTER_CLOCKS_PER_CPU_CYCLE;
                 advanceMathUnit(1);
                 continue;
             }
 
             int interruptCycles = checkInterrupts();
             cycles += interruptCycles;
+            elapsedMasterClocks += interruptCycles * MASTER_CLOCKS_PER_CPU_CYCLE;
             advanceMathUnit(interruptCycles);
             if (cycles >= maxCycles) {
                 continue;
@@ -310,9 +322,12 @@ public class CPU extends AMemory {
             if (!waitingForInterrupt) {
                 int instructionCycles = executeInstruction();
                 cycles += instructionCycles;
+                elapsedMasterClocks += instructionCycles * MASTER_CLOCKS_PER_CPU_CYCLE;
                 advanceMathUnit(instructionCycles);
             } else {
-                advanceMathUnit(maxCycles - cycles);
+                int idleCycles = maxCycles - cycles;
+                elapsedMasterClocks += idleCycles * MASTER_CLOCKS_PER_CPU_CYCLE;
+                advanceMathUnit(idleCycles);
                 return maxCycles;
             }
         }
@@ -1238,6 +1253,7 @@ public class CPU extends AMemory {
         isAbortRequested = false;
         mathOperation = MATH_OPERATION_NONE;
         mathCyclesRemaining = 0;
+        elapsedMasterClocks = 0;
         dmaStartupPending = false;
         internalRegisters[0x10] &= 0x7f;
         internalRegisters[0x11] &= 0x7f;
