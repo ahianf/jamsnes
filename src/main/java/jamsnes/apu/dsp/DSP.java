@@ -40,6 +40,16 @@ public class DSP {
             536, 0, 1040, 536, 0, 1040,
             0, 0
     };
+    private static final int[] POWER_ON_REGISTERS = {
+            0x45, 0x8b, 0x5a, 0x9a, 0xe4, 0x82, 0x1b, 0x78, 0x00, 0x00, 0xaa, 0x96, 0x89, 0x0e, 0xe0, 0x80,
+            0x2a, 0x49, 0x3d, 0xba, 0x14, 0xa0, 0xac, 0xc5, 0x00, 0x00, 0x51, 0xbb, 0x9c, 0x4e, 0x7b, 0xff,
+            0xf4, 0xfd, 0x57, 0x32, 0x37, 0xd9, 0x42, 0x22, 0x00, 0x00, 0x5b, 0x3c, 0x9f, 0x1b, 0x87, 0x9a,
+            0x6f, 0x27, 0xaf, 0x7b, 0xe5, 0x68, 0x0a, 0xd9, 0x00, 0x00, 0x9a, 0xc5, 0x9c, 0x4e, 0x7b, 0xff,
+            0xea, 0x21, 0x78, 0x4f, 0xdd, 0xed, 0x24, 0x14, 0x00, 0x00, 0x77, 0xb1, 0xd1, 0x36, 0xc1, 0x67,
+            0x52, 0x57, 0x46, 0x3d, 0x59, 0xf4, 0x87, 0xa4, 0x00, 0x00, 0x7e, 0x44, 0x00, 0x4e, 0x7b, 0xff,
+            0x75, 0xf5, 0x06, 0x97, 0x10, 0xc3, 0x24, 0xbb, 0x00, 0x00, 0x7b, 0x7a, 0xe0, 0x60, 0x12, 0x0f,
+            0xf7, 0x74, 0x1c, 0xe5, 0x39, 0x3d, 0x73, 0xc1, 0x00, 0x00, 0x7a, 0xb3, 0xff, 0x4e, 0x7b, 0xff
+    };
     private static final int[] GAUSS = {
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2,
@@ -82,14 +92,13 @@ public class DSP {
     private final BRR brr = new BRR();
     private final Latch latch = new Latch();
     private final Timer timer = new Timer();
-    private final int[] unusedRegisters = new int[0x80];
+    private final int[] externalRegisters = new int[0x80];
     private final short[] soundBuffer = new short[0x10000];
     private final IntUnaryOperator ramReader;
     private final RamWriter ramWriter;
     private final IRenderer renderer;
     private int voicePhase;
     private int bufferOffset;
-    private int endxReadback;
 
     public DSP() {
         int[] ram = new int[0x10000];
@@ -118,73 +127,22 @@ public class DSP {
         for (Voice voice : voices) {
             voice.reset();
         }
+        voices[4].pitchLow = 1;
+        voices[5].pitchLow = 1;
         master.reset();
         echo.reset();
         noise.reset();
         brr.reset();
         latch.reset();
         timer.reset();
-        Arrays.fill(unusedRegisters, 0);
+        System.arraycopy(POWER_ON_REGISTERS, 0, externalRegisters, 0, externalRegisters.length);
         voicePhase = 0;
         bufferOffset = 0;
-        endxReadback = 0;
     }
 
     public int read(int address) {
         int normalized = u8(address) & 0x7f;
-        int voice = normalized >>> 4;
-        int register = normalized & 0x0f;
-
-        if (voice < voices.length) {
-            switch (register) {
-                case 0x0:
-                    return voices[voice].volume[0];
-                case 0x1:
-                    return voices[voice].volume[1];
-                case 0x2:
-                    return voices[voice].pitchLow;
-                case 0x3:
-                    return voices[voice].pitchHigh;
-                case 0x4:
-                    return voices[voice].sourceNumber;
-                case 0x5:
-                    return voices[voice].adsr1;
-                case 0x6:
-                    return voices[voice].adsr2;
-                case 0x7:
-                    return voices[voice].gain;
-                case 0x8:
-                    return voices[voice].envx;
-                case 0x9:
-                    return voices[voice].outx;
-                default:
-                    break;
-            }
-        }
-
-        return switch (normalized) {
-            case 0x0c -> master.volume[0];
-            case 0x1c -> master.volume[1];
-            case 0x2c -> echo.volume[0];
-            case 0x3c -> echo.volume[1];
-            case 0x4c -> packedVoiceFlags(Flag.KON);
-            case 0x5c -> packedVoiceFlags(Flag.KOF);
-            case 0x6c -> ((master.reset ? 1 : 0) << 7)
-                    | ((master.mute ? 1 : 0) << 6)
-                    | ((echo.enabled ? 1 : 0) << 5)
-                    | noise.clock;
-            case 0x7c -> endxReadback;
-            case 0x0d -> echo.feedback;
-            case 0x1d -> master.unused;
-            case 0x2d -> packedVoiceFlags(Flag.PMON);
-            case 0x3d -> packedVoiceFlags(Flag.NON);
-            case 0x4d -> packedVoiceFlags(Flag.EON);
-            case 0x5d -> brr.offset;
-            case 0x6d -> echo.data;
-            case 0x7d -> echo.delay;
-            case 0x0f, 0x1f, 0x2f, 0x3f, 0x4f, 0x5f, 0x6f, 0x7f -> echo.fir[normalized >>> 4];
-            default -> unusedRegisters[normalized];
-        };
+        return externalRegisters[normalized];
     }
 
     public void write(int address, int data) {
@@ -192,6 +150,7 @@ public class DSP {
         int value = u8(data);
         int voice = normalized >>> 4;
         int register = normalized & 0x0f;
+        externalRegisters[normalized] = value;
 
         if (voice < voices.length) {
             switch (register) {
@@ -256,7 +215,6 @@ public class DSP {
                 noise.clock = value & 0x1f;
             }
             case 0x7c -> {
-                endxReadback = value;
                 setVoiceFlags(0, Flag.ENDX);
                 latch.endx = 0;
             }
@@ -269,7 +227,8 @@ public class DSP {
             case 0x6d -> echo.data = value;
             case 0x7d -> echo.delay = value;
             case 0x0f, 0x1f, 0x2f, 0x3f, 0x4f, 0x5f, 0x6f, 0x7f -> echo.fir[normalized >>> 4] = value;
-            default -> unusedRegisters[normalized] = value;
+            default -> {
+            }
         }
     }
 
@@ -279,7 +238,7 @@ public class DSP {
             int value = u8(data);
             setVoiceFlags(value, Flag.ENDX);
             latch.endx = value;
-            endxReadback = value;
+            externalRegisters[normalized] = value;
             return;
         }
         write(normalized, data);
@@ -956,16 +915,18 @@ public class DSP {
 
     private void voice7(Voice voice) {
         setVoiceFlags(latch.endx, Flag.ENDX);
-        endxReadback = latch.endx;
+        externalRegisters[0x7c] = latch.endx;
         latch.envx = voice.envelopeOutput;
     }
 
     private void voice8(Voice voice) {
         voice.outx = latch.outx;
+        externalRegisters[voice.registerBase + 0x09] = latch.outx;
     }
 
     private void voice9(Voice voice) {
         voice.envx = latch.envx;
+        externalRegisters[voice.registerBase + 0x08] = latch.envx;
     }
 
     int loadFIR(int channel, int fir) {
@@ -1281,6 +1242,7 @@ public class DSP {
 
     private static final class Voice {
         private final int bit;
+        private final int registerBase;
         private final int[] volume = new int[2];
         private int pitchLow;
         private int pitchHigh;
@@ -1316,6 +1278,7 @@ public class DSP {
 
         private Voice(int index) {
             bit = 1 << index;
+            registerBase = index << 4;
         }
 
         private void reset() {

@@ -90,13 +90,31 @@ class DSPTest {
     }
 
     @Test
-    void resetRestoresPowerOnDspFlags() {
+    void resetRestoresPowerOnDspRegisterReadback() {
         DSP dsp = new DSP();
         dsp.write(0x6c, 0x00);
 
         dsp.reset();
 
+        assertEquals(0x45, dsp.read(0x00));
+        assertEquals(0xd1, dsp.read(0x4c));
         assertEquals(0xe0, dsp.read(0x6c));
+        assertEquals(0xff, dsp.read(0x7c));
+    }
+
+    @Test
+    void resetKeepsPowerOnReadbackSeparateFromInternalRegisters() {
+        DSP dsp = new DSP();
+
+        dsp.reset();
+
+        assertEquals(0x78, dsp.read(0x42));
+        dsp.voice2(4);
+        assertEquals(1, dsp.latchPitch());
+
+        dsp.voice5(0);
+        dsp.voice7(0);
+        assertEquals(0, dsp.read(0x7c));
     }
 
     @Test
