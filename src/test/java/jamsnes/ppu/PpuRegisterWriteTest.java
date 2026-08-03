@@ -397,7 +397,7 @@ class PpuRegisterWriteTest {
     }
 
     @Test
-    void cgDataWriteIsSkippedDuringCgramRenderingButStillAdvancesPhaseAndAddress() {
+    void cgDataWriteRedirectsToTheBackdropFetchDuringActiveRendering() {
         SNES snes = init();
         snes.ppu.advanceCountersOnly(PPU.H_COUNTER_DOTS + 22);
 
@@ -411,6 +411,24 @@ class PpuRegisterWriteTest {
         assertEquals(0x11, snes.ppu.ppuRegisters().cgAddress());
         assertEquals(0x00, snes.ppu.cgram.read(0x20));
         assertEquals(0x00, snes.ppu.cgram.read(0x21));
+        assertEquals(0xff, snes.ppu.cgram.read(0x00));
+        assertEquals(0x78, snes.ppu.cgram.read(0x01));
+    }
+
+    @Test
+    void cgDataWriteRedirectsToTheBackgroundPaletteFetchDuringActiveRendering() {
+        SNES snes = init();
+        prepareBg1PaletteFetchAtFirstVisiblePixel(snes);
+
+        snes.bus.write(0x2121, 0x20);
+        snes.bus.write(0x2122, 0xaa);
+        snes.bus.write(0x2122, 0xbb);
+
+        assertEquals(0xaa, snes.ppu.cgram.read(9 * 2));
+        assertEquals(0x3b, snes.ppu.cgram.read(9 * 2 + 1));
+        assertEquals(0x00, snes.ppu.cgram.read(0x40));
+        assertEquals(0x00, snes.ppu.cgram.read(0x41));
+        assertEquals(0x21, snes.ppu.ppuRegisters().cgAddress());
     }
 
     @Test
@@ -442,7 +460,7 @@ class PpuRegisterWriteTest {
     }
 
     @Test
-    void cgDataWriteRemainsBlockedFromRenderingUntilHardwareHBlank() {
+    void cgDataWriteStopsRedirectingAtHardwareHBlank() {
         SNES snes = init();
         snes.ppu.advanceCountersOnly(PPU.H_COUNTER_DOTS + 22);
 
@@ -453,6 +471,8 @@ class PpuRegisterWriteTest {
         assertFalse(snes.ppu.isInHBlank());
         assertEquals(0x00, snes.ppu.cgram.read(0x20));
         assertEquals(0x00, snes.ppu.cgram.read(0x21));
+        assertEquals(0xff, snes.ppu.cgram.read(0x00));
+        assertEquals(0x78, snes.ppu.cgram.read(0x01));
 
         snes.ppu.advanceCountersOnly(PPU.H_BLANK_START_DOT - 22);
         snes.bus.write(0x2121, 0x10);
@@ -663,6 +683,19 @@ class PpuRegisterWriteTest {
     private static void writeMode7Register(SNES snes, int address, int value) {
         snes.bus.write(address, value);
         snes.bus.write(address, value >>> 8);
+    }
+
+    private static void prepareBg1PaletteFetchAtFirstVisiblePixel(SNES snes) {
+        snes.bus.write(0x2105, 0x00);
+        snes.bus.write(0x2107, 0x04);
+        snes.bus.write(0x212c, 0x01);
+        snes.ppu.vram.write(0x0002, 0x80);
+        snes.ppu.vram.write(0x0003, 0x00);
+        snes.ppu.vram.write(0x0800, 0x00);
+        snes.ppu.vram.write(0x0801, 0x08);
+        snes.ppu.renderMainAndSubScreen();
+        snes.bus.write(0x2100, 0x00);
+        snes.ppu.advanceCountersOnly(PPU.H_COUNTER_DOTS + 22);
     }
 
     private static SNES init() {

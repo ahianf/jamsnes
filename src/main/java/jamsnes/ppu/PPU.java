@@ -21,6 +21,7 @@ public class PPU extends AMemory {
     private static final int SOURCE_BACKDROP = 0;
     private static final int SOURCE_OBJ = 5;
     private static final int SOURCE_OBJ_COLOR_MATH = 6;
+    private static final short NO_CGRAM_FETCH = -1;
     private static final int OBJ_COUNT = 128;
     private static final int OBJ_SCANLINE_LIMIT = 32;
     private static final int OBJ_SLIVER_LIMIT = 34;
@@ -72,6 +73,12 @@ public class PPU extends AMemory {
     private final int[][] subScreenLevelMap = new int[Background.BUFFER_SIZE][Background.BUFFER_SIZE];
     private final int[][] mainScreenSourceMap = new int[Background.BUFFER_SIZE][Background.BUFFER_SIZE];
     private final int[][] subScreenSourceMap = new int[Background.BUFFER_SIZE][Background.BUFFER_SIZE];
+    private final short[][] mainScreenCgramIndexMap =
+            new short[OVERSCAN_V_BLANK_START_SCANLINE][VISIBLE_WIDTH];
+    private final short[][] subScreenCgramIndexMap =
+            new short[OVERSCAN_V_BLANK_START_SCANLINE][VISIBLE_WIDTH];
+    private final short[][] cgramFetchAddressMap =
+            new short[OVERSCAN_V_BLANK_START_SCANLINE][VISIBLE_WIDTH];
     private final int[][] evaluatedObjectIndices = new int[OBJ_EVALUATED_SCANLINES][OBJ_SCANLINE_LIMIT];
     private final int[][] evaluatedObjectSliverMasks = new int[OBJ_EVALUATED_SCANLINES][OBJ_SCANLINE_LIMIT];
     private final int[] evaluatedObjectCounts = new int[OBJ_EVALUATED_SCANLINES];
@@ -321,6 +328,7 @@ public class PPU extends AMemory {
         Arrays.fill(scanlineMode7States, null);
         Arrays.fill(scanlineCgramStates, null);
         Arrays.fill(scanlineDisplayControlCaptured, false);
+        clearCgramIndexMaps();
         updateBackgroundModes();
         for (int i = 0; i < backgrounds.length; i++) {
             updateBackgroundTileMap(i);
@@ -353,6 +361,7 @@ public class PPU extends AMemory {
         clearBuffer(subScreenLevelMap);
         clearSourceMap(mainScreenSourceMap, SOURCE_NONE);
         clearSourceMap(subScreenSourceMap, SOURCE_BACKDROP);
+        clearCgramIndexMaps();
 
         switch (ppuRegisters.bgMode()) {
             case 0 -> {
@@ -376,6 +385,8 @@ public class PPU extends AMemory {
                     + ppuRegisters.bgMode() + ")");
         }
         addObjectsToMainSubScreen();
+        markBackdropCgramFetches();
+        rebuildCgramFetchAddressMap();
     }
 
     private void fillSubScreenBackdrop() {
@@ -699,7 +710,8 @@ public class PPU extends AMemory {
     }
 
     private int readCgData() {
-        int address = ppuRegisters.cgByteAddress();
+        int address = cgramAccessWordAddress(ppuRegisters.cgAddress()) * 2
+                + (ppuRegisters.isCgLowByte() ? 0 : 1);
         int value = cgram.read(address);
         if (!ppuRegisters.isCgLowByte()) {
             value = (value & 0x7f) | (ppu2OpenBus & 0x80);
@@ -838,11 +850,9 @@ public class PPU extends AMemory {
             ppuRegisters.setCgDataLow(value);
         } else {
             ppuRegisters.setCgDataHigh(value);
-            int byteAddress = u16(ppuRegisters.cgAddress() * 2);
-            if (canAccessCgramMemory()) {
-                cgram.write(byteAddress, ppuRegisters.cgDataLow());
-                cgram.write(u16(byteAddress + 1), ppuRegisters.cgDataHigh());
-            }
+            int byteAddress = cgramAccessWordAddress(ppuRegisters.cgAddress()) * 2;
+            cgram.write(byteAddress, ppuRegisters.cgDataLow());
+            cgram.write(u16(byteAddress + 1), ppuRegisters.cgDataHigh());
             ppuRegisters.incrementCgAddress();
         }
         ppuRegisters.toggleCgLowByte();
@@ -862,11 +872,20 @@ public class PPU extends AMemory {
         ppuRegisters.incrementOamAddress();
     }
 
-    private boolean canAccessCgramMemory() {
-        return canAccessVideoMemory()
-                || vCounter == 0
-                || hCounter < CGRAM_RENDER_START_DOT
-                || isInHBlank();
+    private int cgramAccessWordAddress(int programmedAddress) {
+        if (!isCgramRendering()) {
+            return u8(programmedAddress);
+        }
+        int x = Math.min(VISIBLE_WIDTH - 1, hCounter - CGRAM_RENDER_START_DOT);
+        return cgramFetchAddressMap[vCounter][x] & 0xff;
+    }
+
+    private boolean isCgramRendering() {
+        return !ppuRegisters.inidispFblank()
+                && vCounter > 0
+                && vCounter < vBlankStartScanline()
+                && hCounter >= CGRAM_RENDER_START_DOT
+                && hCounter < H_BLANK_START_DOT;
     }
 
     private void commitOamLowTablePair(int address, int value) {
@@ -929,7 +948,8 @@ public class PPU extends AMemory {
                 levelLow,
                 levelHigh,
                 backgroundScanlineStates(backgroundIndex, 0),
-                VISIBLE_WIDTH);
+                VISIBLE_WIDTH,
+                mainScreenCgramIndexMap);
         Background.mergeBackgroundBuffer(
                 subScreen,
                 subScreenLevelMap,
@@ -939,7 +959,8 @@ public class PPU extends AMemory {
                 levelLow,
                 levelHigh,
                 backgroundScanlineStates(backgroundIndex, 1),
-                VISIBLE_WIDTH);
+                VISIBLE_WIDTH,
+                subScreenCgramIndexMap);
     }
 
     private Background.ScanlineState[] backgroundScanlineStates(int backgroundIndex, int screenIndex) {
@@ -1140,6 +1161,7 @@ public class PPU extends AMemory {
     private void renderObjectsToBuffer(int[][] destination, int[][] levelMap, int[][] sourceMap, int screenIndex) {
         LayerState currentState = currentLayerState();
         int[] currentPalette = currentCgramState();
+        short[][] cgramIndexMap = screenIndex == 0 ? mainScreenCgramIndexMap : subScreenCgramIndexMap;
         boolean[] currentWindowMask = objectWindowMask(currentState, screenIndex);
         for (int screenY = 0; screenY < vBlankStartScanline(); screenY++) {
             boolean captured = scanlineDisplayControlCaptured[screenY];
@@ -1165,6 +1187,7 @@ public class PPU extends AMemory {
                         destination,
                         levelMap,
                         sourceMap,
+                        cgramIndexMap,
                         claimedPixels,
                         windowMask,
                         palette,
@@ -1181,6 +1204,7 @@ public class PPU extends AMemory {
             int[][] destination,
             int[][] levelMap,
             int[][] sourceMap,
+            short[][] cgramIndexMap,
             boolean[] claimedPixels,
             boolean[] windowMask,
             int[] paletteColors,
@@ -1221,10 +1245,12 @@ public class PPU extends AMemory {
                 continue;
             }
             int sourceX = horizontalFlip ? dimensions.width() - 1 - pixelX : pixelX;
-            int color = readObjectPixel(baseAddress, tile, palette, sourceX, sourceY, paletteColors);
-            if ((color & 0xff) == 0) {
+            int colorIndex = readObjectPixelReference(baseAddress, tile, sourceX, sourceY);
+            if (colorIndex == 0) {
                 continue;
             }
+            int cgramIndex = OBJ_PALETTE_BASE + palette * 16 + colorIndex;
+            int color = PPUUtils.cgramColorToRGBA(paletteColors[cgramIndex]);
             claimedPixels[screenX] = true;
             if (level < levelMap[screenY][screenX]) {
                 continue;
@@ -1232,6 +1258,7 @@ public class PPU extends AMemory {
             destination[screenY][screenX] = color;
             levelMap[screenY][screenX] = level;
             sourceMap[screenY][screenX] = palette >= 4 ? SOURCE_OBJ_COLOR_MATH : SOURCE_OBJ;
+            cgramIndexMap[screenY][screenX] = (short) cgramIndex;
         }
     }
 
@@ -1285,25 +1312,18 @@ public class PPU extends AMemory {
         return u16(base);
     }
 
-    private int readObjectPixel(
+    private int readObjectPixelReference(
             int baseAddress,
             int tile,
-            int palette,
             int sourceX,
-            int sourceY,
-            int[] paletteColors) {
+            int sourceY) {
         int tileX = sourceX / Tile.NB_PIXELS_WIDTH;
         int tileY = sourceY / Tile.NB_PIXELS_HEIGHT;
         int pixelX = sourceX % Tile.NB_PIXELS_WIDTH;
         int pixelY = sourceY % Tile.NB_PIXELS_HEIGHT;
         int tileNumber = objectTileNumber(tile, tileX, tileY);
         int rowAddress = u16(baseAddress + tileNumber * OBJ_TILE_BYTE_SIZE + pixelY * 2);
-        int colorIndex = readObjectPixelReference(rowAddress, pixelX);
-        if (colorIndex == 0) {
-            return 0;
-        }
-        int cgramIndex = OBJ_PALETTE_BASE + palette * 16 + colorIndex;
-        return PPUUtils.cgramColorToRGBA(paletteColors[cgramIndex]);
+        return readObjectPixelReference(rowAddress, pixelX);
     }
 
     private int objectTileNumber(int tile, int tileX, int tileY) {
@@ -1397,6 +1417,7 @@ public class PPU extends AMemory {
             int levelHigh,
             boolean extBg,
             int screenIndex) {
+        short[][] cgramIndexMap = screenIndex == 0 ? mainScreenCgramIndexMap : subScreenCgramIndexMap;
         int backgroundIndex = source - 1;
         int backgroundBit = 1 << backgroundIndex;
         LayerState currentLayerState = currentLayerState();
@@ -1474,6 +1495,9 @@ public class PPU extends AMemory {
                 destination[y][x] = pixel.color;
                 levelMap[y][x] = level;
                 sourceMap[y][x] = source;
+                if (pixel.cgramIndex >= 0) {
+                    cgramIndexMap[y][x] = (short) pixel.cgramIndex;
+                }
             }
         }
     }
@@ -1515,9 +1539,9 @@ public class PPU extends AMemory {
             return Mode7Pixel.TRANSPARENT;
         }
         if (!extBg && directColor) {
-            return new Mode7Pixel(PPUUtils.directColorToRGBA(0, colorIndex), priority);
+            return new Mode7Pixel(PPUUtils.directColorToRGBA(0, colorIndex), priority, NO_CGRAM_FETCH);
         }
-        return new Mode7Pixel(PPUUtils.cgramColorToRGBA(palette[colorIndex]), priority);
+        return new Mode7Pixel(PPUUtils.cgramColorToRGBA(palette[colorIndex]), priority, colorIndex);
     }
 
     private int signed16(int value) {
@@ -1544,8 +1568,8 @@ public class PPU extends AMemory {
         return (value & 0x2000) != 0 ? value | ~0x3ff : value & 0x3ff;
     }
 
-    private record Mode7Pixel(int color, boolean priority) {
-        private static final Mode7Pixel TRANSPARENT = new Mode7Pixel(0, false);
+    private record Mode7Pixel(int color, boolean priority, int cgramIndex) {
+        private static final Mode7Pixel TRANSPARENT = new Mode7Pixel(0, false, NO_CGRAM_FETCH);
     }
 
     private record ColorMathState(
@@ -1855,6 +1879,50 @@ public class PPU extends AMemory {
 
     private void clearSourceMap(int[][] buffer, int value) {
         fillBuffer(buffer, value);
+    }
+
+    private void clearCgramIndexMaps() {
+        fillShortBuffer(mainScreenCgramIndexMap, NO_CGRAM_FETCH);
+        fillShortBuffer(subScreenCgramIndexMap, NO_CGRAM_FETCH);
+        fillShortBuffer(cgramFetchAddressMap, (short) 0);
+    }
+
+    private void fillShortBuffer(short[][] buffer, short value) {
+        for (short[] row : buffer) {
+            Arrays.fill(row, value);
+        }
+    }
+
+    private void rebuildCgramFetchAddressMap() {
+        short retainedAddress = 0;
+        int rows = Math.min(vBlankStartScanline(), cgramFetchAddressMap.length);
+        for (int y = 0; y < rows; y++) {
+            for (int x = 0; x < VISIBLE_WIDTH; x++) {
+                short belowAddress = subScreenCgramIndexMap[y][x];
+                if (belowAddress != NO_CGRAM_FETCH) {
+                    retainedAddress = belowAddress;
+                }
+                short aboveAddress = mainScreenCgramIndexMap[y][x];
+                if (aboveAddress != NO_CGRAM_FETCH) {
+                    retainedAddress = aboveAddress;
+                }
+                cgramFetchAddressMap[y][x] = retainedAddress;
+            }
+        }
+    }
+
+    private void markBackdropCgramFetches() {
+        int rows = Math.min(vBlankStartScanline(), mainScreenCgramIndexMap.length);
+        for (int y = 0; y < rows; y++) {
+            for (int x = 0; x < VISIBLE_WIDTH; x++) {
+                if (subScreenLevelMap[y][x] == 0) {
+                    subScreenCgramIndexMap[y][x] = 0;
+                }
+                if (mainScreenLevelMap[y][x] == 0) {
+                    mainScreenCgramIndexMap[y][x] = 0;
+                }
+            }
+        }
     }
 
     private int applyDisplayControl(int rgba, int displayControl) {

@@ -303,6 +303,30 @@ public class Background {
             int levelHigh,
             ScanlineState[] scanlineStates,
             int maxWidth) {
+        mergeBackgroundBuffer(
+                bufferDest,
+                pixelDestinationLevelMap,
+                sourceDestinationMap,
+                source,
+                backgroundSrc,
+                levelLow,
+                levelHigh,
+                scanlineStates,
+                maxWidth,
+                null);
+    }
+
+    static void mergeBackgroundBuffer(
+            int[][] bufferDest,
+            int[][] pixelDestinationLevelMap,
+            int[][] sourceDestinationMap,
+            int source,
+            Background backgroundSrc,
+            int levelLow,
+            int levelHigh,
+            ScanlineState[] scanlineStates,
+            int maxWidth,
+            short[][] cgramDestinationMap) {
         int height = Math.min(scanlineStates.length, Math.min(bufferDest.length, backgroundSrc.buffer.length));
         int sourceHeight = backgroundSrc.backgroundSize.y > 0
                 ? Math.min(backgroundSrc.backgroundSize.y, backgroundSrc.buffer.length)
@@ -358,6 +382,14 @@ public class Background {
                 if (pixelLevel >= pixelDestinationLevelMap[y][x]) {
                     bufferDest[y][x] = pixel;
                     pixelDestinationLevelMap[y][x] = pixelLevel;
+                    if (cgramDestinationMap != null
+                            && y < cgramDestinationMap.length
+                            && x < cgramDestinationMap[y].length) {
+                        int cgramIndex = backgroundSrc.resolveCgramIndex(sourceX, sourceY, state);
+                        if (cgramIndex >= 0) {
+                            cgramDestinationMap[y][x] = (short) cgramIndex;
+                        }
+                    }
                     if (sourceDestinationMap != null) {
                         sourceDestinationMap[y][x] = source;
                     }
@@ -383,6 +415,18 @@ public class Background {
                 ? pixelReference
                 : paletteIndex * (1 << bpp) + pixelReference;
         return PPUUtils.cgramColorToRGBA(state.palette()[colorIndex & 0xff]);
+    }
+
+    private int resolveCgramIndex(int x, int y, ScanlineState state) {
+        int descriptor = pixelDescriptors[y][x] & 0xffff;
+        int pixelReference = descriptor & 0xff;
+        int paletteIndex = descriptor >>> 8;
+        if (bpp == 8 && state.directColor()) {
+            return -1;
+        }
+        return (bpp == 8
+                ? pixelReference
+                : paletteIndex * (1 << bpp) + pixelReference) & 0xff;
     }
 
     private void drawBasicTileMap(int baseAddress, int offsetX, int offsetY) {
