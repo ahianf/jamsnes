@@ -453,6 +453,30 @@ class MemoryBusTest {
         assertEquals(0x78, snes.sram.data()[1]);
     }
 
+    @Test
+    void unmappedBusReadsOpenBusWithoutAccessors() {
+        MemoryBus bus = new MemoryBus();
+        bus.setOpenBus(0x42);
+
+        assertNull(bus.getAccessor(0x000000));
+        assertNull(bus.getAccessor(0xffffff));
+        assertEquals(0x42, bus.read(0x7e0000));
+        bus.write(0x7e0000, 0x99);
+        assertEquals(0x99, bus.read(0x7e0000));
+    }
+
+    @Test
+    void remappingComponentsDropsStaleAccessors() {
+        SNES snes = init();
+        assertSame(snes.sram, snes.bus.getAccessor(0xf00000));
+
+        snes.sram.setSize(0);
+        snes.bus.mapComponents(snes);
+
+        assertNull(snes.bus.getAccessor(0xf00000));
+        assertNull(snes.bus.getAccessor(0x700000));
+    }
+
     private static SNES init() {
         SNES snes = new SNES(new NoRenderer(0, 0, 0));
         snes.cartridge.setSize(100);

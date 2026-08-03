@@ -6,6 +6,7 @@ import jamsnes.exceptions.InvalidAddress;
 import jamsnes.models.Component;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.OptionalInt;
 
@@ -13,17 +14,26 @@ import static jamsnes.models.Unsigned.u24;
 import static jamsnes.models.Unsigned.u8;
 
 public class MemoryBus implements IMemoryBus {
+    private static final int PAGE_SHIFT = 12;
+    private static final int PAGE_COUNT = 1 << (24 - PAGE_SHIFT);
+    private static final IMemory[] EMPTY_PAGE = new IMemory[0];
+
     private final List<IMemory> memoryAccessors = new ArrayList<>();
     private final List<MemoryShadow> shadows = new ArrayList<>();
     private final List<RepeatingMemoryShadow> repeatingShadows = new ArrayList<>();
     private final List<RectangleShadow> rectangleShadows = new ArrayList<>();
+    private final IMemory[][] pageAccessors = new IMemory[PAGE_COUNT][];
     private int openBus;
     private int externalOpenBus;
+
+    public MemoryBus() {
+        Arrays.fill(pageAccessors, EMPTY_PAGE);
+    }
 
     @Override
     public IMemory getAccessor(int address) {
         int normalized = u24(address);
-        for (IMemory accessor : memoryAccessors) {
+        for (IMemory accessor : pageAccessors[normalized >>> PAGE_SHIFT]) {
             if (accessor.hasMemoryAt(normalized)) {
                 return accessor;
             }
@@ -163,6 +173,44 @@ public class MemoryBus implements IMemoryBus {
         memoryAccessors.addAll(shadows);
         memoryAccessors.addAll(repeatingShadows);
         memoryAccessors.addAll(rectangleShadows);
+        rebuildPageTable();
+    }
+
+    private void rebuildPageTable() {
+        @SuppressWarnings("unchecked")
+        List<IMemory>[] pages = new List[PAGE_COUNT];
+        for (IMemory accessor : memoryAccessors) {
+            addAccessorPages(accessor, pages);
+        }
+        for (int i = 0; i < PAGE_COUNT; i++) {
+            pageAccessors[i] = pages[i] == null ? EMPTY_PAGE : pages[i].toArray(new IMemory[0]);
+        }
+    }
+
+    private static void addAccessorPages(IMemory accessor, List<IMemory>[] pages) {
+        if (accessor instanceof ARectangleMemory rectangle) {
+            int firstBankPage = rectangle.startPage >>> PAGE_SHIFT;
+            int lastBankPage = rectangle.endPage >>> PAGE_SHIFT;
+            for (int bank = rectangle.startBank; bank <= rectangle.endBank; bank++) {
+                int bankBase = bank << (16 - PAGE_SHIFT);
+                addToPages(pages, bankBase + firstBankPage, bankBase + lastBankPage, accessor);
+            }
+            return;
+        }
+        if (accessor instanceof AMemory linear) {
+            addToPages(pages, linear.start >>> PAGE_SHIFT, linear.end >>> PAGE_SHIFT, accessor);
+            return;
+        }
+        addToPages(pages, 0, PAGE_COUNT - 1, accessor);
+    }
+
+    private static void addToPages(List<IMemory>[] pages, int firstPage, int lastPage, IMemory accessor) {
+        for (int page = firstPage; page <= lastPage; page++) {
+            if (pages[page] == null) {
+                pages[page] = new ArrayList<>(4);
+            }
+            pages[page].add(accessor);
+        }
     }
 
     private void mirrorComponents(SNES console, int bank) {
