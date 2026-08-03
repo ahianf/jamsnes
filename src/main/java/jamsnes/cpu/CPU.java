@@ -26,6 +26,15 @@ public class CPU extends AMemory {
     private static final int MATH_OPERATION_NONE = 0;
     private static final int MATH_OPERATION_MULTIPLY = 1;
     private static final int MATH_OPERATION_DIVIDE = 2;
+    private static final int NATIVE_COP_VECTOR = 0xffe4;
+    private static final int NATIVE_BRK_VECTOR = 0xffe6;
+    private static final int NATIVE_ABORT_VECTOR = 0xffe8;
+    private static final int NATIVE_NMI_VECTOR = 0xffea;
+    private static final int NATIVE_IRQ_VECTOR = 0xffee;
+    private static final int EMULATION_COP_VECTOR = 0xfff4;
+    private static final int EMULATION_ABORT_VECTOR = 0xfff8;
+    private static final int EMULATION_NMI_VECTOR = 0xfffa;
+    private static final int EMULATION_IRQ_BRK_VECTOR = 0xfffe;
     private final Registers registers = new Registers();
     private final int[] internalRegisters = new int[0x300];
     private final DMA[] dmaChannels = new DMA[8];
@@ -1322,12 +1331,14 @@ public class CPU extends AMemory {
     }
 
     public int BRK(int valueAddr) {
-        runInterrupt(cartridgeHeader.nativeInterrupts.brk, cartridgeHeader.emulationInterrupts.brk, true);
+        runInterrupt(cartridgeHeader.nativeInterrupts.brk, cartridgeHeader.emulationInterrupts.brk,
+                NATIVE_BRK_VECTOR, EMULATION_IRQ_BRK_VECTOR, true);
         return emulationMode ? 0 : 1;
     }
 
     public int COP(int valueAddr) {
-        runInterrupt(cartridgeHeader.nativeInterrupts.cop, cartridgeHeader.emulationInterrupts.cop, true);
+        runInterrupt(cartridgeHeader.nativeInterrupts.cop, cartridgeHeader.emulationInterrupts.cop,
+                NATIVE_COP_VECTOR, EMULATION_COP_VECTOR, true);
         return emulationMode ? 0 : 1;
     }
 
@@ -1883,16 +1894,19 @@ public class CPU extends AMemory {
             if (wasWaitingForInterrupt) {
                 registers.incrementPc(-1);
             }
-            runInterrupt(cartridgeHeader.nativeInterrupts.abort, cartridgeHeader.emulationInterrupts.abort, false);
+            runInterrupt(cartridgeHeader.nativeInterrupts.abort, cartridgeHeader.emulationInterrupts.abort,
+                    NATIVE_ABORT_VECTOR, EMULATION_ABORT_VECTOR, false);
             return interruptEntryCycles();
         }
         if (isNMIRequested) {
             isNMIRequested = false;
-            runInterrupt(cartridgeHeader.nativeInterrupts.nmi, cartridgeHeader.emulationInterrupts.nmi, false);
+            runInterrupt(cartridgeHeader.nativeInterrupts.nmi, cartridgeHeader.emulationInterrupts.nmi,
+                    NATIVE_NMI_VECTOR, EMULATION_NMI_VECTOR, false);
             return interruptEntryCycles();
         }
         if (isIRQRequested && !registers.p.i) {
-            runInterrupt(cartridgeHeader.nativeInterrupts.irq, cartridgeHeader.emulationInterrupts.irq, false);
+            runInterrupt(cartridgeHeader.nativeInterrupts.irq, cartridgeHeader.emulationInterrupts.irq,
+                    NATIVE_IRQ_VECTOR, EMULATION_IRQ_BRK_VECTOR, false);
             return interruptEntryCycles();
         }
         return 0;
@@ -1902,7 +1916,8 @@ public class CPU extends AMemory {
         return emulationMode ? 7 : 8;
     }
 
-    private void runInterrupt(int nativeHandler, int emulationHandler, boolean softwareInterrupt) {
+    private void runInterrupt(int nativeHandler, int emulationHandler, int nativeVector, int emulationVector,
+                              boolean softwareInterrupt) {
         int status = registers.p.flags();
         if (emulationMode) {
             status = (status | 0x20) & ~0x10;
@@ -1914,6 +1929,7 @@ public class CPU extends AMemory {
             registers.p.i = true;
             registers.p.d = false;
             registers.setPbr(0);
+            readInterruptVector(emulationVector);
             registers.setPc(emulationHandler);
         } else {
             _push8(registers.pbr);
@@ -1922,8 +1938,16 @@ public class CPU extends AMemory {
             registers.p.i = true;
             registers.p.d = false;
             registers.setPbr(0);
+            readInterruptVector(nativeVector);
             registers.setPc(nativeHandler);
         }
+    }
+
+    private void readInterruptVector(int address) {
+        // Supported LoROM/HiROM vectors are immutable cartridge ROM and were decoded into cartridgeHeader.
+        // The physical reads still consume slow-bus time and leave the vector high byte on the external bus.
+        bus.read(address);
+        bus.read(address + 1);
     }
 
     private void enforceStatusWidth() {

@@ -119,6 +119,34 @@ class CpuUpdateLoopTest {
     }
 
     @Test
+    void emulationInterruptReadsItsVectorThroughTheSlowBus() {
+        SNES snes = init();
+        snes.cartridge.header.emulationInterrupts.nmi = 0x0300;
+        writeVector(snes, 0xfffa, 0x0300);
+        snes.cpu.requestNMI();
+
+        assertEquals(7, snes.cpu.update(7));
+        assertEquals(52, snes.cpu.elapsedMasterClocks());
+        assertEquals(0x03, snes.bus.getExternalOpenBus());
+        assertEquals(0x0300, snes.cpu.registers().pc);
+    }
+
+    @Test
+    void nativeInterruptReadsItsVectorThroughTheSlowBus() {
+        SNES snes = init();
+        snes.cpu.setEmulationMode(false);
+        snes.cpu.registers().s = 0x1fff;
+        snes.cartridge.header.nativeInterrupts.abort = 0x0300;
+        writeVector(snes, 0xffe8, 0x0300);
+        snes.cpu.requestABORT();
+
+        assertEquals(8, snes.cpu.update(8));
+        assertEquals(60, snes.cpu.elapsedMasterClocks());
+        assertEquals(0x03, snes.bus.getExternalOpenBus());
+        assertEquals(0x0300, snes.cpu.registers().pc);
+    }
+
+    @Test
     void updateRunsAbortBeforeNextInstruction() {
         SNES snes = init();
         snes.cpu.registers().setPc(0x0200);
@@ -385,6 +413,12 @@ class CpuUpdateLoopTest {
         for (int i = 0; i < opcodes.length; i++) {
             snes.wram.data()[start + i] = opcodes[i];
         }
+    }
+
+    private static void writeVector(SNES snes, int address, int handler) {
+        int cartridgeOffset = address & 0x7fff;
+        snes.cartridge.data()[cartridgeOffset] = handler & 0xff;
+        snes.cartridge.data()[cartridgeOffset + 1] = handler >>> 8;
     }
 
     private static SNES init() {

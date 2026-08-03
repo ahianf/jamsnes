@@ -375,13 +375,13 @@ class SNESTest {
 
         snes.update();
 
-        assertEquals(22, snes.ppu.hCounter());
+        assertEquals(23, snes.ppu.hCounter());
         assertEquals(0x0303, snes.cpu.registers().pc);
 
         snes.cpu.requestNMI();
         snes.update();
 
-        assertEquals(45, snes.ppu.hCounter());
+        assertEquals(47, snes.ppu.hCounter());
         assertEquals(0x0303, snes.cpu.registers().pc);
     }
 
