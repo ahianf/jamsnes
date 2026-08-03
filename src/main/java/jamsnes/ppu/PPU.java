@@ -26,6 +26,8 @@ public class PPU extends AMemory {
     private static final int OBJ_SCANLINE_LIMIT = 32;
     private static final int OBJ_SLIVER_LIMIT = 34;
     private static final int OBJ_LOW_TABLE_SIZE = 0x200;
+    private static final int OBJ_EVALUATION_END_DOT = 256;
+    private static final int OBJ_FETCH_START_DOT = 270;
     private static final int OBJ_TILE_BPP = 4;
     private static final int OBJ_TILE_BYTE_SIZE = 32;
     private static final int OBJ_TILE_ROW_SIZE = 16;
@@ -100,6 +102,10 @@ public class PPU extends AMemory {
     private int latchedHCounter;
     private int latchedVCounter;
     private int oamLowTableLatch;
+    private int oamEvaluationAddress;
+    private int scanlineFirstObject;
+    private int timingEvaluatedObjectCount;
+    private final int[] timingEvaluatedObjectIndices = new int[OBJ_SCANLINE_LIMIT];
     private boolean hCounterHighByte;
     private boolean vCounterHighByte;
     private boolean counterLatchFlag;
@@ -305,6 +311,8 @@ public class PPU extends AMemory {
         secondField = false;
         fieldInterlace = false;
         fieldOverscan = false;
+        oamEvaluationAddress = 0;
+        beginObjectScanline();
     }
 
     public void resetRegisterState() {
@@ -318,6 +326,9 @@ public class PPU extends AMemory {
         hvSharedScrollPreviousValue = 0;
         hScrollPreviousValue = 0;
         oamLowTableLatch = 0;
+        oamEvaluationAddress = 0;
+        scanlineFirstObject = 0;
+        timingEvaluatedObjectCount = 0;
         objectRangeOver = false;
         objectTimeOver = false;
         ppu1OpenBus = 0;
@@ -787,13 +798,16 @@ public class PPU extends AMemory {
     }
 
     private void advanceCounters(int cycles) {
-        if (cycles <= 0) {
-            return;
-        }
-        hCounter += cycles;
-        int scanlineDots = scanlineDotsAt(vCounter, secondField);
-        while (hCounter >= scanlineDots) {
-            hCounter -= scanlineDots;
+        while (cycles > 0) {
+            int scanlineDots = scanlineDotsAt(vCounter, secondField);
+            int elapsed = Math.min(cycles, scanlineDots - hCounter);
+            advanceObjectEvaluation(hCounter, hCounter + elapsed);
+            hCounter += elapsed;
+            cycles -= elapsed;
+            if (hCounter < scanlineDots) {
+                continue;
+            }
+            hCounter = 0;
             vCounter++;
             if (vCounter >= scanlinesInField(secondField)) {
                 vCounter = 0;
@@ -806,7 +820,73 @@ public class PPU extends AMemory {
             if (vCounter == vBlankStartScanline()) {
                 reloadOamAddressAtVBlankEntry();
             }
-            scanlineDots = scanlineDotsAt(vCounter, secondField);
+            beginObjectScanline();
+        }
+    }
+
+    private void beginObjectScanline() {
+        scanlineFirstObject = ppuRegisters.oamObjPriorityActivationBit()
+                ? ppuRegisters.oamPriorityObjectNumber()
+                : 0;
+        timingEvaluatedObjectCount = 0;
+    }
+
+    private void advanceObjectEvaluation(int startDot, int endDot) {
+        if (!isOamRendering() || startDot >= endDot) {
+            return;
+        }
+        int evaluationEnd = Math.min(endDot, OBJ_EVALUATION_END_DOT);
+        int firstOffset = (startDot + 1) / 2;
+        int offsetLimit = Math.min(OBJ_COUNT, (evaluationEnd + 1) / 2);
+        for (int offset = firstOffset; offset < offsetLimit; offset++) {
+            evaluateObjectAddress((scanlineFirstObject + offset) % OBJ_COUNT);
+        }
+        if (vCounter < vBlankStartScanline() - 1 && endDot > OBJ_FETCH_START_DOT) {
+            updateObjectFetchAddress(endDot);
+        }
+    }
+
+    private void evaluateObjectAddress(int objectIndex) {
+        if (timingEvaluatedObjectCount > OBJ_SCANLINE_LIMIT) {
+            return;
+        }
+        ObjectDimensions dimensions = objectDimensionsForObject(objectIndex, registers[0x01]);
+        if (!objectIntersectsScanline(
+                objectIndex,
+                dimensions,
+                vCounter,
+                (registers[0x33] & 0x02) != 0)
+                || !objectIntersectsHorizontalScreen(objectIndex, dimensions)) {
+            return;
+        }
+        oamEvaluationAddress = objectIndex;
+        if (timingEvaluatedObjectCount < OBJ_SCANLINE_LIMIT) {
+            timingEvaluatedObjectIndices[timingEvaluatedObjectCount] = objectIndex;
+        }
+        timingEvaluatedObjectCount++;
+    }
+
+    private void updateObjectFetchAddress(int endDot) {
+        int dot = OBJ_FETCH_START_DOT;
+        int sliverCount = 0;
+        int objectCount = Math.min(timingEvaluatedObjectCount, OBJ_SCANLINE_LIMIT);
+        for (int objectSlot = objectCount - 1; objectSlot >= 0 && dot < endDot; objectSlot--) {
+            int objectIndex = timingEvaluatedObjectIndices[objectSlot];
+            oamEvaluationAddress = objectIndex;
+            ObjectDimensions dimensions = objectDimensionsForObject(objectIndex, registers[0x01]);
+            int x = objectX(objectIndex);
+            for (int sliver = 0; sliver < dimensions.width() / Tile.NB_PIXELS_WIDTH; sliver++) {
+                if (!objectSliverCountsTowardLimit(x, sliver)) {
+                    continue;
+                }
+                if (sliverCount++ >= OBJ_SLIVER_LIMIT) {
+                    break;
+                }
+                dot += 2;
+                if (dot >= endDot) {
+                    break;
+                }
+            }
         }
     }
 
@@ -862,12 +942,10 @@ public class PPU extends AMemory {
         int address = ppuRegisters.oamAddress();
         if (address < OBJ_LOW_TABLE_SIZE && (address & 1) == 0) {
             oamLowTableLatch = value;
-        } else if (canAccessVideoMemory()) {
-            if (address < OBJ_LOW_TABLE_SIZE) {
-                commitOamLowTablePair(address, value);
-            } else {
-                oamram.write(getOamDataAddress(), value);
-            }
+        } else if (address < OBJ_LOW_TABLE_SIZE) {
+            commitOamLowTablePair(address, value);
+        } else {
+            oamram.write(getOamDataAddress(), value);
         }
         ppuRegisters.incrementOamAddress();
     }
@@ -889,16 +967,29 @@ public class PPU extends AMemory {
     }
 
     private void commitOamLowTablePair(int address, int value) {
-        oamram.write(address - 1, oamLowTableLatch);
-        oamram.write(address, value);
+        oamram.write(getOamDataAddress(address - 1), oamLowTableLatch);
+        oamram.write(getOamDataAddress(address), value);
     }
 
     private int getOamDataAddress() {
-        int address = ppuRegisters.oamAddress();
+        return getOamDataAddress(ppuRegisters.oamAddress());
+    }
+
+    private int getOamDataAddress(int address) {
+        if (isOamRendering()) {
+            if (address < OBJ_LOW_TABLE_SIZE) {
+                return oamEvaluationAddress * 4 + (address & 1);
+            }
+            return OBJ_LOW_TABLE_SIZE + oamEvaluationAddress / 4;
+        }
         if (address >= OBJ_LOW_TABLE_SIZE) {
             return OBJ_LOW_TABLE_SIZE + (address & 0x1f);
         }
         return address;
+    }
+
+    private boolean isOamRendering() {
+        return !ppuRegisters.inidispFblank() && vCounter < vBlankStartScanline();
     }
 
     private void writeBgHorizontalOffset(int address, int value) {

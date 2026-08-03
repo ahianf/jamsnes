@@ -117,19 +117,38 @@ class PpuRegisterWriteTest {
     }
 
     @Test
-    void oamDataWriteIsSkippedDuringActiveDisplayButStillIncrements() {
+    void oamDataWriteRedirectsHighTableToActiveEvaluatorGroup() {
         SNES snes = init();
 
         snes.bus.write(0x2102, 0x00);
         snes.bus.write(0x2103, 0x01);
+        snes.ppu.advanceCountersOnly(17);
         snes.bus.write(0x2104, 0x55);
 
+        assertEquals(0x55, snes.ppu.oamram.read(0x202));
         assertEquals(0, snes.ppu.oamram.read(0x200));
         assertEquals(0x201, snes.ppu.ppuRegisters().oamAddress());
     }
 
     @Test
-    void blockedEvenOamWriteStillFeedsNextAccessiblePair() {
+    void oamDataWriteRedirectsLowTablePairToActiveEvaluatorObject() {
+        SNES snes = init();
+
+        snes.bus.write(0x2102, 0x20);
+        snes.bus.write(0x2103, 0x00);
+        snes.ppu.advanceCountersOnly(7);
+        snes.bus.write(0x2104, 0x55);
+        snes.bus.write(0x2104, 0xaa);
+
+        assertEquals(0x55, snes.ppu.oamram.read(0x0c));
+        assertEquals(0xaa, snes.ppu.oamram.read(0x0d));
+        assertEquals(0, snes.ppu.oamram.read(0x40));
+        assertEquals(0, snes.ppu.oamram.read(0x41));
+        assertEquals(0x42, snes.ppu.ppuRegisters().oamAddress());
+    }
+
+    @Test
+    void activeEvenOamWriteStillFeedsNextForcedBlankPair() {
         SNES snes = init();
 
         snes.bus.write(0x2102, 0x00);

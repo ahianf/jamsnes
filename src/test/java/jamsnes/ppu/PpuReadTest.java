@@ -161,6 +161,7 @@ class PpuReadTest {
     @Test
     void oamDataReadReturnsCurrentAddressAndIncrements() {
         SNES snes = init();
+        snes.bus.write(0x2100, 0x80);
         snes.bus.write(0x2102, 0x05);
         snes.bus.write(0x2103, 0x80);
         snes.ppu.oamram.write(0x0a, 0x42);
@@ -175,6 +176,7 @@ class PpuReadTest {
     @Test
     void oamDataReadMapsUpperAddressRangeToHighTable() {
         SNES snes = init();
+        snes.bus.write(0x2100, 0x80);
         snes.bus.write(0x2102, 0x00);
         snes.bus.write(0x2103, 0x01);
         snes.ppu.oamram.write(0x200, 0x77);
@@ -182,6 +184,65 @@ class PpuReadTest {
 
         assertEquals(0x77, snes.bus.read(0x2138));
         assertEquals(0x201, snes.ppu.ppuRegisters().oamAddress());
+    }
+
+    @Test
+    void oamDataReadRedirectsLowTablePhaseToActiveEvaluatorObject() {
+        SNES snes = init();
+        snes.bus.write(0x2102, 0x20);
+        snes.bus.write(0x2103, 0x00);
+        snes.ppu.oamram.write(0x0c, 0x42);
+        snes.ppu.oamram.write(0x0d, 0xff);
+        snes.ppu.oamram.write(0x40, 0x11);
+        snes.ppu.oamram.write(0x41, 0x22);
+        snes.ppu.advanceCountersOnly(7);
+
+        assertEquals(0x42, snes.bus.read(0x2138));
+        assertEquals(0xff, snes.bus.read(0x2138));
+        assertEquals(0x42, snes.ppu.ppuRegisters().oamAddress());
+    }
+
+    @Test
+    void oamDataReadRedirectsHighTableToActiveEvaluatorGroup() {
+        SNES snes = init();
+        snes.bus.write(0x2102, 0x00);
+        snes.bus.write(0x2103, 0x01);
+        snes.ppu.oamram.write(0x202, 0xa5);
+        snes.ppu.advanceCountersOnly(17);
+
+        assertEquals(0xa5, snes.bus.read(0x2138));
+        assertEquals(0x201, snes.ppu.ppuRegisters().oamAddress());
+    }
+
+    @Test
+    void oamDataReadFollowsObjectFetchAddressDuringHBlank() {
+        SNES snes = init();
+        snes.ppu.oamram.write(30 * 4, 0x30);
+        snes.ppu.oamram.write(31 * 4, 0x31);
+        snes.ppu.advanceCountersOnly(271);
+        snes.bus.write(0x2102, 0x00);
+        snes.bus.write(0x2103, 0x00);
+
+        assertEquals(0x31, snes.bus.read(0x2138));
+
+        snes.ppu.advanceCountersOnly(2);
+        snes.bus.write(0x2102, 0x00);
+        snes.bus.write(0x2103, 0x00);
+
+        assertEquals(0x30, snes.bus.read(0x2138));
+    }
+
+    @Test
+    void priorityRotationBecomesTheNextScanlinesFirstEvaluatorObject() {
+        SNES snes = init();
+        snes.ppu.oamram.write(0x14, 0x5a);
+        snes.ppu.oamram.write(0x15, 0x01);
+        snes.bus.write(0x2102, 0x0a);
+        snes.bus.write(0x2103, 0x80);
+        snes.ppu.advanceCountersOnly(PPU.H_COUNTER_DOTS + 1);
+
+        assertEquals(0x5a, snes.bus.read(0x2138));
+        assertEquals(0x01, snes.bus.read(0x2138));
     }
 
     @Test

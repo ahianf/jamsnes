@@ -682,7 +682,7 @@ class DmaTest {
     }
 
     @Test
-    void wramToOamDmaIsSkippedDuringActiveDisplayButStillIncrementsOamAddress() {
+    void wramToOamDmaUsesActiveEvaluatorAddressAndIncrementsProgrammedAddress() {
         SNES snes = init();
         snes.wram.data()[0x40] = 0x12;
         snes.wram.data()[0x41] = 0x34;
@@ -696,8 +696,8 @@ class DmaTest {
         int cycles = dma.run(1_000_000);
 
         assertEquals(8 + 8 * 2, cycles);
-        assertEquals(0x00, snes.ppu.oamram.read(0x00));
-        assertEquals(0x00, snes.ppu.oamram.read(0x01));
+        assertEquals(0x12, snes.ppu.oamram.read(0x00));
+        assertEquals(0x34, snes.ppu.oamram.read(0x01));
         assertEquals(0x02, snes.ppu.ppuRegisters().oamAddress());
         assertEquals(0x7e0042, dma.getAAddress());
         assertFalse(dma.isEnabled());
