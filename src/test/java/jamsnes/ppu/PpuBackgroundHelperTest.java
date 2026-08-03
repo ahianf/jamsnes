@@ -79,17 +79,22 @@ class PpuBackgroundHelperTest {
     }
 
     @Test
-    void tracksBackgroundScrollWithOriginalLatchIndexing() {
+    void tracksHorizontalAndVerticalScrollForEveryBackground() {
         SNES snes = init();
 
-        snes.bus.write(0x210d, 0x12);
-        assertEquals(new Vector2<>(0x200, 0), snes.ppu.getBgScroll(1));
+        for (int background = 0; background < 4; background++) {
+            int horizontalPort = 0x210d + background * 2;
+            int verticalPort = horizontalPort + 1;
+            int horizontal = 0x111 + background * 0x11;
+            int vertical = 0x255 + background * 0x11;
 
-        snes.bus.write(0x210f, 0x34);
-        assertEquals(new Vector2<>(0x12, 0), snes.ppu.getBgScroll(2));
+            snes.bus.write(horizontalPort, horizontal & 0xff);
+            snes.bus.write(horizontalPort, horizontal >>> 8);
+            snes.bus.write(verticalPort, vertical & 0xff);
+            snes.bus.write(verticalPort, vertical >>> 8);
 
-        snes.bus.write(0x2110, 0x56);
-        assertEquals(new Vector2<>(0x234, 0), snes.ppu.getBgScroll(2));
+            assertEquals(new Vector2<>(horizontal, vertical), snes.ppu.getBgScroll(background + 1));
+        }
     }
 
     @Test

@@ -192,6 +192,24 @@ class PpuRenderIntegrationTest {
     }
 
     @Test
+    void verticalBackgroundScrollSelectsTheLowerTilemapPage() {
+        SNES snes = init(new TestRenderer());
+        writeColor(snes, 1, 0x001f);
+        snes.bus.write(0x2107, 0x02);
+        snes.bus.write(0x210b, 0x01);
+        snes.bus.write(0x212c, 0x01);
+        snes.bus.write(0x210e, 0x00);
+        snes.bus.write(0x210e, 0x01);
+        snes.ppu.vram.write(0x0800, 0x01);
+        snes.ppu.vram.write(0x0801, 0x00);
+        snes.ppu.vram.write(0x2010, 0x80);
+
+        snes.ppu.renderMainAndSubScreen();
+
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][0]);
+    }
+
+    @Test
     void backgroundMosaicRepeatsFirstPixelInMosaicBlock() {
         SNES snes = init(new TestRenderer());
         writeColor(snes, 1, 0x001f);
