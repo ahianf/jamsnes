@@ -92,7 +92,7 @@ class PpuReadTest {
     }
 
     @Test
-    void vramDataReadDoesNotRefreshBufferDuringActiveDisplay() {
+    void activeVmaddPrefetchClearsVramReadBuffer() {
         SNES snes = init();
         snes.ppu.vram.write(0, 0x12);
         snes.ppu.vram.write(1, 0x34);
@@ -107,9 +107,47 @@ class PpuReadTest {
         snes.bus.write(0x2116, 0x01);
         snes.bus.write(0x2117, 0x00);
 
-        assertEquals(0x12, snes.bus.read(0x2139));
+        assertEquals(0x00, snes.bus.read(0x2139));
         assertEquals(2, snes.ppu.getVramAddressRegister());
+        assertEquals(0x00, snes.bus.read(0x213a));
+    }
+
+    @Test
+    void activeLowPortIncrementReturnsOldByteThenClearsVramReadBuffer() {
+        SNES snes = init();
+        snes.ppu.vram.write(0, 0x12);
+        snes.ppu.vram.write(1, 0x34);
+
+        snes.bus.write(0x2100, 0x80);
+        snes.bus.write(0x2116, 0x00);
+        snes.bus.write(0x2117, 0x00);
+        snes.bus.write(0x2100, 0x00);
+
+        assertEquals(0x12, snes.bus.read(0x2139));
+        assertEquals(1, snes.ppu.getVramAddressRegister());
+        assertEquals(0x00, snes.bus.read(0x213a));
+        assertEquals(0x00, snes.bus.read(0x2139));
+        assertEquals(2, snes.ppu.getVramAddressRegister());
+    }
+
+    @Test
+    void activeHighPortIncrementReturnsOldWordThenClearsVramReadBuffer() {
+        SNES snes = init();
+        snes.ppu.vram.write(0, 0x12);
+        snes.ppu.vram.write(1, 0x34);
+
+        snes.bus.write(0x2100, 0x80);
+        snes.bus.write(0x2115, 0x80);
+        snes.bus.write(0x2116, 0x00);
+        snes.bus.write(0x2117, 0x00);
+        snes.bus.write(0x2100, 0x00);
+
+        assertEquals(0x12, snes.bus.read(0x2139));
         assertEquals(0x34, snes.bus.read(0x213a));
+        assertEquals(1, snes.ppu.getVramAddressRegister());
+        assertEquals(0x00, snes.bus.read(0x2139));
+        assertEquals(0x00, snes.bus.read(0x213a));
+        assertEquals(2, snes.ppu.getVramAddressRegister());
     }
 
     @Test

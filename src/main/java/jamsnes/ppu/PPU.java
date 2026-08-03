@@ -171,11 +171,11 @@ public class PPU extends AMemory {
             case 0x15 -> setVmain(value);
             case 0x16 -> {
                 vramAddress = u16((vramAddress & 0xff00) | value);
-                updateVramReadBufferIfAccessible();
+                updateVramReadBuffer();
             }
             case 0x17 -> {
                 vramAddress = u16((vramAddress & 0x00ff) | (value << 8));
-                updateVramReadBufferIfAccessible();
+                updateVramReadBuffer();
             }
             case 0x18 -> {
                 if (canAccessVideoMemory()) {
@@ -698,7 +698,7 @@ public class PPU extends AMemory {
     private int readVramLow() {
         int value = vramReadBuffer & 0xff;
         if (!isVramIncrementAfterHighByte()) {
-            updateVramReadBufferIfAccessible();
+            updateVramReadBuffer();
             incrementVramAddress();
         }
         return readPpu1(value);
@@ -707,14 +707,15 @@ public class PPU extends AMemory {
     private int readVramHigh() {
         int value = (vramReadBuffer >>> 8) & 0xff;
         if (isVramIncrementAfterHighByte()) {
-            updateVramReadBufferIfAccessible();
+            updateVramReadBuffer();
             incrementVramAddress();
         }
         return readPpu1(value);
     }
 
-    private void updateVramReadBufferIfAccessible() {
+    private void updateVramReadBuffer() {
         if (!canAccessVideoMemory()) {
+            vramReadBuffer = 0;
             return;
         }
         vramReadBuffer = vram.read(getVramAddress()) | (vram.read(u16(getVramAddress() + 1)) << 8);
