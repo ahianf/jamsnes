@@ -13,6 +13,7 @@ public class Ram extends ARectangleMemory {
     private int[] data;
     private final Component ramType;
     private final String ramName;
+    private long modificationCount;
 
     public Ram(int size, Component ramType, String ramName) {
         this.data = new int[size];
@@ -36,6 +37,11 @@ public class Ram extends ARectangleMemory {
             throw new InvalidAddress(getName() + " write", normalized);
         }
         data[normalized] = u8(value);
+        modificationCount++;
+    }
+
+    public long modificationCount() {
+        return modificationCount;
     }
 
     public int get(int address) {
@@ -52,6 +58,7 @@ public class Ram extends ARectangleMemory {
 
     public void clear() {
         Arrays.fill(data, 0);
+        modificationCount++;
     }
 
     @Override
@@ -71,5 +78,6 @@ public class Ram extends ARectangleMemory {
 
     public void setSize(int size) {
         data = Arrays.copyOf(data, size);
+        modificationCount++;
     }
 }

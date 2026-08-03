@@ -94,18 +94,54 @@ public class TileRenderer {
     }
 
     public void render(int tileAddress, boolean directColor) {
-        int[] palette = directColor ? null : getPalette(bpp == 8 ? 0 : paletteIndex);
-        int pixelIndex = 0;
-        for (int y = 0; y < buffer.length; y++) {
-            for (int x = 0; x < buffer[y].length; x++) {
-                int pixelReference = getPixelReferenceFromTile(tileAddress, pixelIndex++);
+        int[] vramData = ram.data();
+        int[] cgramData = cgram.data();
+        int vramSize = vramData.length;
+        int planePairs = bpp == 2 || bpp == 4 || bpp == 8 ? bpp >> 1 : 0;
+        int paletteAddress = (bpp == 8 ? 0 : paletteIndex) * bpp * bpp * 2;
+        for (int y = 0; y < Tile.NB_PIXELS_HEIGHT; y++) {
+            int rowAddress = tileAddress + 2 * y;
+            int plane0Low = 0;
+            int plane0High = 0;
+            int plane1Low = 0;
+            int plane1High = 0;
+            int plane2Low = 0;
+            int plane2High = 0;
+            int plane3Low = 0;
+            int plane3High = 0;
+            if (planePairs >= 1) {
+                plane0Low = vramData[rowAddress % vramSize];
+                plane0High = vramData[(rowAddress + 1) % vramSize];
+            }
+            if (planePairs >= 2) {
+                plane1Low = vramData[(rowAddress + TILE_BYTE_SIZE_ROW) % vramSize];
+                plane1High = vramData[(rowAddress + TILE_BYTE_SIZE_ROW + 1) % vramSize];
+            }
+            if (planePairs == 4) {
+                plane2Low = vramData[(rowAddress + TILE_BYTE_SIZE_ROW * 2) % vramSize];
+                plane2High = vramData[(rowAddress + TILE_BYTE_SIZE_ROW * 2 + 1) % vramSize];
+                plane3Low = vramData[(rowAddress + TILE_BYTE_SIZE_ROW * 3) % vramSize];
+                plane3High = vramData[(rowAddress + TILE_BYTE_SIZE_ROW * 3 + 1) % vramSize];
+            }
+            for (int x = 0; x < Tile.NB_PIXELS_WIDTH; x++) {
+                int shift = 7 - x;
+                int pixelReference = (((plane0Low >>> shift) & 1))
+                        | (((plane0High >>> shift) & 1) << 1)
+                        | (((plane1Low >>> shift) & 1) << 2)
+                        | (((plane1High >>> shift) & 1) << 3)
+                        | (((plane2Low >>> shift) & 1) << 4)
+                        | (((plane2High >>> shift) & 1) << 5)
+                        | (((plane3Low >>> shift) & 1) << 6)
+                        | (((plane3High >>> shift) & 1) << 7);
                 pixelReferences[y][x] = pixelReference;
                 if (pixelReference == 0) {
                     buffer[y][x] = 0;
                 } else if (directColor) {
                     buffer[y][x] = PPUUtils.directColorToRGBA(paletteIndex, pixelReference);
                 } else {
-                    buffer[y][x] = PPUUtils.cgramColorToRGBA(palette[pixelReference]);
+                    int colorAddress = paletteAddress + pixelReference * 2;
+                    int color = cgramData[colorAddress] | (cgramData[colorAddress + 1] << 8);
+                    buffer[y][x] = PPUUtils.cgramColorToRGBA(color);
                 }
             }
         }

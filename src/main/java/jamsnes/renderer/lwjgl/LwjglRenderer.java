@@ -243,15 +243,21 @@ public class LwjglRenderer extends FrameBufferRenderer {
 
     private void uploadFrameBuffer() {
         pixelBuffer.clear();
-        for (int pixel : frameBuffer()) {
-            pixelBuffer.put((byte) ((pixel >>> 24) & 0xff));
-            pixelBuffer.put((byte) ((pixel >>> 16) & 0xff));
-            pixelBuffer.put((byte) ((pixel >>> 8) & 0xff));
-            pixelBuffer.put((byte) (pixel & 0xff));
+        int[] pixels = frameBuffer();
+        int stride = width();
+        for (int y = 0; y < displayHeight; y++) {
+            int rowStart = y * stride;
+            for (int x = 0; x < displayWidth; x++) {
+                int pixel = pixels[rowStart + x];
+                pixelBuffer.put((byte) ((pixel >>> 24) & 0xff));
+                pixelBuffer.put((byte) ((pixel >>> 16) & 0xff));
+                pixelBuffer.put((byte) ((pixel >>> 8) & 0xff));
+                pixelBuffer.put((byte) (pixel & 0xff));
+            }
         }
         pixelBuffer.flip();
         GL11.glBindTexture(GL11.GL_TEXTURE_2D, texture);
-        GL11.glTexSubImage2D(GL11.GL_TEXTURE_2D, 0, 0, 0, width(), height(),
+        GL11.glTexSubImage2D(GL11.GL_TEXTURE_2D, 0, 0, 0, displayWidth, displayHeight,
                 GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, pixelBuffer);
     }
 

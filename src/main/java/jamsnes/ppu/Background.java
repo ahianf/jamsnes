@@ -88,6 +88,9 @@ public class Background {
     public final int[][] buffer = new int[BUFFER_SIZE][BUFFER_SIZE];
     public final boolean[][] tilesPriority = new boolean[PRIORITY_SIZE][PRIORITY_SIZE];
     public Vector2<Integer> backgroundSize = new Vector2<>(0, 0);
+    private long renderedVramModificationCount = -1;
+    private long renderedCgramModificationCount = -1;
+    private long renderedConfiguration = -1;
 
     public Background(PPU ppu, int backgroundNumber) {
         this.ppu = ppu;
@@ -103,6 +106,16 @@ public class Background {
     }
 
     public void renderBackground() {
+        long configuration = renderConfiguration();
+        if (renderedVramModificationCount == vram.modificationCount()
+                && renderedCgramModificationCount == ppu.cgram.modificationCount()
+                && renderedConfiguration == configuration) {
+            return;
+        }
+        renderedVramModificationCount = vram.modificationCount();
+        renderedCgramModificationCount = ppu.cgram.modificationCount();
+        renderedConfiguration = configuration;
+
         backgroundSize = new Vector2<>(
                 ((tileMapMirroring.x ? 1 : 0) + 1) * characterNbPixels.x * NB_CHARACTER_WIDTH,
                 ((tileMapMirroring.y ? 1 : 0) + 1) * characterNbPixels.y * NB_CHARACTER_HEIGHT);
@@ -119,6 +132,18 @@ public class Background {
                         mapY);
             }
         }
+    }
+
+    private long renderConfiguration() {
+        return tileMapStartAddress
+                | ((long) tilesetAddress << 16)
+                | ((long) bpp << 32)
+                | ((long) characterNbPixels.x << 37)
+                | ((long) characterNbPixels.y << 43)
+                | ((tileMapMirroring.x ? 1L : 0L) << 49)
+                | ((tileMapMirroring.y ? 1L : 0L) << 50)
+                | ((long) (ppu.getBgMode() == 0 ? backgroundNumber : 0) << 51)
+                | ((ppu.ppuRegisters().cgwselDirectColorMode() ? 1L : 0L) << 54);
     }
 
     public void setTileMapStartAddress(int address) {
@@ -379,15 +404,13 @@ public class Background {
     }
 
     private void drawTile(int data, int indexX, int indexY) {
-        TileData tileData = new TileData(data);
+        tilesPriority[indexY][indexX] = (data & (1 << 13)) != 0;
+        drawTileFromMemoryToTileBuffer(data & 0x0f, (data >>> 4) & 0x3f, (data >>> 10) & 0x07);
 
-        tilesPriority[indexY][indexX] = tileData.tilePriority;
-        drawTileFromMemoryToTileBuffer(tileData);
-
-        if (tileData.verticalFlip) {
+        if ((data & (1 << 15)) != 0) {
             horizontalFlipTileBuffer(characterNbPixels.x, characterNbPixels.y);
         }
-        if (tileData.horizontalFlip) {
+        if ((data & (1 << 14)) != 0) {
             verticalFlipTileBuffer(characterNbPixels.x, characterNbPixels.y);
         }
 
@@ -404,17 +427,16 @@ public class Background {
         }
     }
 
-    private void drawTileFromMemoryToTileBuffer(TileData tileData) {
-        clearTileBuffer();
+    private void drawTileFromMemoryToTileBuffer(int posX, int posY, int palette) {
         int paletteBase = ppu.getBgMode() == 0 ? (backgroundNumber - 1) * 8 : 0;
-        tileRenderer.setPaletteIndex(paletteBase + tileData.palette);
+        tileRenderer.setPaletteIndex(paletteBase + palette);
         int tileOffsetY = 0;
         for (int y = 0; y < characterNbPixels.y; y += Tile.NB_PIXELS_HEIGHT) {
             int tileOffsetX = 0;
             for (int x = 0; x < characterNbPixels.x; x += Tile.NB_PIXELS_WIDTH) {
                 int graphicAddress = tilesetAddress
-                        + ((tileData.posY + tileOffsetY) * NB_TILE_PER_ROW * bpp * Tile.BASE_BYTE_SIZE)
-                        + ((tileData.posX + tileOffsetX) * bpp * Tile.BASE_BYTE_SIZE);
+                        + ((posY + tileOffsetY) * NB_TILE_PER_ROW * bpp * Tile.BASE_BYTE_SIZE)
+                        + ((posX + tileOffsetX) * bpp * Tile.BASE_BYTE_SIZE);
                 tileRenderer.render(graphicAddress, bpp == 8 && ppu.ppuRegisters().cgwselDirectColorMode());
                 mergeTileRendererBuffer(x, y);
                 tileOffsetX++;
@@ -476,30 +498,4 @@ public class Background {
         }
     }
 
-    private void clearTileBuffer() {
-        for (int[] row : tileBuffer) {
-            Arrays.fill(row, 0);
-        }
-        for (short[] row : tilePixelDescriptors) {
-            Arrays.fill(row, (short) 0);
-        }
-    }
-
-    private static final class TileData {
-        private final int posX;
-        private final int posY;
-        private final int palette;
-        private final boolean tilePriority;
-        private final boolean horizontalFlip;
-        private final boolean verticalFlip;
-
-        private TileData(int raw) {
-            posX = raw & 0x0f;
-            posY = (raw >>> 4) & 0x3f;
-            palette = (raw >>> 10) & 0x07;
-            tilePriority = (raw & (1 << 13)) != 0;
-            horizontalFlip = (raw & (1 << 14)) != 0;
-            verticalFlip = (raw & (1 << 15)) != 0;
-        }
-    }
 }
