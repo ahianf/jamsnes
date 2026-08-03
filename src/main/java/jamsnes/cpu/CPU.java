@@ -1196,7 +1196,7 @@ public class CPU extends AMemory {
     }
 
     public int PEI(int value) {
-        int effective = bus.read(value) | (bus.read(u16(value + 1)) << 8);
+        int effective = bus.read(value) | (bus.read(nextDirectPageAddress(value)) << 8);
         pushWordAcrossEmulationStackBoundary(effective);
         return 0;
     }

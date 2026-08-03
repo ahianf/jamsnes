@@ -1051,6 +1051,26 @@ class CpuOpcodeDispatchTest {
         assertEquals(0xabcd, snes.cpu._pop16());
     }
 
+    @Test
+    void emulationPeiWrapsPointerWithinAlignedDirectPage() {
+        SNES snes = init();
+        snes.cpu.registers().setPc(0x0200);
+        snes.cpu.registers().d = 0x0c00;
+        snes.cpu.registers().s = 0x0158;
+        snes.wram.data()[0x0cff] = 0x26;
+        snes.wram.data()[0x0c00] = 0x6b;
+        snes.wram.data()[0x0d00] = 0x99;
+        writeProgram(snes, 0x0200, 0xd4, 0xff);
+
+        assertEquals(6, snes.cpu.executeInstruction());
+
+        assertEquals(0x0202, snes.cpu.registers().pc);
+        assertEquals(0x0156, snes.cpu.registers().s);
+        assertEquals(0x6b, snes.wram.data()[0x0158]);
+        assertEquals(0x26, snes.wram.data()[0x0157]);
+        assertEquals(0x6b26, snes.cpu._pop16());
+    }
+
     private static void writeProgram(SNES snes, int start, int... opcodes) {
         for (int i = 0; i < opcodes.length; i++) {
             snes.wram.data()[start + i] = opcodes[i];
