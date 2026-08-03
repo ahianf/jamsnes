@@ -471,6 +471,31 @@ class PpuReadTest {
     }
 
     @Test
+    void selectedWriteOnlyPortsUsePpu1OpenBus() {
+        SNES snes = init();
+        writeMode7Register(snes, 0x211b, 0x0008);
+        writeMode7Register(snes, 0x211c, 0x0200);
+        assertEquals(0x10, snes.bus.read(0x2134));
+
+        snes.bus.setOpenBus(0x5a);
+
+        int[] ppu1OpenBusPorts = {
+                0x2104, 0x2105, 0x2106, 0x2108, 0x2109, 0x210a,
+                0x2114, 0x2115, 0x2116, 0x2118, 0x2119, 0x211a,
+                0x2124, 0x2125, 0x2126, 0x2128, 0x2129, 0x212a
+        };
+        for (int address : ppu1OpenBusPorts) {
+            assertEquals(0x10, snes.bus.read(address));
+        }
+        assertEquals(0x10, snes.bus.read(0x802104));
+
+        snes.bus.setOpenBus(0x5a);
+        assertEquals(0x5a, snes.bus.read(0x2107));
+        assertEquals(0x5a, snes.bus.read(0x2117));
+        assertEquals(0x5a, snes.bus.read(0x2127));
+    }
+
+    @Test
     void unsupportedDirectPpuReadRegisterThrows() {
         SNES snes = init();
 

@@ -113,6 +113,9 @@ public class PPU extends AMemory {
     @Override
     public int read(int address) {
         return switch (address) {
+            case 0x04, 0x05, 0x06, 0x08, 0x09, 0x0a,
+                    0x14, 0x15, 0x16, 0x18, 0x19, 0x1a,
+                    0x24, 0x25, 0x26, 0x28, 0x29, 0x2a -> ppu1OpenBus;
             case 0x34, 0x35, 0x36 -> mode7MultiplicationResultByte(address - 0x34);
             case 0x37 -> readSoftwareLatch();
             case 0x38 -> readOamData();
