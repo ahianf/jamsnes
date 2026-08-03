@@ -351,6 +351,10 @@ class InternalMemoryMapTest {
         snes.apu._internalWrite(0x00f2, 0x7c);
         assertEquals(0xa5, snes.apu._internalRead(0x00f3));
         snes.apu._internalWrite(0x00f3, 0xff);
+        assertEquals(0xff, snes.apu._internalRead(0x00f3));
+        for (int i = 0; i < 3; i++) {
+            snes.apu.dsp().update();
+        }
         assertEquals(0x00, snes.apu._internalRead(0x00f3));
 
         snes.apu._internalWrite(0x00f2, 0x08);

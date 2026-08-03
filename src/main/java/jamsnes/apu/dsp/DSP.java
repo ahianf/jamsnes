@@ -89,6 +89,7 @@ public class DSP {
     private final IRenderer renderer;
     private int voicePhase;
     private int bufferOffset;
+    private int endxReadback;
 
     public DSP() {
         int[] ram = new int[0x10000];
@@ -126,6 +127,7 @@ public class DSP {
         Arrays.fill(unusedRegisters, 0);
         voicePhase = 0;
         bufferOffset = 0;
+        endxReadback = 0;
     }
 
     public int read(int address) {
@@ -171,7 +173,7 @@ public class DSP {
                     | ((master.mute ? 1 : 0) << 6)
                     | ((echo.enabled ? 1 : 0) << 5)
                     | noise.clock;
-            case 0x7c -> packedVoiceFlags(Flag.ENDX);
+            case 0x7c -> endxReadback;
             case 0x0d -> echo.feedback;
             case 0x1d -> master.unused;
             case 0x2d -> packedVoiceFlags(Flag.PMON);
@@ -254,6 +256,7 @@ public class DSP {
                 noise.clock = value & 0x1f;
             }
             case 0x7c -> {
+                endxReadback = value;
                 setVoiceFlags(0, Flag.ENDX);
                 latch.endx = 0;
             }
@@ -276,6 +279,7 @@ public class DSP {
             int value = u8(data);
             setVoiceFlags(value, Flag.ENDX);
             latch.endx = value;
+            endxReadback = value;
             return;
         }
         write(normalized, data);
@@ -952,6 +956,7 @@ public class DSP {
 
     private void voice7(Voice voice) {
         setVoiceFlags(latch.endx, Flag.ENDX);
+        endxReadback = latch.endx;
         latch.envx = voice.envelopeOutput;
     }
 

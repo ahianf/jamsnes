@@ -593,7 +593,7 @@ class DSPTest {
     }
 
     @Test
-    void endxWriteClearsSampleEndFlags() {
+    void endxWriteClearsInternalFlagsBeforePhaseSevenUpdatesReadback() {
         DSP dsp = new DSP();
         dsp.setVoiceRuntimeState(0, 0, true, false, false, false);
         dsp.setVoiceRuntimeState(1, 0, true, false, false, false);
@@ -605,9 +605,13 @@ class DSPTest {
 
         dsp.write(0x7c, 0xff);
 
-        assertEquals(0x00, dsp.read(0x7c));
+        assertEquals(0xff, dsp.read(0x7c));
         assertFalse(dsp.voiceEndx(0));
         assertFalse(dsp.voiceEndx(1));
+
+        dsp.voice7(0);
+
+        assertEquals(0x00, dsp.read(0x7c));
     }
 
     @Test
@@ -625,6 +629,9 @@ class DSPTest {
 
         dsp.voice5(0);
         dsp.write(0x7c, 0xff);
+
+        assertEquals(0xff, dsp.read(0x7c));
+
         dsp.voice7(0);
 
         assertEquals(0, dsp.read(0x7c));
