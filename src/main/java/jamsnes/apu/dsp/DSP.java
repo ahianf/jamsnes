@@ -96,7 +96,7 @@ public class DSP {
         ramWriter = (address, value) -> ram[u16(address)] = u8(value);
         renderer = null;
         for (int i = 0; i < voices.length; i++) {
-            voices[i] = new Voice();
+            voices[i] = new Voice(i);
         }
     }
 
@@ -109,7 +109,7 @@ public class DSP {
         this.ramWriter = (address, value) -> ramWriter.write(u16(address), u8(value));
         this.renderer = renderer;
         for (int i = 0; i < voices.length; i++) {
-            voices[i] = new Voice();
+            voices[i] = new Voice(i);
         }
     }
 
@@ -227,10 +227,12 @@ public class DSP {
                 }
                 case 0x8 -> {
                     voices[voice].envx = value;
+                    latch.envx = value;
                     return;
                 }
                 case 0x9 -> {
                     voices[voice].outx = value;
+                    latch.outx = value;
                     return;
                 }
                 default -> {
@@ -251,7 +253,10 @@ public class DSP {
                 echo.enabled = (value & 0x20) != 0;
                 noise.clock = value & 0x1f;
             }
-            case 0x7c -> setVoiceFlags(0, Flag.ENDX);
+            case 0x7c -> {
+                setVoiceFlags(0, Flag.ENDX);
+                latch.endx = 0;
+            }
             case 0x0d -> echo.feedback = value;
             case 0x1d -> master.unused = value;
             case 0x2d -> setVoiceFlags(value, Flag.PMON);
@@ -268,7 +273,9 @@ public class DSP {
     public void restoreRegister(int address, int data) {
         int normalized = u8(address) & 0x7f;
         if (normalized == 0x7c) {
-            setVoiceFlags(u8(data), Flag.ENDX);
+            int value = u8(data);
+            setVoiceFlags(value, Flag.ENDX);
+            latch.endx = value;
             return;
         }
         write(normalized, data);
@@ -279,6 +286,7 @@ public class DSP {
             int envelope = Math.min((voice.envx & 0x7f) << 4, 0x7ff);
             voice.envelope = envelope;
             voice.hiddenEnvelope = envelope;
+            voice.envelopeOutput = voice.envx;
             voice.envelopeMode = envelope != 0 && !voice.kof
                     ? EnvelopeMode.SUSTAIN
                     : EnvelopeMode.RELEASE;
@@ -881,7 +889,7 @@ public class DSP {
         }
 
         latch.output = (interpolated * voice.envelope >> 11) & ~1;
-        voice.envx = voice.envelope >> 4;
+        voice.envelopeOutput = voice.envelope >> 4;
 
         if (master.reset || (brr.header & 3) == 1) {
             voice.envelope = 0;
@@ -928,10 +936,14 @@ public class DSP {
     private void voice5(Voice voice) {
         voiceOutput(voice, 1);
 
-        voice.endx |= voice.loop;
-        if (voice.konDelay == 5) {
-            voice.endx = false;
+        int endx = packedVoiceFlags(Flag.ENDX);
+        if (voice.loop) {
+            endx |= voice.bit;
         }
+        if (voice.konDelay == 5) {
+            endx &= ~voice.bit;
+        }
+        latch.endx = u8(endx);
     }
 
     private void voice6(Voice voice) {
@@ -939,7 +951,8 @@ public class DSP {
     }
 
     private void voice7(Voice voice) {
-        latch.envx = voice.envx;
+        setVoiceFlags(latch.endx, Flag.ENDX);
+        latch.envx = voice.envelopeOutput;
     }
 
     private void voice8(Voice voice) {
@@ -1255,6 +1268,7 @@ public class DSP {
     }
 
     private static final class Voice {
+        private final int bit;
         private final int[] volume = new int[2];
         private int pitchLow;
         private int pitchHigh;
@@ -1264,6 +1278,7 @@ public class DSP {
         private int gain;
         private int envx;
         private int outx;
+        private int envelopeOutput;
         private int envelope;
         private int hiddenEnvelope;
         private EnvelopeMode envelopeMode = EnvelopeMode.RELEASE;
@@ -1286,6 +1301,10 @@ public class DSP {
         private boolean tempKon;
         private boolean tempKof;
 
+        private Voice(int index) {
+            bit = 1 << index;
+        }
+
         private void reset() {
             volume[0] = 0;
             volume[1] = 0;
@@ -1297,6 +1316,7 @@ public class DSP {
             gain = 0;
             envx = 0;
             outx = 0;
+            envelopeOutput = 0;
             envelope = 0;
             hiddenEnvelope = 0;
             envelopeMode = EnvelopeMode.RELEASE;
@@ -1418,6 +1438,7 @@ public class DSP {
 
     private static final class Latch {
         private int adsr1;
+        private int endx;
         private int envx;
         private int outx;
         private int pitch;
@@ -1425,6 +1446,7 @@ public class DSP {
 
         private void reset() {
             adsr1 = 0;
+            endx = 0;
             envx = 0;
             outx = 0;
             pitch = 0;

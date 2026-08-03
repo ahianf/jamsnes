@@ -115,6 +115,37 @@ class DSPTest {
     }
 
     @Test
+    void outputRegisterWritesReplacePendingPipelineValues() {
+        DSP dsp = new DSP();
+        dsp.setLatchState(0, 0x1234);
+        dsp.setVoiceEnvelopeState(0, 0x420, 0x420, DSP.EnvelopeMode.SUSTAIN);
+
+        dsp.voice6(0);
+        dsp.voice3c(0);
+        dsp.voice7(0);
+        dsp.write(0x19, 0x56);
+        dsp.write(0x18, 0x65);
+        dsp.voice8(0);
+        dsp.voice9(0);
+
+        assertEquals(0x56, dsp.read(0x09));
+        assertEquals(0x65, dsp.read(0x08));
+    }
+
+    @Test
+    void envelopePipelineKeepsItsInternalValueSeparateFromVisibleEnvx() {
+        DSP dsp = new DSP();
+        dsp.setVoiceEnvelopeState(0, 0x420, 0x420, DSP.EnvelopeMode.SUSTAIN);
+
+        dsp.voice3c(0);
+        dsp.write(0x08, 0x11);
+        dsp.voice7(0);
+        dsp.voice9(1);
+
+        assertEquals(0x42, dsp.read(0x18));
+    }
+
+    @Test
     void snapshotRestoreSeedsVisibleEnvelopeIntoVoiceState() {
         DSP dsp = new DSP();
         dsp.restoreRegister(0x08, 0x42);
@@ -534,7 +565,8 @@ class DSPTest {
         dsp.setLatchState(0, 0x1234);
         dsp.voice6(0);
         dsp.voice8(0);
-        dsp.write(0x08, 0x2a);
+        dsp.setVoiceEnvelopeState(0, 0x2a0, 0x2a0, DSP.EnvelopeMode.SUSTAIN);
+        dsp.voice3c(0);
         dsp.voice7(0);
         dsp.voice9(1);
 
@@ -543,10 +575,13 @@ class DSPTest {
 
         dsp.setVoiceRuntimeState(0, 0, true, false, false, false);
         dsp.voice5(0);
+        assertFalse(dsp.voiceEndx(0));
+        dsp.voice7(0);
         assertTrue(dsp.voiceEndx(0));
 
         dsp.setVoiceRuntimeState(0, 5, true, false, false, false);
         dsp.voice5(0);
+        dsp.voice7(0);
         assertFalse(dsp.voiceEndx(0));
     }
 
@@ -556,7 +591,9 @@ class DSPTest {
         dsp.setVoiceRuntimeState(0, 0, true, false, false, false);
         dsp.setVoiceRuntimeState(1, 0, true, false, false, false);
         dsp.voice5(0);
+        dsp.voice7(0);
         dsp.voice5(1);
+        dsp.voice7(1);
         assertEquals(0x03, dsp.read(0x7c));
 
         dsp.write(0x7c, 0xff);
@@ -564,6 +601,26 @@ class DSPTest {
         assertEquals(0x00, dsp.read(0x7c));
         assertFalse(dsp.voiceEndx(0));
         assertFalse(dsp.voiceEndx(1));
+    }
+
+    @Test
+    void endxChangesPublishAtVoiceSevenAndHonorInterveningWrites() {
+        DSP dsp = new DSP();
+        dsp.setVoiceRuntimeState(0, 0, true, false, false, false);
+
+        dsp.voice5(0);
+
+        assertEquals(0, dsp.read(0x7c));
+
+        dsp.voice7(0);
+
+        assertEquals(1, dsp.read(0x7c));
+
+        dsp.voice5(0);
+        dsp.write(0x7c, 0xff);
+        dsp.voice7(0);
+
+        assertEquals(0, dsp.read(0x7c));
     }
 
     @Test
