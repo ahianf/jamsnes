@@ -226,8 +226,10 @@ public class PPU extends AMemory {
         ColorMathState currentColorMathState = currentColorMathState();
         LayerState currentLayerState = currentLayerState();
         boolean interlaced = fieldInterlace;
+        int outputHeight = 2 * vBlankStartScanline();
+        int outputWidth = 2 * VISIBLE_WIDTH;
 
-        for (int outputY = 0; outputY < screen.length; outputY++) {
+        for (int outputY = 0; outputY < outputHeight; outputY++) {
             if (interlaced && (outputY & 1) != (secondField ? 1 : 0)) {
                 continue;
             }
@@ -242,7 +244,7 @@ public class PPU extends AMemory {
                     ? scanlineLayerStates[sourceY]
                     : currentLayerState;
             boolean highResolution = highResolutionEnabled(layerState);
-            for (int x = 0; x < screen[outputY].length; x++) {
+            for (int x = 0; x < outputWidth; x++) {
                 int sourceX = x >>> 1;
                 screen[outputY][x] = highResolution && (x & 1) == 0
                         ? composeSubscreenPixel(sourceX, sourceY, colorMathState)
@@ -319,10 +321,15 @@ public class PPU extends AMemory {
     }
 
     public void renderMainAndSubScreen() {
-        if (ppuRegisters.bgMode() != 7) {
-            for (Background background : backgrounds) {
-                background.renderBackground();
-            }
+        int backgroundCount = switch (ppuRegisters.bgMode()) {
+            case 0 -> 4;
+            case 1 -> 3;
+            case 2, 3, 4, 5 -> 2;
+            case 6 -> 1;
+            default -> 0;
+        };
+        for (int i = 0; i < backgroundCount; i++) {
+            backgrounds[i].renderBackground();
         }
 
         fillSubScreenBackdrop();
@@ -358,11 +365,12 @@ public class PPU extends AMemory {
 
     private void fillSubScreenBackdrop() {
         ColorMathState currentState = currentColorMathState();
-        for (int y = 0; y < subScreen.length; y++) {
+        int rows = vBlankStartScanline();
+        for (int y = 0; y < rows; y++) {
             ColorMathState state = scanlineDisplayControlCaptured[y]
                     ? scanlineColorMathStates[y]
                     : currentState;
-            Arrays.fill(subScreen[y], PPUUtils.cgramColorToRGBA(state.fixedColor()));
+            Arrays.fill(subScreen[y], 0, VISIBLE_WIDTH, PPUUtils.cgramColorToRGBA(state.fixedColor()));
         }
     }
 
@@ -902,7 +910,8 @@ public class PPU extends AMemory {
                 background,
                 levelLow,
                 levelHigh,
-                backgroundScanlineStates(backgroundIndex, 0));
+                backgroundScanlineStates(backgroundIndex, 0),
+                VISIBLE_WIDTH);
         Background.mergeBackgroundBuffer(
                 subScreen,
                 subScreenLevelMap,
@@ -911,11 +920,12 @@ public class PPU extends AMemory {
                 background,
                 levelLow,
                 levelHigh,
-                backgroundScanlineStates(backgroundIndex, 1));
+                backgroundScanlineStates(backgroundIndex, 1),
+                VISIBLE_WIDTH);
     }
 
     private Background.ScanlineState[] backgroundScanlineStates(int backgroundIndex, int screenIndex) {
-        Background.ScanlineState[] result = new Background.ScanlineState[Background.BUFFER_SIZE];
+        Background.ScanlineState[] result = new Background.ScanlineState[vBlankStartScanline()];
         LayerState currentState = currentLayerState();
         ColorMathState currentColorMathState = currentColorMathState();
         int[] currentPalette = currentCgramState();
@@ -970,7 +980,7 @@ public class PPU extends AMemory {
                 : state.windowSelection34();
         boolean highNibble = (backgroundIndex & 1) != 0;
         int shift = highNibble ? 4 : 0;
-        boolean[] mask = new boolean[Background.BUFFER_SIZE];
+        boolean[] mask = new boolean[VISIBLE_WIDTH];
         for (int x = 0; x < mask.length; x++) {
             mask[x] = isInsideWindowMask(
                     (selection & (0x02 << shift)) != 0,
@@ -1100,7 +1110,7 @@ public class PPU extends AMemory {
             boolean[] windowMask = state == currentState
                     ? currentWindowMask
                     : objectWindowMask(state, screenIndex);
-            boolean[] claimedPixels = new boolean[destination[screenY].length];
+            boolean[] claimedPixels = new boolean[VISIBLE_WIDTH];
             for (int objectSlot = 0; objectSlot < evaluatedObjectCounts[screenY]; objectSlot++) {
                 renderObjectScanlineToBuffer(
                         evaluatedObjectIndices[screenY][objectSlot],
@@ -1155,7 +1165,7 @@ public class PPU extends AMemory {
                 continue;
             }
             int screenX = x + pixelX;
-            if (screenX < 0 || screenX >= destination[screenY].length) {
+            if (screenX < 0 || screenX >= claimedPixels.length) {
                 continue;
             }
             if (claimedPixels[screenX]) {
@@ -1286,7 +1296,7 @@ public class PPU extends AMemory {
         }
 
         int selection = state.objectWindowSelection();
-        boolean[] mask = new boolean[Background.BUFFER_SIZE];
+        boolean[] mask = new boolean[VISIBLE_WIDTH];
         for (int x = 0; x < mask.length; x++) {
             mask[x] = isInsideWindowMask(
                     (selection & 0x02) != 0,
@@ -1348,8 +1358,9 @@ public class PPU extends AMemory {
         ColorMathState currentColorMathState = currentColorMathState();
         int[] currentPalette = currentCgramState();
         boolean[] currentWindowMask = backgroundWindowMask(currentLayerState, backgroundIndex, screenIndex);
+        int rows = vBlankStartScanline();
 
-        for (int y = 0; y < destination.length; y++) {
+        for (int y = 0; y < rows; y++) {
             boolean captured = scanlineDisplayControlCaptured[y];
             LayerState layerState = captured ? scanlineLayerStates[y] : currentLayerState;
             Mode7State mode7State = captured ? scanlineMode7States[y] : currentMode7State;
@@ -1392,7 +1403,7 @@ public class PPU extends AMemory {
                     + (d * clippedScrollY & ~63)
                     + (d * screenY & ~63)
                     + (centerY << 8);
-            for (int x = 0; x < destination[y].length; x++) {
+            for (int x = 0; x < VISIBLE_WIDTH; x++) {
                 if (windowMask != null && windowMask[x]) {
                     continue;
                 }
@@ -1789,15 +1800,14 @@ public class PPU extends AMemory {
     }
 
     private void fillBuffer(int[][] buffer, int value) {
-        for (int[] row : buffer) {
-            Arrays.fill(row, value);
+        int rows = Math.min(buffer.length, vBlankStartScanline());
+        for (int y = 0; y < rows; y++) {
+            Arrays.fill(buffer[y], 0, Math.min(buffer[y].length, VISIBLE_WIDTH), value);
         }
     }
 
     private void clearSourceMap(int[][] buffer, int value) {
-        for (int[] row : buffer) {
-            Arrays.fill(row, value);
-        }
+        fillBuffer(buffer, value);
     }
 
     private int applyDisplayControl(int rgba, int displayControl) {

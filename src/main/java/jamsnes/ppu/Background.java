@@ -78,10 +78,10 @@ public class Background {
     }
 
     public void renderBackground() {
-        clearBuffers();
         backgroundSize = new Vector2<>(
                 ((tileMapMirroring.x ? 1 : 0) + 1) * characterNbPixels.x * NB_CHARACTER_WIDTH,
                 ((tileMapMirroring.y ? 1 : 0) + 1) * characterNbPixels.y * NB_CHARACTER_HEIGHT);
+        clearBuffers();
 
         int mapColumns = tileMapMirroring.x ? 2 : 1;
         int mapRows = tileMapMirroring.y ? 2 : 1;
@@ -231,7 +231,29 @@ public class Background {
             int levelLow,
             int levelHigh,
             ScanlineState[] scanlineStates) {
-        int height = Math.min(bufferDest.length, backgroundSrc.buffer.length);
+        mergeBackgroundBuffer(
+                bufferDest,
+                pixelDestinationLevelMap,
+                sourceDestinationMap,
+                source,
+                backgroundSrc,
+                levelLow,
+                levelHigh,
+                scanlineStates,
+                Integer.MAX_VALUE);
+    }
+
+    public static void mergeBackgroundBuffer(
+            int[][] bufferDest,
+            int[][] pixelDestinationLevelMap,
+            int[][] sourceDestinationMap,
+            int source,
+            Background backgroundSrc,
+            int levelLow,
+            int levelHigh,
+            ScanlineState[] scanlineStates,
+            int maxWidth) {
+        int height = Math.min(scanlineStates.length, Math.min(bufferDest.length, backgroundSrc.buffer.length));
         int sourceHeight = backgroundSrc.backgroundSize.y > 0
                 ? Math.min(backgroundSrc.backgroundSize.y, backgroundSrc.buffer.length)
                 : backgroundSrc.buffer.length;
@@ -239,11 +261,11 @@ public class Background {
                 ? Math.min(backgroundSrc.backgroundSize.x, backgroundSrc.buffer[0].length)
                 : backgroundSrc.buffer[0].length;
         for (int y = 0; y < height; y++) {
-            ScanlineState state = y < scanlineStates.length ? scanlineStates[y] : null;
+            ScanlineState state = scanlineStates[y];
             if (state == null || !state.enabled()) {
                 continue;
             }
-            int width = Math.min(bufferDest[y].length, backgroundSrc.buffer[y].length);
+            int width = Math.min(maxWidth, Math.min(bufferDest[y].length, backgroundSrc.buffer[y].length));
             int pixelSize = Math.max(1, state.mosaicSize());
             int mosaicY = (y / pixelSize) * pixelSize;
             int[] offsetSourceX = null;
@@ -416,11 +438,11 @@ public class Background {
     }
 
     private void clearBuffers() {
-        for (int[] row : buffer) {
-            Arrays.fill(row, 0);
-        }
-        for (short[] row : pixelDescriptors) {
-            Arrays.fill(row, (short) 0);
+        int height = backgroundSize.y > 0 ? Math.min(backgroundSize.y, buffer.length) : buffer.length;
+        int width = backgroundSize.x > 0 ? Math.min(backgroundSize.x, buffer[0].length) : buffer[0].length;
+        for (int y = 0; y < height; y++) {
+            Arrays.fill(buffer[y], 0, width, 0);
+            Arrays.fill(pixelDescriptors[y], 0, width, (short) 0);
         }
         for (boolean[] row : tilesPriority) {
             Arrays.fill(row, false);

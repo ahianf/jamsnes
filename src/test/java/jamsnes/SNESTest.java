@@ -396,7 +396,7 @@ class SNESTest {
         snes.update();
 
         assertEquals(1, renderer.drawScreenCalls);
-        assertEquals((long) Background.BUFFER_SIZE * Background.BUFFER_SIZE, renderer.putPixelCalls);
+        assertEquals((long) 2 * PPU.VISIBLE_WIDTH * 2 * PPU.V_BLANK_START_SCANLINE, renderer.putPixelCalls);
     }
 
     @Test

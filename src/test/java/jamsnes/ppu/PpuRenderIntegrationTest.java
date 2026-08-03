@@ -1340,7 +1340,7 @@ class PpuRenderIntegrationTest {
         snes.ppu.update(1);
 
         assertEquals(PPUUtils.cgramColorToRGBA(0x7c00), renderer.firstPixel);
-        assertEquals((long) Background.BUFFER_SIZE * Background.BUFFER_SIZE, renderer.putPixelCalls);
+        assertEquals((long) 2 * PPU.VISIBLE_WIDTH * 2 * PPU.V_BLANK_START_SCANLINE, renderer.putPixelCalls);
         assertEquals(1, renderer.drawScreenCalls);
     }
 
