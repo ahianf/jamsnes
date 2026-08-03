@@ -564,6 +564,81 @@ class PpuRenderIntegrationTest {
     }
 
     @Test
+    void backgroundVerticalMosaicRestartsWhenEnabledMidFrame() {
+        SNES snes = init(new TestRenderer());
+        writeColor(snes, 1, 0x001f);
+        writeColor(snes, 2, 0x03e0);
+        snes.bus.write(0x210b, 0x01);
+        snes.bus.write(0x212c, 0x01);
+        snes.ppu.vram.write(0x0000, 0x00);
+        snes.ppu.vram.write(0x0001, 0x00);
+        snes.ppu.vram.write(0x2000, 0x80);
+        snes.ppu.vram.write(0x2002, 0x00);
+        snes.ppu.vram.write(0x2003, 0x80);
+        snes.ppu.captureScanlineState(0);
+        snes.bus.write(0x2106, 0x11);
+        snes.ppu.captureScanlineState(1);
+        snes.ppu.captureScanlineState(2);
+
+        snes.ppu.renderMainAndSubScreen();
+
+        int firstColor = PPUUtils.cgramColorToRGBA(0x001f);
+        int secondColor = PPUUtils.cgramColorToRGBA(0x03e0);
+        assertEquals(firstColor, snes.ppu.mainScreen()[0][0]);
+        assertEquals(secondColor, snes.ppu.mainScreen()[1][0]);
+        assertEquals(secondColor, snes.ppu.mainScreen()[2][0]);
+    }
+
+    @Test
+    void modeSevenVerticalMosaicRestartsWhenEnabledMidFrame() {
+        SNES snes = init(new TestRenderer());
+        writeColor(snes, 5, 0x001f);
+        writeColor(snes, 6, 0x03e0);
+        setupMode7Identity(snes);
+        writeMode7Map(snes, 0, 0, 1);
+        writeMode7Pixel(snes, 1, 0, 0, 5);
+        writeMode7Pixel(snes, 1, 0, 1, 6);
+        snes.ppu.captureScanlineState(0);
+        snes.bus.write(0x2106, 0x11);
+        snes.ppu.captureScanlineState(1);
+        snes.ppu.captureScanlineState(2);
+
+        snes.ppu.renderMainAndSubScreen();
+
+        int firstColor = PPUUtils.cgramColorToRGBA(0x001f);
+        int secondColor = PPUUtils.cgramColorToRGBA(0x03e0);
+        assertEquals(firstColor, snes.ppu.mainScreen()[0][0]);
+        assertEquals(secondColor, snes.ppu.mainScreen()[1][0]);
+        assertEquals(secondColor, snes.ppu.mainScreen()[2][0]);
+    }
+
+    @Test
+    void verticalMosaicCounterIsSharedAcrossBackgroundEnableBits() {
+        SNES snes = init(new TestRenderer());
+        writeColor(snes, 1, 0x001f);
+        writeColor(snes, 2, 0x03e0);
+        snes.bus.write(0x210b, 0x01);
+        snes.bus.write(0x212c, 0x01);
+        snes.ppu.vram.write(0x0000, 0x00);
+        snes.ppu.vram.write(0x0001, 0x00);
+        snes.ppu.vram.write(0x2000, 0x80);
+        snes.ppu.vram.write(0x2002, 0x00);
+        snes.ppu.vram.write(0x2003, 0x80);
+        snes.bus.write(0x2106, 0x22);
+        snes.ppu.captureScanlineState(0);
+        snes.bus.write(0x2106, 0x21);
+        snes.ppu.captureScanlineState(1);
+        snes.ppu.captureScanlineState(2);
+
+        snes.ppu.renderMainAndSubScreen();
+
+        int firstColor = PPUUtils.cgramColorToRGBA(0x001f);
+        assertEquals(firstColor, snes.ppu.mainScreen()[0][0]);
+        assertEquals(firstColor, snes.ppu.mainScreen()[1][0]);
+        assertEquals(firstColor, snes.ppu.mainScreen()[2][0]);
+    }
+
+    @Test
     void modeSevenDirectColorBypassesCgramForBackgroundOne() {
         SNES snes = init(new TestRenderer());
         writeColor(snes, 0xe7, 0x001f);

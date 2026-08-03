@@ -8,6 +8,7 @@ import java.util.Arrays;
 import static jamsnes.models.Unsigned.u16;
 
 public class Background {
+    private static final int DERIVE_MOSAIC_SOURCE_FROM_OUTPUT = Integer.MIN_VALUE;
     private static final int NB_CHARACTER_WIDTH = 32;
     private static final int NB_CHARACTER_HEIGHT = 32;
     private static final int NB_TILE_PER_ROW = 16;
@@ -20,11 +21,35 @@ public class Background {
             int scrollX,
             int scrollY,
             int mosaicSize,
+            int mosaicSourceY,
             boolean[] windowMask,
             int horizontalScale,
             int horizontalPhase,
             int[] palette,
             boolean directColor) {
+        public ScanlineState(
+                boolean enabled,
+                int scrollX,
+                int scrollY,
+                int mosaicSize,
+                boolean[] windowMask,
+                int horizontalScale,
+                int horizontalPhase,
+                int[] palette,
+                boolean directColor) {
+            this(
+                    enabled,
+                    scrollX,
+                    scrollY,
+                    mosaicSize,
+                    DERIVE_MOSAIC_SOURCE_FROM_OUTPUT,
+                    windowMask,
+                    horizontalScale,
+                    horizontalPhase,
+                    palette,
+                    directColor);
+        }
+
         public ScanlineState(
                 boolean enabled,
                 int scrollX,
@@ -267,7 +292,9 @@ public class Background {
             }
             int width = Math.min(maxWidth, Math.min(bufferDest[y].length, backgroundSrc.buffer[y].length));
             int pixelSize = Math.max(1, state.mosaicSize());
-            int mosaicY = (y / pixelSize) * pixelSize;
+            int mosaicY = state.mosaicSourceY() == DERIVE_MOSAIC_SOURCE_FROM_OUTPUT
+                    ? (y / pixelSize) * pixelSize
+                    : state.mosaicSourceY();
             int[] offsetSourceX = null;
             int[] offsetScrollY = null;
             if (backgroundSrc.ppu.usesOffsetPerTile(backgroundSrc.backgroundNumber)) {

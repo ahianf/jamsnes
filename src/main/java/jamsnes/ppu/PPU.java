@@ -931,6 +931,7 @@ public class PPU extends AMemory {
     private Background.ScanlineState[] backgroundScanlineStates(int backgroundIndex, int screenIndex) {
         Background.ScanlineState[] result = new Background.ScanlineState[vBlankStartScanline()];
         LayerState currentState = currentLayerState();
+        int[] mosaicSourceLines = verticalMosaicSourceLines(currentState);
         ColorMathState currentColorMathState = currentColorMathState();
         int[] currentPalette = currentCgramState();
         boolean[] currentWindowMask = backgroundWindowMask(currentState, backgroundIndex, screenIndex);
@@ -951,7 +952,8 @@ public class PPU extends AMemory {
                     ? state.mainScreenDesignation()
                     : state.subScreenDesignation();
             int mode = state.backgroundMode() & 0x07;
-            int mosaicSize = (state.mosaic() & backgroundBit) != 0
+            boolean verticalMosaic = (state.mosaic() & backgroundBit) != 0;
+            int mosaicSize = verticalMosaic
                     ? ((state.mosaic() >>> 4) & 0x0f) + 1
                     : 1;
             boolean[] windowMask = state == currentState
@@ -962,11 +964,37 @@ public class PPU extends AMemory {
                     state.backgroundOffsets()[offsetIndex],
                     state.backgroundOffsets()[offsetIndex + 1],
                     mosaicSize,
+                    verticalMosaic ? mosaicSourceLines[y] : y,
                     windowMask,
                     mode == 5 || mode == 6 ? 2 : 1,
                     mode == 5 || mode == 6 ? 1 - screenIndex : 0,
                     palette,
                     (colorMathState.selection() & 0x01) != 0);
+        }
+        return result;
+    }
+
+    private int[] verticalMosaicSourceLines(LayerState currentState) {
+        int[] result = new int[vBlankStartScanline()];
+        int counter = 0;
+        boolean wasEnabled = false;
+
+        for (int y = 0; y < result.length; y++) {
+            LayerState state = scanlineDisplayControlCaptured[y]
+                    ? scanlineLayerStates[y]
+                    : currentState;
+            int mosaic = state.mosaic();
+            int size = ((mosaic >>> 4) & 0x0f) + 1;
+            boolean enabled = (mosaic & 0x0f) != 0;
+
+            if (y == 0 || (enabled && !wasEnabled)) {
+                counter = enabled ? size : 0;
+            } else if (counter > 0 && --counter == 0) {
+                counter = enabled ? size : 0;
+            }
+
+            result[y] = enabled ? y - (size - counter) : y;
+            wasEnabled = enabled;
         }
         return result;
     }
@@ -1362,6 +1390,7 @@ public class PPU extends AMemory {
         ColorMathState currentColorMathState = currentColorMathState();
         int[] currentPalette = currentCgramState();
         boolean[] currentWindowMask = backgroundWindowMask(currentLayerState, backgroundIndex, screenIndex);
+        int[] mosaicSourceLines = verticalMosaicSourceLines(currentLayerState);
         int rows = vBlankStartScanline();
 
         for (int y = 0; y < rows; y++) {
@@ -1395,7 +1424,7 @@ public class PPU extends AMemory {
             boolean[] windowMask = captured
                     ? backgroundWindowMask(layerState, backgroundIndex, screenIndex)
                     : currentWindowMask;
-            int screenY = verticalMosaic ? (y / mosaicSize) * mosaicSize : y;
+            int screenY = verticalMosaic ? mosaicSourceLines[y] : y;
             if ((mode7State.settings() & 0x02) != 0) {
                 screenY = 255 - screenY;
             }
