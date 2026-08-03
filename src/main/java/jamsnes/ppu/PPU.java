@@ -156,8 +156,14 @@ public class PPU extends AMemory {
             case 0x0d, 0x0f, 0x11, 0x13 -> writeBgHorizontalOffset(address, value);
             case 0x0e, 0x10, 0x12, 0x14 -> writeBgVerticalOffset(address, value);
             case 0x15 -> setVmain(value);
-            case 0x16 -> vramAddress = u16((vramAddress & 0xff00) | value);
-            case 0x17 -> vramAddress = u16((vramAddress & 0x00ff) | (value << 8));
+            case 0x16 -> {
+                vramAddress = u16((vramAddress & 0xff00) | value);
+                updateVramReadBufferIfAccessible();
+            }
+            case 0x17 -> {
+                vramAddress = u16((vramAddress & 0x00ff) | (value << 8));
+                updateVramReadBufferIfAccessible();
+            }
             case 0x18 -> {
                 if (canAccessVideoMemory()) {
                     vram.write(getVramAddress(), value);

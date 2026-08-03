@@ -23,7 +23,7 @@ class PpuReadTest {
         snes.bus.write(0x2116, 0);
         snes.bus.write(0x2117, 0);
 
-        assertEquals(0, snes.bus.read(0x213a));
+        assertEquals(0b1111_1111, snes.bus.read(0x213a));
         assertEquals(1, snes.ppu.getVramAddressRegister());
         assertEquals(0b1111_1111, snes.bus.read(0x2139));
         assertEquals(0b1111_1111, snes.bus.read(0x213a));
@@ -43,7 +43,7 @@ class PpuReadTest {
         snes.bus.write(0x2116, 0);
         snes.bus.write(0x2117, 0);
 
-        assertEquals(0, snes.bus.read(0x213a));
+        assertEquals(0x34, snes.bus.read(0x213a));
         assertEquals(1, snes.ppu.getVramAddressRegister());
         assertEquals(0x12, snes.bus.read(0x2139));
         assertEquals(0x34, snes.bus.read(0x213a));
@@ -54,7 +54,7 @@ class PpuReadTest {
     }
 
     @Test
-    void writingVramAddressPreservesBufferedWordUntilTriggerRead() {
+    void writingVramAddressPrefetchesTheSelectedWord() {
         SNES snes = init();
         snes.ppu.vram.write(0, 0x12);
         snes.ppu.vram.write(1, 0x34);
@@ -65,19 +65,17 @@ class PpuReadTest {
         snes.bus.write(0x2115, 0b1000_0000);
         snes.bus.write(0x2116, 0x00);
         snes.bus.write(0x2117, 0x00);
-        assertEquals(0, snes.bus.read(0x213a));
+        assertEquals(0x34, snes.bus.read(0x213a));
 
         snes.bus.write(0x2116, 0x01);
         snes.bus.write(0x2117, 0x00);
 
-        assertEquals(0x12, snes.bus.read(0x2139));
-        assertEquals(0x34, snes.bus.read(0x213a));
         assertEquals(0x56, snes.bus.read(0x2139));
         assertEquals(0x78, snes.bus.read(0x213a));
     }
 
     @Test
-    void vramDataReadUsesLowPortAsDummyInDefaultIncrementMode() {
+    void vramDataReadReturnsPrefetchedWordBeforeDefaultLowPortIncrement() {
         SNES snes = init();
         snes.ppu.vram.write(0, 0b0110_1001);
         snes.ppu.vram.write(1, 0b1111_1111);
@@ -86,7 +84,7 @@ class PpuReadTest {
         snes.bus.write(0x2116, 0);
         snes.bus.write(0x2117, 0);
 
-        assertEquals(0, snes.bus.read(0x2139));
+        assertEquals(0b0110_1001, snes.bus.read(0x2139));
         assertEquals(0b1111_1111, snes.bus.read(0x213a));
         assertEquals(1, snes.ppu.getVramAddressRegister());
         assertEquals(0b0110_1001, snes.bus.read(0x2139));
@@ -104,7 +102,7 @@ class PpuReadTest {
         snes.bus.write(0x2100, 0x80);
         snes.bus.write(0x2116, 0x00);
         snes.bus.write(0x2117, 0x00);
-        assertEquals(0, snes.bus.read(0x2139));
+        assertEquals(0x12, snes.bus.read(0x2139));
         snes.bus.write(0x2100, 0x00);
         snes.bus.write(0x2116, 0x01);
         snes.bus.write(0x2117, 0x00);
@@ -224,7 +222,7 @@ class PpuReadTest {
         snes.bus.write(0x2116, 0x00);
         snes.bus.write(0x2117, 0x00);
 
-        assertEquals(0x00, snes.bus.read(0x2139));
+        assertEquals(0x10, snes.bus.read(0x2139));
         assertEquals(0x10, snes.bus.read(0x2139));
         assertEquals(0x11, snes.bus.read(0x213e));
 
