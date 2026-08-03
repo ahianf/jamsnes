@@ -245,7 +245,7 @@ public class DSP {
             case 0x1c -> master.volume[1] = value;
             case 0x2c -> echo.volume[0] = value;
             case 0x3c -> echo.volume[1] = value;
-            case 0x4c -> setVoiceFlags(value, Flag.KON);
+            case 0x4c -> writeKeyOn(value);
             case 0x5c -> setVoiceFlags(value, Flag.KOF);
             case 0x6c -> {
                 master.reset = (value & 0x80) != 0;
@@ -795,7 +795,7 @@ public class DSP {
         timer.sample = !timer.sample;
         if (timer.sample) {
             for (Voice voice : voices) {
-                voice.kon &= !voice.tempKon;
+                voice.newKon &= !voice.tempKon;
             }
         }
     }
@@ -803,7 +803,7 @@ public class DSP {
     private void misc30() {
         if (timer.sample) {
             for (Voice voice : voices) {
-                voice.tempKon = voice.kon;
+                voice.tempKon = voice.newKon;
                 voice.tempKof = voice.kof;
             }
         }
@@ -1230,6 +1230,13 @@ public class DSP {
         return packed;
     }
 
+    private void writeKeyOn(int value) {
+        setVoiceFlags(value, Flag.KON);
+        for (Voice voice : voices) {
+            voice.newKon = (value & voice.bit) != 0;
+        }
+    }
+
     private void setVoiceFlags(int value, Flag flag) {
         for (int i = 0; i < voices.length; i++) {
             setVoiceFlag(voices[i], flag, (value & (1 << i)) != 0);
@@ -1288,6 +1295,7 @@ public class DSP {
         private int sampleOffset;
         private int gaussOffset;
         private boolean kon;
+        private boolean newKon;
         private boolean kof;
         private boolean pmon;
         private boolean non;
@@ -1328,6 +1336,7 @@ public class DSP {
             sampleOffset = 0;
             gaussOffset = 0;
             kon = false;
+            newKon = false;
             kof = false;
             pmon = false;
             non = false;
