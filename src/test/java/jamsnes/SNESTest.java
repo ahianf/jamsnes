@@ -396,7 +396,7 @@ class SNESTest {
         snes.update();
 
         assertEquals(1, renderer.drawScreenCalls);
-        assertEquals((long) 2 * PPU.VISIBLE_WIDTH * 2 * PPU.V_BLANK_START_SCANLINE, renderer.putPixelCalls);
+        assertEquals((long) 2 * PPU.VISIBLE_WIDTH * 2 * PPU.VISIBLE_HEIGHT, renderer.putPixelCalls);
     }
 
     @Test
@@ -1014,7 +1014,7 @@ class SNESTest {
         snes.ppu.cgram.write(0, 0x1f);
         snes.ppu.cgram.write(1, 0x00);
         snes.bus.write(0x2100, 0x0f);
-        snes.wram.data()[0x0200] = 0x01;
+        snes.wram.data()[0x0200] = (byte) 0x82;
         snes.wram.data()[0x0201] = 0x07;
         snes.wram.data()[0x0202] = 0x00;
         setupHdma(snes, DMA.ONE_TO_ONE, 0x00, 0x7e0200);
@@ -1025,8 +1025,8 @@ class SNESTest {
         }
 
         assertEquals(1, renderer.drawScreenCalls);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.firstScanlinePixel);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x000e), renderer.secondScanlinePixel);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x000e), renderer.firstScanlinePixel);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x0000), renderer.secondScanlinePixel);
     }
 
     @Test
@@ -1038,9 +1038,10 @@ class SNESTest {
         snes.apu.isDisabled = true;
         snes.bus.write(0x2100, 0x0f);
         snes.bus.write(0x2131, 0x20);
-        snes.wram.data()[0x0200] = 0x01;
+        snes.wram.data()[0x0200] = (byte) 0x82;
         snes.wram.data()[0x0201] = 0x3f;
-        snes.wram.data()[0x0202] = 0x00;
+        snes.wram.data()[0x0202] = 0x5f;
+        snes.wram.data()[0x0203] = 0x00;
         setupHdma(snes, DMA.ONE_TO_ONE, 0x32, 0x7e0200);
         snes.bus.write(0x420c, 0x01);
 
@@ -1049,8 +1050,8 @@ class SNESTest {
         }
 
         assertEquals(1, renderer.drawScreenCalls);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x0000), renderer.firstScanlinePixel);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.secondScanlinePixel);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.firstScanlinePixel);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03ff), renderer.secondScanlinePixel);
     }
 
     @Test
@@ -1062,7 +1063,7 @@ class SNESTest {
         snes.apu.isDisabled = true;
         snes.bus.write(0x2100, 0x0f);
         snes.bus.write(0x2121, 0x00);
-        snes.wram.data()[0x0200] = 0x01;
+        snes.wram.data()[0x0200] = (byte) 0x82;
         snes.wram.data()[0x0201] = 0x1f;
         snes.wram.data()[0x0202] = 0x00;
         snes.wram.data()[0x0203] = 0x00;
@@ -1074,7 +1075,7 @@ class SNESTest {
         }
 
         assertEquals(1, renderer.drawScreenCalls);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x0000), renderer.firstScanlinePixel);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.firstScanlinePixel);
         assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.secondScanlinePixel);
     }
 
@@ -1095,7 +1096,8 @@ class SNESTest {
         snes.ppu.vram.write(0x0001, 0x00);
         snes.ppu.vram.write(0x2000, 0x80);
         snes.ppu.vram.write(0x2002, 0x80);
-        snes.wram.data()[0x0200] = 0x01;
+        snes.ppu.vram.write(0x2004, 0x80);
+        snes.wram.data()[0x0200] = (byte) 0x82;
         snes.wram.data()[0x0201] = 0xe0;
         snes.wram.data()[0x0202] = 0x03;
         snes.wram.data()[0x0203] = 0x00;
@@ -1107,7 +1109,7 @@ class SNESTest {
         }
 
         assertEquals(1, renderer.drawScreenCalls);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.firstScanlinePixel);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), renderer.firstScanlinePixel);
         assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), renderer.secondScanlinePixel);
     }
 
@@ -1125,7 +1127,8 @@ class SNESTest {
         snes.ppu.cgram.write(0x103, 0x00);
         snes.ppu.vram.write(0x0000, 0x80);
         snes.ppu.vram.write(0x0002, 0x80);
-        snes.wram.data()[0x0200] = 0x01;
+        snes.ppu.vram.write(0x0004, 0x80);
+        snes.wram.data()[0x0200] = (byte) 0x82;
         snes.wram.data()[0x0201] = 0xe0;
         snes.wram.data()[0x0202] = 0x03;
         snes.wram.data()[0x0203] = 0x00;
@@ -1137,7 +1140,7 @@ class SNESTest {
         }
 
         assertEquals(1, renderer.drawScreenCalls);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.firstScanlinePixel);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), renderer.firstScanlinePixel);
         assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), renderer.secondScanlinePixel);
     }
 
@@ -1161,7 +1164,8 @@ class SNESTest {
         snes.ppu.vram.write(0x0000, 0x01);
         snes.ppu.vram.write(0x0081, 0x05);
         snes.ppu.vram.write(0x0091, 0x05);
-        snes.wram.data()[0x0200] = 0x01;
+        snes.ppu.vram.write(0x00a1, 0x05);
+        snes.wram.data()[0x0200] = (byte) 0x82;
         snes.wram.data()[0x0201] = 0xe0;
         snes.wram.data()[0x0202] = 0x03;
         snes.wram.data()[0x0203] = 0x00;
@@ -1173,7 +1177,7 @@ class SNESTest {
         }
 
         assertEquals(1, renderer.drawScreenCalls);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.firstScanlinePixel);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), renderer.firstScanlinePixel);
         assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), renderer.secondScanlinePixel);
     }
 
@@ -1198,7 +1202,10 @@ class SNESTest {
         snes.ppu.vram.write(0x2002, 0x80);
         snes.ppu.vram.write(0x2003, 0x80);
         snes.ppu.vram.write(0x2012, 0x80);
-        snes.wram.data()[0x0200] = 0x01;
+        snes.ppu.vram.write(0x2004, 0x80);
+        snes.ppu.vram.write(0x2005, 0x80);
+        snes.ppu.vram.write(0x2014, 0x80);
+        snes.wram.data()[0x0200] = (byte) 0x82;
         snes.wram.data()[0x0201] = 0x01;
         snes.wram.data()[0x0202] = 0x00;
         setupHdma(snes, DMA.ONE_TO_ONE, 0x30, 0x7e0200);
@@ -1209,8 +1216,8 @@ class SNESTest {
         }
 
         assertEquals(1, renderer.drawScreenCalls);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), renderer.firstScanlinePixel);
-        assertEquals(PPUUtils.directColorToRGBA(0, 0x07), renderer.secondScanlinePixel);
+        assertEquals(PPUUtils.directColorToRGBA(0, 0x07), renderer.firstScanlinePixel);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), renderer.secondScanlinePixel);
     }
 
     @Test
@@ -1233,11 +1240,13 @@ class SNESTest {
         snes.ppu.vram.write(0x0003, 0x00);
         snes.ppu.vram.write(0x2000, 0x80);
         snes.ppu.vram.write(0x2001, 0x00);
+        snes.ppu.vram.write(0x2004, 0x80);
+        snes.ppu.vram.write(0x2005, 0x00);
         snes.ppu.vram.write(0x2010, 0x00);
         snes.ppu.vram.write(0x2011, 0x80);
         snes.ppu.vram.write(0x2012, 0x00);
         snes.ppu.vram.write(0x2013, 0x80);
-        snes.wram.data()[0x0200] = 0x01;
+        snes.wram.data()[0x0200] = (byte) 0x82;
         snes.wram.data()[0x0201] = 0x08;
         snes.wram.data()[0x0202] = 0x00;
         snes.wram.data()[0x0203] = 0x00;
@@ -1249,8 +1258,8 @@ class SNESTest {
         }
 
         assertEquals(1, renderer.drawScreenCalls);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.firstScanlinePixel);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), renderer.secondScanlinePixel);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), renderer.firstScanlinePixel);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.secondScanlinePixel);
     }
 
     @Test
@@ -1275,7 +1284,8 @@ class SNESTest {
         snes.ppu.vram.write(0x0081, 0x05);
         snes.ppu.vram.write(0x0083, 0x06);
         snes.ppu.vram.write(0x0093, 0x06);
-        snes.wram.data()[0x0200] = 0x01;
+        snes.ppu.vram.write(0x00a1, 0x05);
+        snes.wram.data()[0x0200] = (byte) 0x82;
         snes.wram.data()[0x0201] = 0x01;
         snes.wram.data()[0x0202] = 0x00;
         snes.wram.data()[0x0203] = 0x00;
@@ -1287,8 +1297,8 @@ class SNESTest {
         }
 
         assertEquals(1, renderer.drawScreenCalls);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.firstScanlinePixel);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), renderer.secondScanlinePixel);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), renderer.firstScanlinePixel);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.secondScanlinePixel);
     }
 
     @Test
@@ -1306,9 +1316,12 @@ class SNESTest {
         snes.ppu.vram.write(0x0001, 0x00);
         snes.ppu.vram.write(0x0002, 0x80);
         snes.ppu.vram.write(0x0003, 0x00);
-        snes.wram.data()[0x0200] = 0x01;
+        snes.ppu.vram.write(0x0004, 0x80);
+        snes.ppu.vram.write(0x0005, 0x00);
+        snes.wram.data()[0x0200] = (byte) 0x82;
         snes.wram.data()[0x0201] = 0x00;
-        snes.wram.data()[0x0202] = 0x00;
+        snes.wram.data()[0x0202] = 0x10;
+        snes.wram.data()[0x0203] = 0x00;
         setupHdma(snes, DMA.ONE_TO_ONE, 0x2c, 0x7e0200);
         snes.bus.write(0x420c, 0x01);
 
@@ -1317,8 +1330,8 @@ class SNESTest {
         }
 
         assertEquals(1, renderer.drawScreenCalls);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.firstScanlinePixel);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x0000), renderer.secondScanlinePixel);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x0000), renderer.firstScanlinePixel);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.secondScanlinePixel);
     }
 
     @Test
@@ -1336,9 +1349,11 @@ class SNESTest {
         snes.ppu.cgram.write(0x105, 0x03);
         snes.ppu.vram.write(0x0000, 0x80);
         snes.ppu.vram.write(0x0002, 0x80);
+        snes.ppu.vram.write(0x0004, 0x80);
         snes.ppu.vram.write(0x4001, 0x80);
         snes.ppu.vram.write(0x4003, 0x80);
-        snes.wram.data()[0x0200] = 0x01;
+        snes.ppu.vram.write(0x4005, 0x80);
+        snes.wram.data()[0x0200] = (byte) 0x82;
         snes.wram.data()[0x0201] = 0x01;
         snes.wram.data()[0x0202] = 0x00;
         setupHdma(snes, DMA.ONE_TO_ONE, 0x01, 0x7e0200);
@@ -1349,8 +1364,8 @@ class SNESTest {
         }
 
         assertEquals(1, renderer.drawScreenCalls);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.firstScanlinePixel);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), renderer.secondScanlinePixel);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), renderer.firstScanlinePixel);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.secondScanlinePixel);
     }
 
     @Test

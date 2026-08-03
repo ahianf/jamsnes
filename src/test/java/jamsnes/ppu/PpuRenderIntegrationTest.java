@@ -498,6 +498,8 @@ class PpuRenderIntegrationTest {
         snes.ppu.vram.write(0x0001, 0x00);
         snes.ppu.vram.write(0x2000, 0x80);
         snes.ppu.vram.write(0x2001, 0x40);
+        snes.ppu.vram.write(0x2002, 0x80);
+        snes.ppu.vram.write(0x2003, 0x40);
 
         snes.ppu.renderMainAndSubScreen();
 
@@ -1230,7 +1232,9 @@ class PpuRenderIntegrationTest {
         snes.ppu.vram.write(0x0800, 0x00);
         snes.ppu.vram.write(0x0801, 0x00);
         snes.ppu.vram.write(0x2000, 0xc0);
+        snes.ppu.vram.write(0x2002, 0xc0);
         snes.ppu.vram.write(0x4000, 0xc0);
+        snes.ppu.vram.write(0x4002, 0xc0);
 
         snes.ppu.update(1);
 
@@ -1253,6 +1257,7 @@ class PpuRenderIntegrationTest {
         snes.ppu.vram.write(0x0000, 0x00);
         snes.ppu.vram.write(0x0001, 0x00);
         snes.ppu.vram.write(0x2000, 0x80);
+        snes.ppu.vram.write(0x2002, 0x80);
 
         snes.ppu.update(1);
 
@@ -1279,7 +1284,9 @@ class PpuRenderIntegrationTest {
         snes.ppu.vram.write(0x0800, 0x00);
         snes.ppu.vram.write(0x0801, 0x00);
         snes.ppu.vram.write(0x2000, 0x80);
+        snes.ppu.vram.write(0x2002, 0x80);
         snes.ppu.vram.write(0x4000, 0x80);
+        snes.ppu.vram.write(0x4002, 0x80);
 
         snes.ppu.update(1);
 
@@ -1306,7 +1313,9 @@ class PpuRenderIntegrationTest {
         snes.ppu.vram.write(0x0800, 0x00);
         snes.ppu.vram.write(0x0801, 0x00);
         snes.ppu.vram.write(0x2000, 0x80);
+        snes.ppu.vram.write(0x2002, 0x80);
         snes.ppu.vram.write(0x4000, 0x80);
+        snes.ppu.vram.write(0x4002, 0x80);
 
         snes.ppu.update(1);
 
@@ -1335,7 +1344,9 @@ class PpuRenderIntegrationTest {
         snes.ppu.vram.write(0x0800, 0x00);
         snes.ppu.vram.write(0x0801, 0x00);
         snes.ppu.vram.write(0x2000, 0xc0);
+        snes.ppu.vram.write(0x2002, 0xc0);
         snes.ppu.vram.write(0x4000, 0xc0);
+        snes.ppu.vram.write(0x4002, 0xc0);
 
         snes.ppu.update(1);
 
@@ -1360,13 +1371,13 @@ class PpuRenderIntegrationTest {
         snes.ppu.vram.write(0x0001, 0x00);
         snes.ppu.vram.write(0x0800, 0x00);
         snes.ppu.vram.write(0x0801, 0x00);
-        snes.ppu.vram.write(0x2000, 0x80);
         snes.ppu.vram.write(0x2002, 0x80);
-        snes.ppu.vram.write(0x4000, 0x80);
+        snes.ppu.vram.write(0x2004, 0x80);
         snes.ppu.vram.write(0x4002, 0x80);
-        snes.ppu.captureScanlineState(0);
-        snes.bus.write(0x2133, 0x08);
+        snes.ppu.vram.write(0x4004, 0x80);
         snes.ppu.captureScanlineState(1);
+        snes.bus.write(0x2133, 0x08);
+        snes.ppu.captureScanlineState(2);
 
         snes.ppu.renderFrame();
 
@@ -1387,8 +1398,8 @@ class PpuRenderIntegrationTest {
         snes.bus.write(0x212c, 0x01);
         snes.ppu.vram.write(0x0000, 0x00);
         snes.ppu.vram.write(0x0001, 0x00);
-        snes.ppu.vram.write(0x2000, 0x80);
-        snes.ppu.vram.write(0x2003, 0x80);
+        snes.ppu.vram.write(0x2002, 0x80);
+        snes.ppu.vram.write(0x2005, 0x80);
 
         snes.ppu.renderFrame();
 
@@ -1396,6 +1407,41 @@ class PpuRenderIntegrationTest {
         assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.outputRows[1][0]);
         assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), renderer.outputRows[2][0]);
         assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), renderer.outputRows[3][0]);
+    }
+
+    @Test
+    void progressiveOutputSkipsPreRenderingScanline() {
+        TestRenderer renderer = new TestRenderer();
+        SNES snes = init(renderer);
+        writeColor(snes, 0, 0x001f);
+        snes.ppu.captureScanlineState(0);
+        snes.bus.write(0x2100, 0x0f);
+        snes.ppu.captureScanlineState(1);
+
+        snes.ppu.renderFrame();
+
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.firstPixel);
+    }
+
+    @Test
+    void overscanOutputCentersVisibleViewportOnScanlineNine() {
+        TestRenderer renderer = new TestRenderer();
+        SNES snes = init(renderer);
+        writeColor(snes, 0, 0x001f);
+        snes.bus.write(0x2133, 0x04);
+        snes.ppu.captureScanlineState(0);
+        snes.ppu.captureScanlineState(8);
+        snes.bus.write(0x2100, 0x0f);
+        snes.ppu.captureScanlineState(9);
+        snes.ppu.captureScanlineState(232);
+        snes.bus.write(0x2100, 0x8f);
+        snes.ppu.captureScanlineState(233);
+
+        snes.ppu.renderFrame();
+
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.firstPixel);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.lastPixel);
+        assertEquals((long) 2 * PPU.VISIBLE_WIDTH * 2 * PPU.VISIBLE_HEIGHT, renderer.putPixelCalls);
     }
 
     @Test
@@ -1410,6 +1456,7 @@ class PpuRenderIntegrationTest {
         snes.ppu.vram.write(0x0000, 0x00);
         snes.ppu.vram.write(0x0001, 0x00);
         snes.ppu.vram.write(0x2000, 0x80);
+        snes.ppu.vram.write(0x2002, 0x80);
 
         snes.ppu.renderFrame();
 
@@ -1433,7 +1480,7 @@ class PpuRenderIntegrationTest {
         snes.ppu.update(1);
 
         assertEquals(PPUUtils.cgramColorToRGBA(0x7c00), renderer.firstPixel);
-        assertEquals((long) 2 * PPU.VISIBLE_WIDTH * 2 * PPU.V_BLANK_START_SCANLINE, renderer.putPixelCalls);
+        assertEquals((long) 2 * PPU.VISIBLE_WIDTH * 2 * PPU.VISIBLE_HEIGHT, renderer.putPixelCalls);
         assertEquals(1, renderer.drawScreenCalls);
     }
 
@@ -1450,6 +1497,8 @@ class PpuRenderIntegrationTest {
         snes.ppu.vram.write(0x0001, 0x00);
         snes.ppu.vram.write(0x2000, 0x80);
         snes.ppu.vram.write(0x2001, 0x00);
+        snes.ppu.vram.write(0x2002, 0x80);
+        snes.ppu.vram.write(0x2003, 0x00);
 
         snes.ppu.update(1);
 
@@ -1565,6 +1614,8 @@ class PpuRenderIntegrationTest {
         snes.ppu.vram.write(0x0001, 0x00);
         snes.ppu.vram.write(0x2000, 0x80);
         snes.ppu.vram.write(0x2001, 0x00);
+        snes.ppu.vram.write(0x2002, 0x80);
+        snes.ppu.vram.write(0x2003, 0x00);
 
         snes.ppu.update(1);
 
@@ -1725,6 +1776,8 @@ class PpuRenderIntegrationTest {
         snes.ppu.vram.write(0x0001, 0x00);
         snes.ppu.vram.write(0x2000, 0x80);
         snes.ppu.vram.write(0x2001, 0x00);
+        snes.ppu.vram.write(0x2002, 0x80);
+        snes.ppu.vram.write(0x2003, 0x00);
     }
 
     private static void setupObjFirstPixel(SNES snes, int color) {
@@ -1746,6 +1799,7 @@ class PpuRenderIntegrationTest {
                 0x00,
                 ((priority & 0x03) << 4) | ((palette & 0x07) << 1));
         snes.ppu.vram.write(0x0000, 0x80);
+        snes.ppu.vram.write(0x0002, 0x80);
     }
 
     private static void setupOverlappingObjectPixels(SNES snes) {
@@ -1810,6 +1864,7 @@ class PpuRenderIntegrationTest {
 
     private static final class TestRenderer implements IRenderer {
         private int firstPixel;
+        private int lastPixel;
         private final int[] firstRowPixels = new int[4];
         private final int[] secondRowPixels = new int[4];
         private final int[][] outputRows = new int[4][4];
@@ -1839,6 +1894,8 @@ class PpuRenderIntegrationTest {
             }
             if (y == 0 && x == 0) {
                 firstPixel = rgba;
+            } else if (y == 2 * PPU.VISIBLE_HEIGHT - 1 && x == 0) {
+                lastPixel = rgba;
             }
             putPixelCalls++;
         }

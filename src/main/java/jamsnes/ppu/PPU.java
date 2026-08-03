@@ -44,6 +44,9 @@ public class PPU extends AMemory {
     private static final int MODE7_TILE_SIZE = 8;
     public static final int H_COUNTER_DOTS = 341;
     public static final int VISIBLE_WIDTH = 256;
+    public static final int VISIBLE_HEIGHT = 224;
+    private static final int FIRST_VISIBLE_SCANLINE = 1;
+    private static final int OVERSCAN_FIRST_VISIBLE_SCANLINE = 9;
     private static final int CGRAM_RENDER_START_DOT = 22;
     public static final int H_BLANK_START_DOT = 274;
     public static final int V_COUNTER_SCANLINES = 262;
@@ -227,14 +230,15 @@ public class PPU extends AMemory {
         ColorMathState currentColorMathState = currentColorMathState();
         LayerState currentLayerState = currentLayerState();
         boolean interlaced = fieldInterlace;
-        int outputHeight = 2 * vBlankStartScanline();
+        int firstSourceY = firstDisplayedScanline();
+        int outputHeight = 2 * VISIBLE_HEIGHT;
         int outputWidth = 2 * VISIBLE_WIDTH;
 
         for (int outputY = 0; outputY < outputHeight; outputY++) {
             if (interlaced && (outputY & 1) != (secondField ? 1 : 0)) {
                 continue;
             }
-            int sourceY = outputY >>> 1;
+            int sourceY = firstSourceY + (outputY >>> 1);
             int displayControl = scanlineDisplayControlCaptured[sourceY]
                     ? scanlineDisplayControl[sourceY]
                     : registers[0x00];
@@ -266,6 +270,10 @@ public class PPU extends AMemory {
         clearBuffer(subScreen);
         clearSourceMap(mainScreenSourceMap, SOURCE_NONE);
         clearSourceMap(subScreenSourceMap, SOURCE_NONE);
+    }
+
+    private int firstDisplayedScanline() {
+        return fieldOverscan ? OVERSCAN_FIRST_VISIBLE_SCANLINE : FIRST_VISIBLE_SCANLINE;
     }
 
     public void advanceCountersOnly(int cycles) {

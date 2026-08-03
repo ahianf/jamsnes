@@ -82,7 +82,7 @@ class SyntheticRomBootTest {
         assertEquals(1, snes.wram.data()[0], "The timer IRQ handler should run exactly once");
         assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.pixel(0, 0));
         assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.pixel(1, 0));
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.pixel(2, 0));
+        assertEquals(PPUUtils.cgramColorToRGBA(0x0010), renderer.pixel(2, 0));
         assertEquals(PPUUtils.cgramColorToRGBA(0x0010), renderer.pixel(4, 0));
         assertEquals(0, snes.cpu.internalRegisters()[0x11] & 0x80,
                 "The handler should acknowledge TIMEUP");
@@ -120,8 +120,8 @@ class SyntheticRomBootTest {
         assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.pixel(0, 0));
         assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.pixel(1, 0));
         assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), renderer.pixel(2, 0));
-        assertEquals(0x8103, snes.cpu.dmaChannels()[0].getTableAddress());
-        assertEquals(0x8114, snes.cpu.dmaChannels()[1].getTableAddress());
+        assertEquals(0x8104, snes.cpu.dmaChannels()[0].getTableAddress());
+        assertEquals(0x8116, snes.cpu.dmaChannels()[1].getTableAddress());
         assertEquals(0x8051, snes.cpu.registers().pc);
     }
 
@@ -419,13 +419,16 @@ class SyntheticRomBootTest {
                 (byte) 0x80, (byte) 0xfe             // BRA *
         };
         System.arraycopy(program, 0, rom, 0, program.length);
-        rom[0x0100] = 0x01;
+        rom[0x0100] = (byte) 0x82;
         rom[0x0101] = 0x00;
         rom[0x0102] = 0x00;
-        rom[0x0110] = 0x01;
-        rom[0x0111] = (byte) 0xe0;
-        rom[0x0112] = 0x03;
-        rom[0x0113] = 0x00;
+        rom[0x0103] = 0x00;
+        rom[0x0110] = (byte) 0x82;
+        rom[0x0111] = 0x1f;
+        rom[0x0112] = 0x00;
+        rom[0x0113] = (byte) 0xe0;
+        rom[0x0114] = 0x03;
+        rom[0x0115] = 0x00;
         byte[] title = "JAMSNES HDMA PROBE".getBytes(StandardCharsets.ISO_8859_1);
         System.arraycopy(title, 0, rom, 0x7fc0, title.length);
         rom[0x7fd5] = 0x20;
