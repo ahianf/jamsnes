@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BuildConfigurationTest {
@@ -46,6 +47,21 @@ class BuildConfigurationTest {
         assertEquals("natives-windows", profileNatives.get("lwjgl-natives-windows-x64"));
     }
 
+    @Test
+    void packageBuildProducesExecutableJamSNESJar() throws Exception {
+        Document pom = pom();
+        Element build = (Element) pom.getElementsByTagNameNS(MAVEN_NAMESPACE, "build").item(0);
+        Element shadePlugin = plugin(pom, "org.apache.maven.plugins", "maven-shade-plugin");
+
+        assertEquals("jamsnes", childText(build, "finalName"));
+        assertNotNull(shadePlugin);
+        assertEquals("3.6.2", childText(shadePlugin, "version"));
+        assertEquals("package", childText(shadePlugin, "phase"));
+        assertEquals("shade", childText(shadePlugin, "goal"));
+        assertEquals("false", childText(shadePlugin, "createDependencyReducedPom"));
+        assertEquals("jamsnes.Main", childText(shadePlugin, "mainClass"));
+    }
+
     private static Document pom() throws Exception {
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
         factory.setNamespaceAware(true);
@@ -65,6 +81,18 @@ class BuildConfigurationTest {
             }
         }
         return profileNatives;
+    }
+
+    private static Element plugin(Document pom, String groupId, String artifactId) {
+        NodeList plugins = pom.getElementsByTagNameNS(MAVEN_NAMESPACE, "plugin");
+        for (int i = 0; i < plugins.getLength(); i++) {
+            Element plugin = (Element) plugins.item(i);
+            if (groupId.equals(childText(plugin, "groupId"))
+                    && artifactId.equals(childText(plugin, "artifactId"))) {
+                return plugin;
+            }
+        }
+        return null;
     }
 
     private static String childText(Element parent, String childName) {
