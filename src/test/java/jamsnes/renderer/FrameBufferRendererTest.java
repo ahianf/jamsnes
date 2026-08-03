@@ -5,9 +5,11 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class FrameBufferRendererTest {
     @Test
@@ -50,6 +52,17 @@ class FrameBufferRendererTest {
 
         renderer.putPixel(0, 1, 0xaabbccde);
         assertNotEquals(firstHash, renderer.frameBufferCrc32());
+    }
+
+    @Test
+    void reportsWhetherTheFrameContainsMoreThanOneColor() {
+        FrameBufferRenderer renderer = new FrameBufferRenderer(2, 2, 60);
+
+        assertFalse(renderer.hasNonUniformFrame());
+
+        renderer.putPixel(1, 1, 0x12345678);
+
+        assertTrue(renderer.hasNonUniformFrame());
     }
 
     @Test

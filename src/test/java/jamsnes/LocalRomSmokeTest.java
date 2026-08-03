@@ -16,7 +16,7 @@ class LocalRomSmokeTest {
     private static final String ROM_PROPERTY = "jamsnes.smoke.rom";
     private static final String UPDATES_PROPERTY = "jamsnes.smoke.updates";
     private static final String FRAME_CRC32_PROPERTY = "jamsnes.smoke.frameCrc32";
-    private static final int DEFAULT_UPDATES = 8_000;
+    private static final int DEFAULT_UPDATES = 500_000;
 
     @Test
     void localRomRunsForConfiguredUpdates() {
@@ -41,6 +41,10 @@ class LocalRomSmokeTest {
                     "SPC smoke run should produce or attempt audio samples");
         } else {
             assertTrue(renderer.drawScreenCalls() > 0, "Game smoke run should draw at least one frame");
+            assertEquals(0, snes.ppu.registers()[0] & 0x80,
+                    "Game smoke run should leave PPU forced blank");
+            assertTrue(renderer.hasNonUniformFrame(),
+                    "Game smoke run should produce a frame containing more than one color");
             String expectedFrameCrc32 = System.getProperty(FRAME_CRC32_PROPERTY);
             if (expectedFrameCrc32 != null && !expectedFrameCrc32.isBlank()) {
                 assertEquals(parseCrc32(expectedFrameCrc32), renderer.frameBufferCrc32(),

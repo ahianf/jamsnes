@@ -99,6 +99,16 @@ public class FrameBufferRenderer implements IRenderer {
         return Arrays.copyOf(frameBuffer, frameBuffer.length);
     }
 
+    public boolean hasNonUniformFrame() {
+        int firstPixel = frameBuffer[0];
+        for (int pixel : frameBuffer) {
+            if (pixel != firstPixel) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public long frameBufferCrc32() {
         CRC32 crc = new CRC32();
         for (int pixel : frameBuffer) {
