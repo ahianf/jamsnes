@@ -44,6 +44,7 @@ public class PPU extends AMemory {
     private static final int MODE7_TILE_SIZE = 8;
     public static final int H_COUNTER_DOTS = 341;
     public static final int VISIBLE_WIDTH = 256;
+    private static final int CGRAM_RENDER_START_DOT = 22;
     public static final int H_BLANK_START_DOT = 274;
     public static final int V_COUNTER_SCANLINES = 262;
     private static final int NTSC_SHORT_SCANLINE = 240;
@@ -848,7 +849,10 @@ public class PPU extends AMemory {
     }
 
     private boolean canAccessCgramMemory() {
-        return canAccessVideoMemory() || isInHBlank();
+        return canAccessVideoMemory()
+                || vCounter == 0
+                || hCounter < CGRAM_RENDER_START_DOT
+                || isInHBlank();
     }
 
     private void commitOamLowTablePair(int address, int value) {

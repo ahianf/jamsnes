@@ -397,8 +397,9 @@ class PpuRegisterWriteTest {
     }
 
     @Test
-    void cgDataWriteIsSkippedDuringActiveDisplayButStillAdvancesPhaseAndAddress() {
+    void cgDataWriteIsSkippedDuringCgramRenderingButStillAdvancesPhaseAndAddress() {
         SNES snes = init();
+        snes.ppu.advanceCountersOnly(PPU.H_COUNTER_DOTS + 22);
 
         snes.bus.write(0x2121, 0x10);
         snes.bus.write(0x2122, 0xff);
@@ -413,9 +414,37 @@ class PpuRegisterWriteTest {
     }
 
     @Test
-    void cgDataWriteRemainsBlockedUntilHardwareHBlank() {
+    void cgDataWriteCommitsThroughoutTheFirstScanline() {
         SNES snes = init();
         snes.ppu.advanceCountersOnly(PPU.VISIBLE_WIDTH);
+
+        snes.bus.write(0x2121, 0x10);
+        snes.bus.write(0x2122, 0xff);
+        snes.bus.write(0x2122, 0x78);
+
+        assertFalse(snes.ppu.isInHBlank());
+        assertEquals(0xff, snes.ppu.cgram.read(0x20));
+        assertEquals(0x78, snes.ppu.cgram.read(0x21));
+    }
+
+    @Test
+    void cgDataWriteCommitsBeforeCgramRenderingBegins() {
+        SNES snes = init();
+        snes.ppu.advanceCountersOnly(PPU.H_COUNTER_DOTS + 21);
+
+        snes.bus.write(0x2121, 0x10);
+        snes.bus.write(0x2122, 0xff);
+        snes.bus.write(0x2122, 0x78);
+
+        assertFalse(snes.ppu.isInHBlank());
+        assertEquals(0xff, snes.ppu.cgram.read(0x20));
+        assertEquals(0x78, snes.ppu.cgram.read(0x21));
+    }
+
+    @Test
+    void cgDataWriteRemainsBlockedFromRenderingUntilHardwareHBlank() {
+        SNES snes = init();
+        snes.ppu.advanceCountersOnly(PPU.H_COUNTER_DOTS + 22);
 
         snes.bus.write(0x2121, 0x10);
         snes.bus.write(0x2122, 0xff);
@@ -425,7 +454,7 @@ class PpuRegisterWriteTest {
         assertEquals(0x00, snes.ppu.cgram.read(0x20));
         assertEquals(0x00, snes.ppu.cgram.read(0x21));
 
-        snes.ppu.advanceCountersOnly(PPU.H_BLANK_START_DOT - PPU.VISIBLE_WIDTH);
+        snes.ppu.advanceCountersOnly(PPU.H_BLANK_START_DOT - 22);
         snes.bus.write(0x2121, 0x10);
         snes.bus.write(0x2122, 0xff);
         snes.bus.write(0x2122, 0x78);
