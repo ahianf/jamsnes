@@ -876,7 +876,7 @@ public class PPU extends AMemory {
 
     private void writeBgVerticalOffset(int address, int value) {
         int offset = ((value << 8) | hvSharedScrollPreviousValue) & 0x3ff;
-        ppuRegisters.setBgOffset(address - 0x0e, offset);
+        ppuRegisters.setBgOffset(address - 0x0d, offset);
         if (address == 0x0e) {
             ppuRegisters.writeM7Offset(1, value);
         }
@@ -1176,7 +1176,7 @@ public class PPU extends AMemory {
             }
             int sourceX = horizontalFlip ? dimensions.width() - 1 - pixelX : pixelX;
             int color = readObjectPixel(baseAddress, tile, palette, sourceX, sourceY, paletteColors);
-            if (Integer.compareUnsigned(color, 0xff) <= 0) {
+            if ((color & 0xff) == 0) {
                 continue;
             }
             claimedPixels[screenX] = true;
@@ -1421,7 +1421,7 @@ public class PPU extends AMemory {
                         (colorMathState.selection() & 0x01) != 0,
                         palette);
                 int level = pixel.priority ? levelHigh : levelLow;
-                if (Integer.compareUnsigned(pixel.color, 0xff) <= 0 || level < levelMap[y][x]) {
+                if ((pixel.color & 0xff) == 0 || level < levelMap[y][x]) {
                     continue;
                 }
                 destination[y][x] = pixel.color;
@@ -1549,7 +1549,7 @@ public class PPU extends AMemory {
     private void addBuffer(int[][] destination, int[][] source) {
         for (int y = 0; y < source.length; y++) {
             for (int x = 0; x < source[y].length; x++) {
-                if (Integer.compareUnsigned(source[y][x], 0xff) > 0) {
+                if ((source[y][x] & 0xff) != 0) {
                     destination[y][x] = source[y][x];
                 }
             }

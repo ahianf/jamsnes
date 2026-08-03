@@ -147,6 +147,33 @@ class BackgroundRenderTest {
         assertEquals(PPUUtils.cgramColorToRGBA(0x001f), background.buffer[256][256]);
     }
 
+    @Test
+    void mergesOpaqueBlackPixelsInsteadOfTreatingThemAsTransparent() {
+        SNES snes = init();
+        Background background = new Background(snes.ppu, 1);
+        background.setTileMapStartAddress(0);
+        background.setTilesetAddress(0x1000);
+        background.setBpp(2);
+        background.setCharacterSize(new Vector2<>(8, 8));
+        background.setTileMapMirroring(new Vector2<>(false, false));
+        writeColor(snes, 1, 0x0000);
+        snes.ppu.vram.write(0x1000, 0x80);
+        snes.ppu.vram.write(0x1001, 0x00);
+
+        background.renderBackground();
+
+        assertEquals(0x000000ff, background.buffer[0][0]);
+
+        int[][] merged = new int[16][16];
+        int[][] levels = new int[16][16];
+        merged[0][0] = PPUUtils.cgramColorToRGBA(0x7c00);
+        Background.mergeBackgroundBuffer(merged, levels, background, 10, 20);
+
+        assertEquals(0x000000ff, merged[0][0]);
+        assertEquals(10, levels[0][0]);
+        assertEquals(0, levels[0][1]);
+    }
+
     private static void writeColor(SNES snes, int colorIndex, int color) {
         int address = colorIndex * 2;
         snes.ppu.cgram.write(address, color);

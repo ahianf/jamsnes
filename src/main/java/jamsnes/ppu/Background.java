@@ -299,7 +299,7 @@ public class Background {
                         sourceWidth);
                 int sourceY = Math.floorMod(mosaicY + sourceScrollY, sourceHeight);
                 int pixel = backgroundSrc.resolvePixel(sourceX, sourceY, state);
-                if (Integer.compareUnsigned(pixel, 0xff) <= 0) {
+                if ((pixel & 0xff) == 0) {
                     continue;
                 }
                 int pixelLevel = backgroundSrc.isPriorityPixel(sourceX, sourceY) ? levelHigh : levelLow;
