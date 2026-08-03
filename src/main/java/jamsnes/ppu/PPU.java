@@ -824,9 +824,11 @@ public class PPU extends AMemory {
 
     private void writeOamData(int value) {
         int address = ppuRegisters.oamAddress();
-        if (canAccessVideoMemory()) {
+        if (address < OBJ_LOW_TABLE_SIZE && (address & 1) == 0) {
+            oamLowTableLatch = value;
+        } else if (canAccessVideoMemory()) {
             if (address < OBJ_LOW_TABLE_SIZE) {
-                writeOamLowTableData(address, value);
+                commitOamLowTablePair(address, value);
             } else {
                 oamram.write(getOamDataAddress(), value);
             }
@@ -838,11 +840,7 @@ public class PPU extends AMemory {
         return canAccessVideoMemory() || isInHBlank();
     }
 
-    private void writeOamLowTableData(int address, int value) {
-        if ((address & 1) == 0) {
-            oamLowTableLatch = value;
-            return;
-        }
+    private void commitOamLowTablePair(int address, int value) {
         oamram.write(address - 1, oamLowTableLatch);
         oamram.write(address, value);
     }

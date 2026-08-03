@@ -129,6 +129,25 @@ class PpuRegisterWriteTest {
     }
 
     @Test
+    void blockedEvenOamWriteStillFeedsNextAccessiblePair() {
+        SNES snes = init();
+
+        snes.bus.write(0x2102, 0x00);
+        snes.bus.write(0x2103, 0x00);
+        snes.bus.write(0x2104, 0x55);
+
+        assertEquals(0, snes.ppu.oamram.read(0x00));
+        assertEquals(0x01, snes.ppu.ppuRegisters().oamAddress());
+
+        snes.bus.write(0x2100, 0x80);
+        snes.bus.write(0x2104, 0xaa);
+
+        assertEquals(0x55, snes.ppu.oamram.read(0x00));
+        assertEquals(0xaa, snes.ppu.oamram.read(0x01));
+        assertEquals(0x02, snes.ppu.ppuRegisters().oamAddress());
+    }
+
+    @Test
     void oamDataWriteCommitsDuringVBlankWithoutForcedBlank() {
         SNES snes = init();
 
