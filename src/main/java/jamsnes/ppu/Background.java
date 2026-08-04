@@ -9,6 +9,7 @@ import static jamsnes.models.Unsigned.u16;
 
 public class Background {
     private static final int DERIVE_MOSAIC_SOURCE_FROM_OUTPUT = Integer.MIN_VALUE;
+    public static final int USE_MERGE_LEVELS = -1;
     private static final int NB_CHARACTER_WIDTH = 32;
     private static final int NB_CHARACTER_HEIGHT = 32;
     private static final int NB_TILE_PER_ROW = 16;
@@ -26,7 +27,35 @@ public class Background {
             int horizontalScale,
             int horizontalPhase,
             int[] palette,
-            boolean directColor) {
+            boolean directColor,
+            int levelLow,
+            int levelHigh) {
+        public ScanlineState(
+                boolean enabled,
+                int scrollX,
+                int scrollY,
+                int mosaicSize,
+                int mosaicSourceY,
+                boolean[] windowMask,
+                int horizontalScale,
+                int horizontalPhase,
+                int[] palette,
+                boolean directColor) {
+            this(
+                    enabled,
+                    scrollX,
+                    scrollY,
+                    mosaicSize,
+                    mosaicSourceY,
+                    windowMask,
+                    horizontalScale,
+                    horizontalPhase,
+                    palette,
+                    directColor,
+                    USE_MERGE_LEVELS,
+                    USE_MERGE_LEVELS);
+        }
+
         public ScanlineState(
                 boolean enabled,
                 int scrollX,
@@ -339,6 +368,8 @@ public class Background {
             if (state == null || !state.enabled()) {
                 continue;
             }
+            int scanlineLevelLow = state.levelLow() == USE_MERGE_LEVELS ? levelLow : state.levelLow();
+            int scanlineLevelHigh = state.levelHigh() == USE_MERGE_LEVELS ? levelHigh : state.levelHigh();
             int width = Math.min(maxWidth, Math.min(bufferDest[y].length, backgroundSrc.buffer[y].length));
             int pixelSize = Math.max(1, state.mosaicSize());
             int mosaicY = state.mosaicSourceY() == DERIVE_MOSAIC_SOURCE_FROM_OUTPUT
@@ -378,7 +409,9 @@ public class Background {
                 if ((pixel & 0xff) == 0) {
                     continue;
                 }
-                int pixelLevel = backgroundSrc.isPriorityPixel(sourceX, sourceY) ? levelHigh : levelLow;
+                int pixelLevel = backgroundSrc.isPriorityPixel(sourceX, sourceY)
+                        ? scanlineLevelHigh
+                        : scanlineLevelLow;
                 if (pixelLevel >= pixelDestinationLevelMap[y][x]) {
                     bufferDest[y][x] = pixel;
                     pixelDestinationLevelMap[y][x] = pixelLevel;

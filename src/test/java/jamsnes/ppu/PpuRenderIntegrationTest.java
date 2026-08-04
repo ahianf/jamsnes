@@ -109,6 +109,38 @@ class PpuRenderIntegrationTest {
     }
 
     @Test
+    void modeOneBg3PriorityBitAppliesPerScanline() {
+        SNES snes = init(new TestRenderer());
+        writeColor(snes, 1, 0x001f);
+        writeColor(snes, 2, 0x03e0);
+        snes.bus.write(0x2105, 0x09);
+        snes.bus.write(0x2109, 0x04);
+        snes.bus.write(0x210b, 0x01);
+        snes.bus.write(0x210c, 0x02);
+        snes.bus.write(0x212c, 0x05);
+        snes.ppu.vram.write(0x0000, 0x00);
+        snes.ppu.vram.write(0x0001, 0x00);
+        snes.ppu.vram.write(0x0800, 0x00);
+        snes.ppu.vram.write(0x0801, 1 << 5);
+        for (int y = 0; y < 8; y++) {
+            snes.ppu.vram.write(0x2000 + y * 2, 0x00);
+            snes.ppu.vram.write(0x2001 + y * 2, 0x80);
+            snes.ppu.vram.write(0x4000 + y * 2, 0x80);
+            snes.ppu.vram.write(0x4001 + y * 2, 0x00);
+        }
+        snes.ppu.captureScanlineState(0);
+        snes.bus.write(0x2105, 0x01);
+        snes.ppu.captureScanlineState(1);
+        snes.ppu.captureScanlineState(2);
+
+        snes.ppu.renderMainAndSubScreen();
+
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), snes.ppu.mainScreen()[1][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), snes.ppu.mainScreen()[2][0]);
+    }
+
+    @Test
     void modeOneBackgroundThreeHighPriorityRendersAboveObjectPriorityZero() {
         SNES snes = init(new TestRenderer());
         writeColor(snes, 1, 0x001f);

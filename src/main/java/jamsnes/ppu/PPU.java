@@ -1086,6 +1086,7 @@ public class PPU extends AMemory {
             boolean[] windowMask = state == currentState
                     ? currentWindowMask
                     : backgroundWindowMask(state, backgroundIndex, screenIndex);
+            int levels = backgroundPriorityLevels(state.backgroundMode(), backgroundIndex);
             result[y] = new Background.ScanlineState(
                     (designation & backgroundBit) != 0,
                     state.backgroundOffsets()[offsetIndex],
@@ -1096,9 +1097,45 @@ public class PPU extends AMemory {
                     mode == 5 || mode == 6 ? 2 : 1,
                     mode == 5 || mode == 6 ? 1 - screenIndex : 0,
                     palette,
-                    (colorMathState.selection() & 0x01) != 0);
+                    (colorMathState.selection() & 0x01) != 0,
+                    levels == NO_SCANLINE_LEVELS ? Background.USE_MERGE_LEVELS : levels & 0xff,
+                    levels == NO_SCANLINE_LEVELS ? Background.USE_MERGE_LEVELS : levels >>> 8);
         }
         return result;
+    }
+
+    private static final int NO_SCANLINE_LEVELS = -1;
+
+    /**
+     * Priority levels for a background as configured by a BGMODE ($2105) value, packed as
+     * (levelHigh << 8) | levelLow. Mirrors the per-mode tables of renderMainAndSubScreen, so
+     * mid-frame BGMODE changes (e.g. SMW toggling the BG3 priority bit below its status bar)
+     * apply to the scanlines they cover.
+     */
+    private static int backgroundPriorityLevels(int backgroundModeValue, int backgroundIndex) {
+        int mode = backgroundModeValue & 0x07;
+        return switch (mode) {
+            case 0 -> switch (backgroundIndex) {
+                case 0 -> (36 << 8) | 32;
+                case 1 -> (35 << 8) | 31;
+                case 2 -> (26 << 8) | 16;
+                case 3 -> (25 << 8) | 15;
+                default -> NO_SCANLINE_LEVELS;
+            };
+            case 1 -> switch (backgroundIndex) {
+                case 0 -> (36 << 8) | 32;
+                case 1 -> (35 << 8) | 31;
+                case 2 -> (((backgroundModeValue & 0x08) != 0 ? 40 : 25) << 8) | 15;
+                default -> NO_SCANLINE_LEVELS;
+            };
+            case 2, 3, 4, 5 -> switch (backgroundIndex) {
+                case 0 -> (36 << 8) | 25;
+                case 1 -> (32 << 8) | 15;
+                default -> NO_SCANLINE_LEVELS;
+            };
+            case 6 -> backgroundIndex == 0 ? (36 << 8) | 25 : NO_SCANLINE_LEVELS;
+            default -> NO_SCANLINE_LEVELS;
+        };
     }
 
     private int[] verticalMosaicSourceLines(LayerState currentState) {
