@@ -62,6 +62,7 @@ public class CPU extends AMemory {
     public boolean isIRQRequested;
     public boolean isAbortRequested;
     public boolean isDisabled;
+    private java.util.function.IntConsumer busAccessListener;
 
     public CPU(IMemoryBus bus, Header cartridgeHeader) {
         rawBus = bus;
@@ -76,6 +77,16 @@ public class CPU extends AMemory {
         registers.setPbr(0);
         registers.d = 0;
         registers.s = 0x0100;
+    }
+
+    /**
+     * Registers a listener invoked with the master-clock cost of every timed
+     * CPU bus access, before the data transfer happens. Reads therefore sample
+     * and writes commit at the end edge of their access. DMA transfers use the
+     * raw bus and are accounted separately, so they never reach this listener.
+     */
+    public void setBusAccessListener(java.util.function.IntConsumer listener) {
+        busAccessListener = listener;
     }
 
     public void setBus(IMemoryBus bus) {
@@ -2150,7 +2161,11 @@ public class CPU extends AMemory {
 
         @Override
         public int read(int address) {
-            busMasterClockSurcharge += busAccessMasterClocks(address) - MASTER_CLOCKS_PER_CPU_CYCLE;
+            int masterClocks = busAccessMasterClocks(address);
+            busMasterClockSurcharge += masterClocks - MASTER_CLOCKS_PER_CPU_CYCLE;
+            if (busAccessListener != null) {
+                busAccessListener.accept(masterClocks);
+            }
             return delegate.read(address);
         }
 
@@ -2176,7 +2191,11 @@ public class CPU extends AMemory {
 
         @Override
         public void write(int address, int data) {
-            busMasterClockSurcharge += busAccessMasterClocks(address) - MASTER_CLOCKS_PER_CPU_CYCLE;
+            int masterClocks = busAccessMasterClocks(address);
+            busMasterClockSurcharge += masterClocks - MASTER_CLOCKS_PER_CPU_CYCLE;
+            if (busAccessListener != null) {
+                busAccessListener.accept(masterClocks);
+            }
             delegate.write(address, data);
         }
 

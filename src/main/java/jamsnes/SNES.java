@@ -56,6 +56,10 @@ public class SNES {
     private int hdmaScanline = -1;
     private int eventStallMasterClocks;
     private int eventStallDots;
+    private boolean eagerAdvanceEnabled;
+    private int eagerMasterClocksConverted;
+    private int eagerDotsProduced;
+    private int eagerDotsAdvanced;
 
     public SNES(VideoSink videoSink, AudioSink audioSink) {
         this.bus = new MemoryBus();
@@ -69,7 +73,69 @@ public class SNES {
         this.cpu.setIoPortLatchListener(this.ppu::latchCounters);
         this.cpu.setNmiControlListener(this::updateNmiControl);
         this.ppu.setExternalCounterLatchEnabled(() -> (cpu.internalRegisters()[0x01] & 0x80) != 0);
+        this.cpu.setBusAccessListener(this::onCpuBusAccess);
         this.apu = new APU(audioSink);
+    }
+
+    /**
+     * Advances the PPU counters to the timestamp of a CPU bus access, so reads
+     * such as the $2137 counter latch observe access-time positions instead of
+     * the position at the start of the CPU slice. Advancement parks exactly at
+     * pending scanline-event dots (HDMA initialization, DRAM refresh, HDMA
+     * start); those events keep running in the aggregate scheduler, which also
+     * advances whatever this eager pass could not. CPU internal cycles still
+     * elapse through the aggregate remainder.
+     */
+    private void onCpuBusAccess(int masterClocks) {
+        if (!eagerAdvanceEnabled) {
+            return;
+        }
+        eagerMasterClocksConverted += masterClocks;
+        int dots = ppuDotsForMasterClocks(masterClocks);
+        eagerDotsProduced += dots;
+        while (dots > 0) {
+            int step = Math.min(dots, dotsToNextPendingEvent());
+            if (step <= 0) {
+                return;
+            }
+            ppu.advanceCountersOnly(step);
+            eagerDotsAdvanced += step;
+            dots -= step;
+        }
+    }
+
+    /**
+     * Dots the counters may advance before reaching the next pending scanline
+     * event or the end of the current line; zero when parked on an event dot.
+     */
+    private int dotsToNextPendingEvent() {
+        int currentHCounter = ppu.hCounter();
+        int limit = ppu.scanlineDotsAt(ppu.vCounter(), ppu.isSecondField()) - currentHCounter;
+        if (isHdmaInitializationPending()) {
+            if (currentHCounter == HDMA_INITIALIZE_DOT) {
+                return 0;
+            }
+            if (currentHCounter < HDMA_INITIALIZE_DOT) {
+                limit = Math.min(limit, HDMA_INITIALIZE_DOT - currentHCounter);
+            }
+        }
+        if (isDramRefreshPending()) {
+            if (currentHCounter == DRAM_REFRESH_START_DOT) {
+                return 0;
+            }
+            if (currentHCounter < DRAM_REFRESH_START_DOT) {
+                limit = Math.min(limit, DRAM_REFRESH_START_DOT - currentHCounter);
+            }
+        }
+        if (isHdmaPending()) {
+            if (currentHCounter == HDMA_START_DOT) {
+                return 0;
+            }
+            if (currentHCounter < HDMA_START_DOT) {
+                limit = Math.min(limit, HDMA_START_DOT - currentHCounter);
+            }
+        }
+        return limit;
     }
 
     public SNES(String romPath, VideoSink videoSink, AudioSink audioSink) {
@@ -122,10 +188,16 @@ public class SNES {
         int timerStartHCounter = ppu.hCounter();
         int timerStartVCounter = ppu.vCounter();
         boolean timerStartSecondField = ppu.isSecondField();
+        eagerMasterClocksConverted = 0;
+        eagerDotsProduced = 0;
+        eagerDotsAdvanced = 0;
+        eagerAdvanceEnabled = true;
         cpu.update(0x0c);
+        eagerAdvanceEnabled = false;
         int cpuMasterClocks = cpu.elapsedMasterClocks();
-        int cpuDots = ppuDotsForMasterClocks(cpuMasterClocks);
-        advanceCpuDotsThroughScanlineEvents(cpuDots);
+        int cpuDots = eagerDotsProduced
+                + ppuDotsForMasterClocks(cpuMasterClocks - eagerMasterClocksConverted);
+        advanceCpuDotsThroughScanlineEvents(cpuDots - eagerDotsAdvanced);
         boolean enteredVBlank = requestFrameNmi();
         if (enteredVBlank) {
             ppu.renderFrame();
