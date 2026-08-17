@@ -109,6 +109,45 @@ class VideoFrameGeometryTest {
     }
 
     @Test
+    void mixedResolutionScanlinesShareTheCanonicalStride() {
+        RecordingVideoSink video = new RecordingVideoSink();
+        SNES snes = init(video);
+        writeColor(snes, 0, GREEN);
+        writeColor(snes, 1, BLUE);
+        writeColor(snes, 2, 0x7c00);
+        snes.bus.write(0x2100, 0x0f);
+        snes.bus.write(0x210b, 0x01);
+        snes.bus.write(0x212c, 0x01);
+        snes.bus.write(0x212d, 0x01);
+        snes.ppu.vram.write(0x0000, 0x00);
+        snes.ppu.vram.write(0x0001, 0x00);
+        snes.ppu.vram.write(0x2002, 0x80);
+        snes.ppu.vram.write(0x2003, 0x40);
+        snes.ppu.vram.write(0x2004, 0x80);
+        snes.ppu.vram.write(0x2005, 0x40);
+        snes.bus.write(0x2105, 0x00);
+        snes.ppu.captureScanlineState(1);
+        snes.bus.write(0x2105, 0x05);
+        snes.ppu.captureScanlineState(2);
+
+        snes.ppu.renderFrame();
+
+        for (int x = 0; x < 2 * PPU.VISIBLE_WIDTH; x += 2) {
+            assertEquals(video.pixel(0, x), video.pixel(0, x + 1),
+                    "the mode 0 line keeps duplicated low-resolution samples at x=" + x);
+        }
+        boolean rowOneHasDistinctNeighbors = false;
+        for (int x = 0; x < 2 * PPU.VISIBLE_WIDTH; x += 2) {
+            if (video.pixel(1, x) != video.pixel(1, x + 1)) {
+                rowOneHasDistinctNeighbors = true;
+                break;
+            }
+        }
+        assertTrue(rowOneHasDistinctNeighbors,
+                "the mode 5 line must use all 512 samples with distinct main/sub columns");
+    }
+
+    @Test
     void interlacedFrameWeaves448RowsAcrossFields() {
         RecordingVideoSink video = new RecordingVideoSink();
         SNES snes = init(video);
