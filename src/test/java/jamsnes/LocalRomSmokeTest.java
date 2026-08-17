@@ -1,7 +1,7 @@
 package jamsnes;
 
 import jamsnes.ppu.Background;
-import jamsnes.renderer.FrameBufferRenderer;
+import jamsnes.renderer.TestFrontend;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Files;
@@ -26,7 +26,7 @@ class LocalRomSmokeTest {
         Path rom = Path.of(romProperty);
         assumeTrue(Files.isRegularFile(rom), () -> "Local smoke ROM does not exist: " + rom);
 
-        FrameBufferRenderer renderer = new FrameBufferRenderer(Background.BUFFER_SIZE, Background.BUFFER_SIZE, 60);
+        TestFrontend renderer = new TestFrontend(Background.BUFFER_SIZE, Background.BUFFER_SIZE, 60);
         SNES snes = assertDoesNotThrow(() -> new SNES(rom.toString(), renderer));
         int updates = smokeUpdates();
 

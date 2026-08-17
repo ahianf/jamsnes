@@ -2,7 +2,7 @@ package jamsnes.apu.dsp;
 
 import jamsnes.SNES;
 import jamsnes.renderer.IRenderer;
-import jamsnes.renderer.NoRenderer;
+import jamsnes.renderer.TestFrontend;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class DSPTest {
     @Test
     void apuDspRamAccessBypassesIoAndIplOverlays() {
-        SNES snes = new SNES(new NoRenderer(0, 0, 0));
+        SNES snes = new SNES(new TestFrontend(0, 0, 0));
         snes.apu._internalWrite(0x00f2, 0x8c);
         snes.apu._internalWrite(0xffc0, 0x42);
 
@@ -281,7 +281,7 @@ class DSPTest {
 
     @Test
     void zeroCycleApuUpdateDoesNotTickDsp() {
-        SNES snes = new SNES(new NoRenderer(0, 0, 0));
+        SNES snes = new SNES(new TestFrontend(0, 0, 0));
 
         snes.apu.update(0);
 
@@ -440,7 +440,7 @@ class DSPTest {
 
     @Test
     void apuBackedDspReadsApuRamForBrrDecode() {
-        SNES snes = new SNES(new NoRenderer(0, 0, 0));
+        SNES snes = new SNES(new TestFrontend(0, 0, 0));
         snes.apu._internalWrite(0x4002, 0x34);
         snes.apu.dsp().setBrrState(0x00, 0x12);
         snes.apu.dsp().setVoiceBrrState(0, 0x4000, 1, 0);

@@ -11,10 +11,10 @@ import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class FrameBufferRendererTest {
+class TestFrontendTest {
     @Test
     void storesPixelsInRowMajorFrameBuffer() {
-        FrameBufferRenderer renderer = new FrameBufferRenderer(2, 3, 60);
+        TestFrontend renderer = new TestFrontend(2, 3, 60);
 
         renderer.putPixel(0, 0, 0x11223344);
         renderer.putPixel(1, 2, 0xaabbccdd);
@@ -31,7 +31,7 @@ class FrameBufferRendererTest {
 
     @Test
     void exposesStableFrameBufferSnapshotForGoldenChecks() {
-        FrameBufferRenderer renderer = new FrameBufferRenderer(1, 2, 60);
+        TestFrontend renderer = new TestFrontend(1, 2, 60);
         renderer.putPixel(0, 1, 0x12345678);
 
         int[] snapshot = renderer.frameBufferCopy();
@@ -43,7 +43,7 @@ class FrameBufferRendererTest {
 
     @Test
     void exposesFrameBufferCrc32ForGoldenChecks() {
-        FrameBufferRenderer renderer = new FrameBufferRenderer(1, 2, 60);
+        TestFrontend renderer = new TestFrontend(1, 2, 60);
         renderer.putPixel(0, 0, 0x11223344);
         renderer.putPixel(0, 1, 0xaabbccdd);
         long firstHash = renderer.frameBufferCrc32();
@@ -56,7 +56,7 @@ class FrameBufferRendererTest {
 
     @Test
     void reportsWhetherTheFrameContainsMoreThanOneColor() {
-        FrameBufferRenderer renderer = new FrameBufferRenderer(2, 2, 60);
+        TestFrontend renderer = new TestFrontend(2, 2, 60);
 
         assertFalse(renderer.hasNonUniformFrame());
 
@@ -67,7 +67,7 @@ class FrameBufferRendererTest {
 
     @Test
     void tracksWindowAudioAndDimensionState() {
-        FrameBufferRenderer renderer = new FrameBufferRenderer(4, 5, 120);
+        TestFrontend renderer = new TestFrontend(4, 5, 120);
         SNES snes = new SNES(renderer);
 
         renderer.setWindowName("JamSNES");
@@ -85,8 +85,8 @@ class FrameBufferRendererTest {
 
     @Test
     void rejectsInvalidDimensionsAndOutOfBoundsPixels() {
-        assertThrows(IllegalArgumentException.class, () -> new FrameBufferRenderer(0, 1, 60));
-        FrameBufferRenderer renderer = new FrameBufferRenderer(2, 2, 60);
+        assertThrows(IllegalArgumentException.class, () -> new TestFrontend(0, 1, 60));
+        TestFrontend renderer = new TestFrontend(2, 2, 60);
 
         assertThrows(IndexOutOfBoundsException.class, () -> renderer.putPixel(2, 0, 0));
         assertThrows(IndexOutOfBoundsException.class, () -> renderer.putPixel(0, 2, 0));

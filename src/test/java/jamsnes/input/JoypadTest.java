@@ -1,7 +1,7 @@
 package jamsnes.input;
 
 import jamsnes.SNES;
-import jamsnes.renderer.NoRenderer;
+import jamsnes.renderer.TestFrontend;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -147,7 +147,7 @@ class JoypadTest {
     }
 
     private static SNES init() {
-        SNES snes = new SNES(new NoRenderer(0, 0, 0));
+        SNES snes = new SNES(new TestFrontend(0, 0, 0));
         snes.bus.mapComponents(snes);
         return snes;
     }

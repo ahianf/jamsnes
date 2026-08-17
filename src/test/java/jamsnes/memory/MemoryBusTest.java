@@ -2,7 +2,7 @@ package jamsnes.memory;
 
 import jamsnes.SNES;
 import jamsnes.cartridge.MappingMode;
-import jamsnes.renderer.NoRenderer;
+import jamsnes.renderer.TestFrontend;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -478,7 +478,7 @@ class MemoryBusTest {
     }
 
     private static SNES init() {
-        SNES snes = new SNES(new NoRenderer(0, 0, 0));
+        SNES snes = new SNES(new TestFrontend(0, 0, 0));
         snes.cartridge.setSize(100);
         snes.cartridge.header.addMappingMode(MappingMode.LOROM);
         snes.sram.setSize(100);
@@ -487,7 +487,7 @@ class MemoryBusTest {
     }
 
     private static SNES initLoromWithoutSram() {
-        SNES snes = new SNES(new NoRenderer(0, 0, 0));
+        SNES snes = new SNES(new TestFrontend(0, 0, 0));
         snes.cartridge.setSize(100);
         snes.cartridge.header.addMappingMode(MappingMode.LOROM);
         snes.bus.mapComponents(snes);
@@ -495,7 +495,7 @@ class MemoryBusTest {
     }
 
     private static SNES initHirom() {
-        SNES snes = new SNES(new NoRenderer(0, 0, 0));
+        SNES snes = new SNES(new TestFrontend(0, 0, 0));
         snes.cartridge.setSize(0x20000);
         snes.cartridge.header.addMappingMode(MappingMode.HIROM);
         snes.bus.mapComponents(snes);

@@ -45,12 +45,22 @@ class LwjglRendererTest {
     }
 
     @Test
-    void emptyAudioBatchOnlyUpdatesCounters() {
+    void storesPpuPixelsInItsFrameBuffer() {
+        LwjglRenderer renderer = new LwjglRenderer(2, 3, 60);
+
+        renderer.putPixel(0, 0, 0x11223344);
+        renderer.putPixel(1, 2, 0xaabbccdd);
+
+        assertEquals(0x11223344, renderer.pixel(0, 0));
+        assertEquals(0xaabbccdd, renderer.pixel(1, 2));
+        assertThrows(IndexOutOfBoundsException.class, () -> renderer.putPixel(2, 0, 0));
+        assertThrows(IndexOutOfBoundsException.class, () -> renderer.putPixel(0, 3, 0));
+    }
+
+    @Test
+    void acceptsEmptyAudioBatchBeforeWindowCreation() {
         LwjglRenderer renderer = new LwjglRenderer(224, 256, 60);
 
         renderer.playAudio(new short[0]);
-
-        assertEquals(1, renderer.audioCalls());
-        assertEquals(0, renderer.audioSamples());
     }
 }

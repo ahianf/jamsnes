@@ -5,7 +5,8 @@ import jamsnes.SNES;
 import java.util.Arrays;
 import java.util.zip.CRC32;
 
-public class FrameBufferRenderer implements IRenderer {
+/** Test-only frontend double for core emulation tests. */
+public final class TestFrontend implements IRenderer {
     private final int height;
     private final int width;
     private final int maxFPS;
@@ -16,14 +17,18 @@ public class FrameBufferRenderer implements IRenderer {
     private int audioCalls;
     private int audioSamples;
 
-    public FrameBufferRenderer(int height, int width, int maxFPS) {
-        if (height <= 0 || width <= 0) {
-            throw new IllegalArgumentException("Frame buffer dimensions must be positive");
+    public TestFrontend() {
+        this(0, 0, 0);
+    }
+
+    public TestFrontend(int height, int width, int maxFPS) {
+        if (height < 0 || width < 0 || (height == 0) != (width == 0)) {
+            throw new IllegalArgumentException("Frame buffer dimensions must both be positive or both be zero");
         }
         this.height = height;
         this.width = width;
         this.maxFPS = maxFPS;
-        this.frameBuffer = new int[height * width];
+        frameBuffer = new int[height * width];
     }
 
     @Override
@@ -38,6 +43,9 @@ public class FrameBufferRenderer implements IRenderer {
 
     @Override
     public void putPixel(int y, int x, int rgba) {
+        if (frameBuffer.length == 0) {
+            return;
+        }
         if (y < 0 || y >= height || x < 0 || x >= width) {
             throw new IndexOutOfBoundsException("Pixel out of frame buffer bounds: " + x + "," + y);
         }

@@ -1,7 +1,6 @@
 package jamsnes;
 
 import jamsnes.renderer.IRenderer;
-import jamsnes.renderer.NoRenderer;
 import jamsnes.renderer.lwjgl.LwjglRenderer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -16,7 +15,7 @@ import java.nio.file.Path;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class MainTest {
@@ -47,14 +46,14 @@ class MainTest {
 
         assertEquals(0, exitCode);
         assertTrue(out.toString(StandardCharsets.UTF_8).contains("Usage: jamsnes rom_path"));
-        assertTrue(out.toString(StandardCharsets.UTF_8).contains("--renderer"));
+        assertFalse(out.toString(StandardCharsets.UTF_8).contains("renderer"));
     }
 
     @Test
     void runLoadsRomAndAdvancesEmulator() throws IOException {
         Path rom = writeGameRom();
 
-        int exitCode = Main.run(new String[]{rom.toString()}, printStream(), printStream());
+        int exitCode = Main.run(new String[]{rom.toString()}, printStream(), printStream(), new TestRenderer());
 
         assertEquals(0, exitCode);
     }
@@ -73,17 +72,6 @@ class MainTest {
     }
 
     @Test
-    void noRendererCreateWindowAdvancesEmulatorOnce() {
-        SNES snes = new SNES(new NoRenderer(0, 0, 0));
-        snes.cpu.isDisabled = true;
-        snes.apu.isDisabled = true;
-
-        new NoRenderer(0, 0, 0).createWindow(snes, 60);
-
-        assertEquals(265, snes.ppu.hCounter());
-    }
-
-    @Test
     void runReportsInvalidRomPath() {
         ByteArrayOutputStream err = new ByteArrayOutputStream();
 
@@ -94,68 +82,34 @@ class MainTest {
     }
 
     @Test
-    void parseArgsAcceptsRendererOptionsAroundRomPath() throws IOException {
-        Path rom = writeGameRom();
-
-        Main.LaunchOptions equalsOption = Main.parseArgs(new String[]{rom.toString(), "--renderer=lwjgl"});
-        Main.LaunchOptions separatedOption = Main.parseArgs(new String[]{"--renderer", "headless", rom.toString()});
-        Main.LaunchOptions shortcutOption = Main.parseArgs(new String[]{"--lwjgl", rom.toString()});
-
-        assertEquals(rom.toString(), equalsOption.romPath());
-        assertEquals("lwjgl", equalsOption.renderer());
-        assertEquals("headless", separatedOption.renderer());
-        assertEquals("lwjgl", shortcutOption.renderer());
-    }
-
-    @Test
-    void runReportsInvalidRendererOptionBeforeLoadingRom() throws IOException {
+    void runRejectsRemovedRendererOptions() {
         ByteArrayOutputStream err = new ByteArrayOutputStream();
 
-        int exitCode = Main.run(new String[]{writeGameRom().toString(), "--renderer=bogus"}, printStream(),
-                new PrintStream(err));
+        int exitCode = Main.run(new String[]{"--headless"}, printStream(), new PrintStream(err));
 
         assertEquals(1, exitCode);
-        assertTrue(err.toString(StandardCharsets.UTF_8).contains("Unknown renderer: bogus"));
+        assertTrue(err.toString(StandardCharsets.UTF_8).contains("Unknown option: --headless"));
     }
 
     @Test
     void runReportsUnknownOption() throws IOException {
         ByteArrayOutputStream err = new ByteArrayOutputStream();
 
-        int exitCode = Main.run(new String[]{writeGameRom().toString(), "--debug"}, printStream(),
-                new PrintStream(err));
+        int exitCode = Main.run(new String[]{"--debug"}, printStream(), new PrintStream(err));
 
         assertEquals(1, exitCode);
         assertTrue(err.toString(StandardCharsets.UTF_8).contains("Unknown option: --debug"));
     }
 
     @Test
-    void defaultRendererUsesLwjglWhenRequested() {
-        String previous = System.getProperty("jamsnes.renderer");
-        try {
-            System.setProperty("jamsnes.renderer", "lwjgl");
+    void launcherAlwaysCreatesLwjglRenderer() {
+        LwjglRenderer renderer = assertInstanceOf(LwjglRenderer.class, Main.createRenderer());
 
-            LwjglRenderer renderer = assertInstanceOf(LwjglRenderer.class, Main.defaultRenderer());
-            assertEquals(448, renderer.displayHeight());
-            assertEquals(512, renderer.displayWidth());
-            assertEquals(256, renderer.windowWidth());
-            assertEquals(224, renderer.windowHeight());
-            assertEquals(3, renderer.windowScale());
-        } finally {
-            if (previous == null) {
-                System.clearProperty("jamsnes.renderer");
-            } else {
-                System.setProperty("jamsnes.renderer", previous);
-            }
-        }
-    }
-
-    @Test
-    void rendererForRejectsUnknownRenderer() {
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-                () -> Main.rendererFor("bogus"));
-
-        assertEquals("Unknown renderer: bogus", exception.getMessage());
+        assertEquals(448, renderer.displayHeight());
+        assertEquals(512, renderer.displayWidth());
+        assertEquals(256, renderer.windowWidth());
+        assertEquals(224, renderer.windowHeight());
+        assertEquals(3, renderer.windowScale());
     }
 
     private Path writeGameRom() throws IOException {

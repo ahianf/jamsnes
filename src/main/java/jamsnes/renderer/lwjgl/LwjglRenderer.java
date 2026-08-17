@@ -3,7 +3,7 @@ package jamsnes.renderer.lwjgl;
 import jamsnes.SNES;
 import jamsnes.input.JoypadButton;
 import jamsnes.input.KeyboardJoypadMapper;
-import jamsnes.renderer.FrameBufferRenderer;
+import jamsnes.renderer.IRenderer;
 import jamsnes.runtime.EmulatorLoop;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.glfw.GLFWErrorCallback;
@@ -55,13 +55,17 @@ import static org.lwjgl.glfw.GLFW.glfwWindowHint;
 import static org.lwjgl.glfw.GLFW.glfwWindowShouldClose;
 import static org.lwjgl.system.MemoryUtil.NULL;
 
-public class LwjglRenderer extends FrameBufferRenderer {
+public final class LwjglRenderer implements IRenderer {
     public static final int DEFAULT_DISPLAY_WIDTH = 512;
     public static final int DEFAULT_DISPLAY_HEIGHT = 448;
     public static final int DEFAULT_WINDOW_WIDTH = 256;
     public static final int DEFAULT_WINDOW_HEIGHT = 224;
     public static final int DEFAULT_WINDOW_SCALE = 3;
 
+    private final int height;
+    private final int width;
+    private final int maxFPS;
+    private final int[] frameBuffer;
     private final int displayHeight;
     private final int displayWidth;
     private final int windowWidth;
@@ -69,6 +73,7 @@ public class LwjglRenderer extends FrameBufferRenderer {
     private final int windowScale;
     private final Map<Integer, JoypadButton> keyBindings;
     private final LwjglAudioDevice audioDevice = new LwjglAudioDevice();
+    private String windowName = "";
     private long window;
     private int texture;
     private ByteBuffer pixelBuffer;
@@ -106,13 +111,19 @@ public class LwjglRenderer extends FrameBufferRenderer {
             int windowHeight,
             int windowScale,
             Map<Integer, JoypadButton> keyBindings) {
-        super(height, width, maxFPS);
+        if (height <= 0 || width <= 0) {
+            throw new IllegalArgumentException("Frame buffer dimensions must be positive");
+        }
         if (displayHeight <= 0 || displayHeight > height || displayWidth <= 0 || displayWidth > width) {
             throw new IllegalArgumentException("Display dimensions must be positive and within the frame buffer");
         }
         if (windowScale <= 0) {
             throw new IllegalArgumentException("windowScale must be positive");
         }
+        this.height = height;
+        this.width = width;
+        this.maxFPS = maxFPS;
+        this.frameBuffer = new int[height * width];
         this.displayHeight = displayHeight;
         this.displayWidth = displayWidth;
         this.windowWidth = windowWidth;
@@ -163,9 +174,25 @@ public class LwjglRenderer extends FrameBufferRenderer {
         return windowScale;
     }
 
+    public int height() {
+        return height;
+    }
+
+    public int width() {
+        return width;
+    }
+
+    public int maxFPS() {
+        return maxFPS;
+    }
+
+    int pixel(int y, int x) {
+        return frameBuffer[y * width + x];
+    }
+
     @Override
     public void setWindowName(String newWindowName) {
-        super.setWindowName(newWindowName);
+        windowName = newWindowName == null ? "" : newWindowName;
         if (window != NULL) {
             glfwSetWindowTitle(window, windowTitle());
         }
@@ -173,7 +200,6 @@ public class LwjglRenderer extends FrameBufferRenderer {
 
     @Override
     public void createWindow(SNES snes, int maxFPS) {
-        super.createWindow(snes, maxFPS);
         GLFWErrorCallback.createPrint(System.err).set();
         if (!glfwInit()) {
             throw new IllegalStateException("Could not initialize GLFW");
@@ -190,7 +216,6 @@ public class LwjglRenderer extends FrameBufferRenderer {
 
     @Override
     public void drawScreen() {
-        super.drawScreen();
         if (window == NULL || texture == 0) {
             return;
         }
@@ -202,11 +227,18 @@ public class LwjglRenderer extends FrameBufferRenderer {
 
     @Override
     public void playAudio(short[] samples) {
-        super.playAudio(samples);
         if (window != NULL) {
             glfwPollEvents();
         }
         audioDevice.queueSamples(samples);
+    }
+
+    @Override
+    public void putPixel(int y, int x, int rgba) {
+        if (y < 0 || y >= height || x < 0 || x >= width) {
+            throw new IndexOutOfBoundsException("Pixel out of frame buffer bounds: " + x + "," + y);
+        }
+        frameBuffer[y * width + x] = rgba;
     }
 
     private void createGlfwWindow(SNES snes) {
@@ -243,7 +275,7 @@ public class LwjglRenderer extends FrameBufferRenderer {
 
     private void uploadFrameBuffer() {
         pixelBuffer.clear();
-        int[] pixels = frameBuffer();
+        int[] pixels = frameBuffer;
         int stride = width();
         for (int y = 0; y < displayHeight; y++) {
             int rowStart = y * stride;
@@ -296,6 +328,6 @@ public class LwjglRenderer extends FrameBufferRenderer {
     }
 
     private String windowTitle() {
-        return windowName().isBlank() ? "JamSNES" : windowName() + " - JamSNES";
+        return windowName.isBlank() ? "JamSNES" : windowName + " - JamSNES";
     }
 }

@@ -3,7 +3,7 @@ package jamsnes.ppu;
 import jamsnes.SNES;
 import jamsnes.cartridge.MappingMode;
 import jamsnes.models.Vector2;
-import jamsnes.renderer.NoRenderer;
+import jamsnes.renderer.TestFrontend;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -181,7 +181,7 @@ class BackgroundRenderTest {
     }
 
     private static SNES init() {
-        SNES snes = new SNES(new NoRenderer(0, 0, 0));
+        SNES snes = new SNES(new TestFrontend(0, 0, 0));
         snes.cartridge.setSize(0x10000);
         snes.cartridge.header.addMappingMode(MappingMode.LOROM);
         snes.sram.setSize(0x10000);

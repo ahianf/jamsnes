@@ -4,7 +4,7 @@ import jamsnes.cartridge.MappingMode;
 import jamsnes.input.Joypad;
 import jamsnes.ppu.Background;
 import jamsnes.ppu.PPUUtils;
-import jamsnes.renderer.FrameBufferRenderer;
+import jamsnes.renderer.TestFrontend;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -22,8 +22,8 @@ class SyntheticRomBootTest {
 
     @Test
     void loadedLoRomExecutesPpuInitializationAndPresentsAFrame() throws IOException {
-        FrameBufferRenderer renderer =
-                new FrameBufferRenderer(Background.BUFFER_SIZE, Background.BUFFER_SIZE, 60);
+        TestFrontend renderer =
+                new TestFrontend(Background.BUFFER_SIZE, Background.BUFFER_SIZE, 60);
         SNES snes = new SNES(writeBootRom().toString(), renderer);
 
         for (int updates = 0; renderer.drawScreenCalls() == 0 && updates < 10_000; updates++) {
@@ -37,8 +37,8 @@ class SyntheticRomBootTest {
 
     @Test
     void loadedHiRomUsesBankZeroResetMirrorAndPresentsAFrame() throws IOException {
-        FrameBufferRenderer renderer =
-                new FrameBufferRenderer(Background.BUFFER_SIZE, Background.BUFFER_SIZE, 60);
+        TestFrontend renderer =
+                new TestFrontend(Background.BUFFER_SIZE, Background.BUFFER_SIZE, 60);
         SNES snes = new SNES(writeHiRomBootRom().toString(), renderer);
 
         for (int updates = 0; renderer.drawScreenCalls() == 0 && updates < 10_000; updates++) {
@@ -54,8 +54,8 @@ class SyntheticRomBootTest {
 
     @Test
     void loadedLoRomRunsNmiHandlerAndPresentsItsPaletteUpdate() throws IOException {
-        FrameBufferRenderer renderer =
-                new FrameBufferRenderer(Background.BUFFER_SIZE, Background.BUFFER_SIZE, 60);
+        TestFrontend renderer =
+                new TestFrontend(Background.BUFFER_SIZE, Background.BUFFER_SIZE, 60);
         SNES snes = new SNES(writeNmiRom().toString(), renderer);
 
         for (int updates = 0; renderer.drawScreenCalls() < 2 && updates < 20_000; updates++) {
@@ -70,8 +70,8 @@ class SyntheticRomBootTest {
 
     @Test
     void loadedLoRomWakesFromWaiForTimerIrqAndPresentsItsDisplayUpdate() throws IOException {
-        FrameBufferRenderer renderer =
-                new FrameBufferRenderer(Background.BUFFER_SIZE, Background.BUFFER_SIZE, 60);
+        TestFrontend renderer =
+                new TestFrontend(Background.BUFFER_SIZE, Background.BUFFER_SIZE, 60);
         SNES snes = new SNES(writeTimerIrqRom().toString(), renderer);
 
         for (int updates = 0; renderer.drawScreenCalls() == 0 && updates < 10_000; updates++) {
@@ -91,8 +91,8 @@ class SyntheticRomBootTest {
 
     @Test
     void loadedLoRomRunsDmaFromCartridgeIntoCgramBeforePresenting() throws IOException {
-        FrameBufferRenderer renderer =
-                new FrameBufferRenderer(Background.BUFFER_SIZE, Background.BUFFER_SIZE, 60);
+        TestFrontend renderer =
+                new TestFrontend(Background.BUFFER_SIZE, Background.BUFFER_SIZE, 60);
         SNES snes = new SNES(writeDmaRom().toString(), renderer);
 
         for (int updates = 0; renderer.drawScreenCalls() == 0 && updates < 10_000; updates++) {
@@ -108,8 +108,8 @@ class SyntheticRomBootTest {
 
     @Test
     void loadedLoRomRunsHdmaAtHBlankAndPreservesThePriorScanline() throws IOException {
-        FrameBufferRenderer renderer =
-                new FrameBufferRenderer(Background.BUFFER_SIZE, Background.BUFFER_SIZE, 60);
+        TestFrontend renderer =
+                new TestFrontend(Background.BUFFER_SIZE, Background.BUFFER_SIZE, 60);
         SNES snes = new SNES(writeHdmaRom().toString(), renderer);
 
         for (int updates = 0; renderer.drawScreenCalls() < 2 && updates < 20_000; updates++) {
@@ -127,8 +127,8 @@ class SyntheticRomBootTest {
 
     @Test
     void loadedLoRomReadsAutomaticJoypadStateInNmiAndUpdatesTheFrame() throws IOException {
-        FrameBufferRenderer renderer =
-                new FrameBufferRenderer(Background.BUFFER_SIZE, Background.BUFFER_SIZE, 60);
+        TestFrontend renderer =
+                new TestFrontend(Background.BUFFER_SIZE, Background.BUFFER_SIZE, 60);
         SNES snes = new SNES(writeJoypadRom().toString(), renderer);
         snes.joypad.setControllerState(0, Joypad.BUTTON_B);
 
@@ -148,8 +148,8 @@ class SyntheticRomBootTest {
 
     @Test
     void loadedLoRomWaitsForTheApuIplHandshakeBeforePresenting() throws IOException {
-        FrameBufferRenderer renderer =
-                new FrameBufferRenderer(Background.BUFFER_SIZE, Background.BUFFER_SIZE, 60);
+        TestFrontend renderer =
+                new TestFrontend(Background.BUFFER_SIZE, Background.BUFFER_SIZE, 60);
         SNES snes = new SNES(writeApuHandshakeRom().toString(), renderer);
 
         for (int updates = 0; renderer.drawScreenCalls() < 2 && updates < 20_000; updates++) {
@@ -166,8 +166,8 @@ class SyntheticRomBootTest {
 
     @Test
     void loadedLoRomUploadsAndLaunchesAnApuProgramBeforePresenting() throws IOException {
-        FrameBufferRenderer renderer =
-                new FrameBufferRenderer(Background.BUFFER_SIZE, Background.BUFFER_SIZE, 60);
+        TestFrontend renderer =
+                new TestFrontend(Background.BUFFER_SIZE, Background.BUFFER_SIZE, 60);
         SNES snes = new SNES(writeApuUploadRom().toString(), renderer);
 
         for (int updates = 0; renderer.drawScreenCalls() < 2 && updates < 20_000; updates++) {

@@ -1,7 +1,7 @@
 package jamsnes.apu;
 
 import jamsnes.SNES;
-import jamsnes.renderer.NoRenderer;
+import jamsnes.renderer.TestFrontend;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -101,6 +101,6 @@ class ArithmeticInstructionTest {
     }
 
     private static SNES init() {
-        return new SNES(new NoRenderer(0, 0, 0));
+        return new SNES(new TestFrontend(0, 0, 0));
     }
 }
