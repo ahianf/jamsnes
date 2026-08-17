@@ -134,6 +134,13 @@ public class Background {
         this.tileRenderer.setBpp(bpp);
     }
 
+    /** Refreshes the logical background dimensions from the current configuration. */
+    public void updateBackgroundSize() {
+        backgroundSize = new Vector2<>(
+                ((tileMapMirroring.x ? 1 : 0) + 1) * characterNbPixels.x * NB_CHARACTER_WIDTH,
+                ((tileMapMirroring.y ? 1 : 0) + 1) * characterNbPixels.y * NB_CHARACTER_HEIGHT);
+    }
+
     public void renderBackground() {
         long configuration = renderConfiguration();
         if (renderedVramModificationCount == vram.modificationCount()
@@ -145,9 +152,7 @@ public class Background {
         renderedCgramModificationCount = ppu.cgram.modificationCount();
         renderedConfiguration = configuration;
 
-        backgroundSize = new Vector2<>(
-                ((tileMapMirroring.x ? 1 : 0) + 1) * characterNbPixels.x * NB_CHARACTER_WIDTH,
-                ((tileMapMirroring.y ? 1 : 0) + 1) * characterNbPixels.y * NB_CHARACTER_HEIGHT);
+        updateBackgroundSize();
         clearBuffers();
 
         int mapColumns = tileMapMirroring.x ? 2 : 1;
@@ -201,7 +206,7 @@ public class Background {
     }
 
     public boolean isPriorityPixel(int x, int y) {
-        return tilesPriority[y / characterNbPixels.y][x / characterNbPixels.x];
+        return (tileMapEntry(x / characterNbPixels.x, y / characterNbPixels.y) & (1 << 13)) != 0;
     }
 
     public static void mergeBackgroundBuffer(
@@ -439,18 +444,19 @@ public class Background {
                     sourceCoordinateX * state.horizontalScale() + state.horizontalPhase(),
                     sourceWidth);
             int sourceY = Math.floorMod(mosaicY + sourceScrollY, sourceHeight);
-            int pixel = backgroundSrc.resolvePixel(sourceX, sourceY, state);
+            int packed = backgroundSrc.samplePackedPixel(sourceX, sourceY);
+            int pixel = backgroundSrc.resolveSampleColor(packed, state);
             if ((pixel & 0xff) == 0) {
                 continue;
             }
-            int pixelLevel = backgroundSrc.isPriorityPixel(sourceX, sourceY)
+            int pixelLevel = (packed & SAMPLE_PRIORITY) != 0
                     ? scanlineLevelHigh
                     : scanlineLevelLow;
             if (pixelLevel >= levelRow[levelBase + x]) {
                 colorRow[colorBase + x] = pixel;
                 levelRow[levelBase + x] = pixelLevel;
                 if (cgramRow != null && x < cgramRow.length - cgramBase) {
-                    int cgramIndex = backgroundSrc.resolveCgramIndex(sourceX, sourceY, state);
+                    int cgramIndex = backgroundSrc.resolveCgramIndex(packed, state);
                     if (cgramIndex >= 0) {
                         cgramRow[cgramBase + x] = (short) cgramIndex;
                     }
@@ -462,16 +468,87 @@ public class Background {
         }
     }
 
-    private int resolvePixel(int x, int y, ScanlineState state) {
-        if (state.palette() == null) {
-            return buffer[y][x];
+    /** Set on a packed sample when the tilemap entry requests high priority. */
+    static final int SAMPLE_PRIORITY = 1 << 16;
+
+    /**
+     * Samples one logical background pixel directly from VRAM. The caller has
+     * already applied scroll, mosaic, offset-per-tile, and wrapping, so
+     * {@code x}/{@code y} are coordinates inside the logical background.
+     * Returns {@code (priority ? SAMPLE_PRIORITY : 0) | paletteIndex << 8 |
+     * pixelReference}; a pixel reference of zero is transparent.
+     */
+    int samplePackedPixel(int x, int y) {
+        int charWidth = characterNbPixels.x;
+        int charHeight = characterNbPixels.y;
+        int entry = tileMapEntry(x / charWidth, y / charHeight);
+        int inTileX = x % charWidth;
+        int inTileY = y % charHeight;
+        if ((entry & (1 << 15)) != 0) {
+            inTileY = charHeight - 1 - inTileY;
         }
-        int descriptor = pixelDescriptors[y][x] & 0xffff;
-        int pixelReference = descriptor & 0xff;
+        if ((entry & (1 << 14)) != 0) {
+            inTileX = charWidth - 1 - inTileX;
+        }
+        int characterColumn = entry & 0x0f;
+        int characterRow = (entry >>> 4) & 0x3f;
+        int graphicAddress = tilesetAddress
+                + ((characterRow + inTileY / Tile.NB_PIXELS_HEIGHT) * NB_TILE_PER_ROW * bpp * Tile.BASE_BYTE_SIZE)
+                + ((characterColumn + inTileX / Tile.NB_PIXELS_WIDTH) * bpp * Tile.BASE_BYTE_SIZE);
+        int pixelReference = decodePixelReference(
+                graphicAddress + 2 * (inTileY % Tile.NB_PIXELS_HEIGHT),
+                inTileX % Tile.NB_PIXELS_WIDTH);
+        int paletteBase = ppu.getBgMode() == 0 ? (backgroundNumber - 1) * 8 : 0;
+        int paletteIndex = paletteBase + ((entry >>> 10) & 0x07);
+        return ((entry & (1 << 13)) != 0 ? SAMPLE_PRIORITY : 0) | (paletteIndex << 8) | pixelReference;
+    }
+
+    private int tileMapEntry(int tileX, int tileY) {
+        int mapColumns = tileMapMirroring.x ? 2 : 1;
+        int page = (tileY / NB_CHARACTER_HEIGHT) * mapColumns + (tileX / NB_CHARACTER_WIDTH);
+        int entryIndex = (tileY % NB_CHARACTER_HEIGHT) * NB_CHARACTER_WIDTH + (tileX % NB_CHARACTER_WIDTH);
+        int address = u16(tileMapStartAddress + page * TILE_MAP_BYTE_SIZE + entryIndex * 2);
+        return vram.read(address) | (vram.read(u16(address + 1)) << 8);
+    }
+
+    private int decodePixelReference(int rowAddress, int x) {
+        int[] vramData = vram.data();
+        int size = vramData.length;
+        int shift = 7 - x;
+        int reference = ((vramData[rowAddress % size] >>> shift) & 1)
+                | (((vramData[(rowAddress + 1) % size] >>> shift) & 1) << 1);
+        if (bpp == 2) {
+            return reference;
+        }
+        if (bpp == 4 || bpp == 8) {
+            reference |= (((vramData[(rowAddress + 16) % size] >>> shift) & 1) << 2)
+                    | (((vramData[(rowAddress + 17) % size] >>> shift) & 1) << 3);
+        } else {
+            return 0;
+        }
+        if (bpp == 8) {
+            reference |= (((vramData[(rowAddress + 32) % size] >>> shift) & 1) << 4)
+                    | (((vramData[(rowAddress + 33) % size] >>> shift) & 1) << 5)
+                    | (((vramData[(rowAddress + 48) % size] >>> shift) & 1) << 6)
+                    | (((vramData[(rowAddress + 49) % size] >>> shift) & 1) << 7);
+        }
+        return reference;
+    }
+
+    private int resolveSampleColor(int packed, ScanlineState state) {
+        int pixelReference = packed & 0xff;
         if (pixelReference == 0) {
             return 0;
         }
-        int paletteIndex = descriptor >>> 8;
+        int paletteIndex = (packed >>> 8) & 0xff;
+        if (state.palette() == null) {
+            if (bpp == 8 && ppu.ppuRegisters().cgwselDirectColorMode()) {
+                return PPUUtils.directColorToRGBA(paletteIndex, pixelReference);
+            }
+            int colorAddress = (bpp == 8 ? 0 : paletteIndex) * bpp * bpp * 2 + pixelReference * 2;
+            return PPUUtils.cgramColorToRGBA(
+                    ppu.cgram.read(colorAddress) | (ppu.cgram.read(colorAddress + 1) << 8));
+        }
         if (bpp == 8 && state.directColor()) {
             return PPUUtils.directColorToRGBA(paletteIndex, pixelReference);
         }
@@ -481,10 +558,9 @@ public class Background {
         return PPUUtils.cgramColorToRGBA(state.palette()[colorIndex & 0xff]);
     }
 
-    private int resolveCgramIndex(int x, int y, ScanlineState state) {
-        int descriptor = pixelDescriptors[y][x] & 0xffff;
-        int pixelReference = descriptor & 0xff;
-        int paletteIndex = descriptor >>> 8;
+    private int resolveCgramIndex(int packed, ScanlineState state) {
+        int pixelReference = packed & 0xff;
+        int paletteIndex = (packed >>> 8) & 0xff;
         if (bpp == 8 && state.directColor()) {
             return -1;
         }

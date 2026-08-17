@@ -363,7 +363,7 @@ public class PPU extends AMemory {
             default -> 0;
         };
         for (int i = 0; i < backgroundCount; i++) {
-            backgrounds[i].renderBackground();
+            backgrounds[i].updateBackgroundSize();
         }
 
         fillSubScreenBackdrop();
