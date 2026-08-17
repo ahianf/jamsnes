@@ -1,8 +1,8 @@
 package jamsnes.apu.dsp;
 
 import jamsnes.SNES;
-import jamsnes.renderer.IRenderer;
-import jamsnes.renderer.TestFrontend;
+import jamsnes.audio.RecordingAudioSink;
+import jamsnes.video.RecordingVideoSink;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class DSPTest {
     @Test
     void apuDspRamAccessBypassesIoAndIplOverlays() {
-        SNES snes = new SNES(new TestFrontend(0, 0, 0));
+        SNES snes = new SNES(new RecordingVideoSink(), new RecordingAudioSink());
         snes.apu._internalWrite(0x00f2, 0x8c);
         snes.apu._internalWrite(0xffc0, 0x42);
 
@@ -281,7 +281,7 @@ class DSPTest {
 
     @Test
     void zeroCycleApuUpdateDoesNotTickDsp() {
-        SNES snes = new SNES(new TestFrontend(0, 0, 0));
+        SNES snes = new SNES(new RecordingVideoSink(), new RecordingAudioSink());
 
         snes.apu.update(0);
 
@@ -290,8 +290,8 @@ class DSPTest {
 
     @Test
     void apuBackedDspPlaysBufferedAudioThroughRenderer() {
-        TestRenderer renderer = new TestRenderer();
-        SNES snes = new SNES(renderer);
+        RecordingAudioSink renderer = new RecordingAudioSink();
+        SNES snes = new SNES(new RecordingVideoSink(), renderer);
         snes.apu.dsp().write(0x6c, 0x00);
         snes.apu.dsp().setMasterOutput(0, 0x1234);
         snes.apu.dsp().setEchoOutput(1, 0x0055);
@@ -307,17 +307,17 @@ class DSPTest {
             }
         }
 
-        assertEquals(1, renderer.playAudioCalls);
-        assertEquals(DSP.AUDIO_BATCH_SAMPLES, renderer.lastAudioSamples.length);
-        assertEquals(4623, renderer.lastAudioSamples[0]);
-        assertEquals(0, renderer.lastAudioSamples[1]);
+        assertEquals(1, renderer.writeCalls());
+        assertEquals(DSP.AUDIO_BATCH_SAMPLES, renderer.lastBatch().length);
+        assertEquals(4623, renderer.lastBatch()[0]);
+        assertEquals(0, renderer.lastBatch()[1]);
         assertEquals(0, snes.apu.dsp().getSamplesCount());
     }
 
     @Test
     void apuBackedDspDoesNotReplayBufferedAudioWithoutNewSamples() {
-        TestRenderer renderer = new TestRenderer();
-        SNES snes = new SNES(renderer);
+        RecordingAudioSink renderer = new RecordingAudioSink();
+        SNES snes = new SNES(new RecordingVideoSink(), renderer);
         snes.apu.dsp().write(0x6c, 0x00);
         snes.apu.dsp().setMasterOutput(0, 0x1234);
         snes.apu.dsp().write(0x0c, 0x7f);
@@ -329,7 +329,7 @@ class DSPTest {
             snes.apu.dsp().update();
         }
 
-        assertEquals(0, renderer.playAudioCalls);
+        assertEquals(0, renderer.writeCalls());
         assertEquals(2, snes.apu.dsp().getSamplesCount());
     }
 
@@ -440,7 +440,7 @@ class DSPTest {
 
     @Test
     void apuBackedDspReadsApuRamForBrrDecode() {
-        SNES snes = new SNES(new TestFrontend(0, 0, 0));
+        SNES snes = new SNES(new RecordingVideoSink(), new RecordingAudioSink());
         snes.apu._internalWrite(0x4002, 0x34);
         snes.apu.dsp().setBrrState(0x00, 0x12);
         snes.apu.dsp().setVoiceBrrState(0, 0x4000, 1, 0);
@@ -801,30 +801,4 @@ class DSPTest {
         assertEquals(0, dsp.masterOutput(0));
     }
 
-    private static final class TestRenderer implements IRenderer {
-        private int playAudioCalls;
-        private short[] lastAudioSamples = new short[0];
-
-        @Override
-        public void setWindowName(String newWindowName) {
-        }
-
-        @Override
-        public void drawScreen() {
-        }
-
-        @Override
-        public void putPixel(int y, int x, int rgba) {
-        }
-
-        @Override
-        public void createWindow(SNES snes, int maxFPS) {
-        }
-
-        @Override
-        public void playAudio(short[] samples) {
-            playAudioCalls++;
-            lastAudioSamples = samples;
-        }
-    }
 }

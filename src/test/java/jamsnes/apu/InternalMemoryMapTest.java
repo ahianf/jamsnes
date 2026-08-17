@@ -6,7 +6,8 @@ import jamsnes.exceptions.InvalidAddress;
 import jamsnes.memory.IMemory;
 import jamsnes.memory.MemoryShadow;
 import jamsnes.memory.RepeatingMemoryShadow;
-import jamsnes.renderer.TestFrontend;
+import jamsnes.audio.RecordingAudioSink;
+import jamsnes.video.RecordingVideoSink;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -441,7 +442,7 @@ class InternalMemoryMapTest {
     }
 
     private static SNES init() {
-        return new SNES(new TestFrontend(0, 0, 0));
+        return new SNES(new RecordingVideoSink(), new RecordingAudioSink());
     }
 
     private Path writeSpcFile() throws IOException {

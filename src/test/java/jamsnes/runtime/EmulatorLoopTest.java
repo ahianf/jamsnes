@@ -1,7 +1,8 @@
 package jamsnes.runtime;
 
 import jamsnes.SNES;
-import jamsnes.renderer.TestFrontend;
+import jamsnes.audio.RecordingAudioSink;
+import jamsnes.video.RecordingVideoSink;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.atomic.AtomicInteger;
@@ -54,7 +55,7 @@ class EmulatorLoopTest {
         private int updateCalls;
 
         private CountingSNES() {
-            super(new TestFrontend(0, 0, 0));
+            super(new RecordingVideoSink(), new RecordingAudioSink());
         }
 
         @Override

@@ -2,7 +2,8 @@ package jamsnes.ppu;
 
 import jamsnes.SNES;
 import jamsnes.exceptions.InvalidAddress;
-import jamsnes.renderer.TestFrontend;
+import jamsnes.audio.RecordingAudioSink;
+import jamsnes.video.RecordingVideoSink;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -718,7 +719,7 @@ class PpuRegisterWriteTest {
     }
 
     private static SNES init() {
-        SNES snes = new SNES(new TestFrontend(0, 0, 0));
+        SNES snes = new SNES(new RecordingVideoSink(), new RecordingAudioSink());
         snes.bus.mapComponents(snes);
         return snes;
     }

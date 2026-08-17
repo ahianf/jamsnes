@@ -7,7 +7,9 @@ import jamsnes.input.Joypad;
 import jamsnes.ppu.Background;
 import jamsnes.ppu.PPU;
 import jamsnes.ppu.PPUUtils;
-import jamsnes.renderer.IRenderer;
+import jamsnes.audio.RecordingAudioSink;
+import jamsnes.video.VideoFrame;
+import jamsnes.video.VideoSink;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -26,7 +28,7 @@ class SNESTest {
 
     @Test
     void loadRomMapsComponentsAndResetsCpuAndApu() throws IOException {
-        SNES snes = new SNES(new TestRenderer());
+        SNES snes = new SNES(new TestRenderer(), new RecordingAudioSink());
         snes.cpu.registers().setPc(0x1234);
         snes.apu.internalRegisters().pc = 0x1234;
         Path rom = writeGameRom();
@@ -40,7 +42,7 @@ class SNESTest {
 
     @Test
     void loadRomUsesZeroSramSizeWhenHeaderDeclaresNoSram() throws IOException {
-        SNES snes = new SNES(new TestRenderer());
+        SNES snes = new SNES(new TestRenderer(), new RecordingAudioSink());
 
         snes.loadRom(writeGameRom().toString());
 
@@ -50,7 +52,7 @@ class SNESTest {
 
     @Test
     void loadRomClearsSramContentsForNewCartridge() throws IOException {
-        SNES snes = new SNES(new TestRenderer());
+        SNES snes = new SNES(new TestRenderer(), new RecordingAudioSink());
         Path rom = writeGameRomWithSram();
         snes.loadRom(rom.toString());
         assertEquals(0x8000, snes.sram.getSize());
@@ -64,7 +66,7 @@ class SNESTest {
 
     @Test
     void loadRomClearsAutoJoypadBusyStatus() throws IOException {
-        SNES snes = new SNES(new TestRenderer());
+        SNES snes = new SNES(new TestRenderer(), new RecordingAudioSink());
         snes.bus.mapComponents(snes);
         snes.cpu.isDisabled = true;
         snes.apu.isDisabled = true;
@@ -81,7 +83,7 @@ class SNESTest {
 
     @Test
     void loadRomResetsCpuControlPorts() throws IOException {
-        SNES snes = new SNES(new TestRenderer());
+        SNES snes = new SNES(new TestRenderer(), new RecordingAudioSink());
         snes.bus.mapComponents(snes);
         snes.cpu.internalRegisters()[0x00] = 0x81;
         snes.cpu.internalRegisters()[0x01] = 0x00;
@@ -100,7 +102,7 @@ class SNESTest {
 
     @Test
     void wrioHighToLowTransitionLatchesPpuCounters() {
-        SNES snes = new SNES(new TestRenderer());
+        SNES snes = new SNES(new TestRenderer(), new RecordingAudioSink());
         snes.bus.mapComponents(snes);
 
         snes.bus.write(0x4201, 0x80);
@@ -116,7 +118,7 @@ class SNESTest {
 
     @Test
     void rdioReflectsWrioWithoutChangingPpuLatchState() {
-        SNES snes = new SNES(new TestRenderer());
+        SNES snes = new SNES(new TestRenderer(), new RecordingAudioSink());
         snes.bus.mapComponents(snes);
 
         snes.bus.write(0x4201, 0x80);
@@ -130,7 +132,7 @@ class SNESTest {
 
     @Test
     void wrioDoesNotLatchPpuCountersWithoutHighToLowTransition() {
-        SNES snes = new SNES(new TestRenderer());
+        SNES snes = new SNES(new TestRenderer(), new RecordingAudioSink());
         snes.bus.mapComponents(snes);
 
         snes.ppu.advanceCountersOnly(12);
@@ -148,7 +150,7 @@ class SNESTest {
 
     @Test
     void loadRomResetsPpuCountersToFrameStart() throws IOException {
-        SNES snes = new SNES(new TestRenderer());
+        SNES snes = new SNES(new TestRenderer(), new RecordingAudioSink());
         snes.bus.mapComponents(snes);
         snes.ppu.advanceCountersOnly(PPU.H_COUNTER_DOTS * PPU.V_BLANK_START_SCANLINE + 12);
         snes.updateVideoStatusRegisters();
@@ -164,7 +166,7 @@ class SNESTest {
 
     @Test
     void loadRomResetsWramPortAddress() throws IOException {
-        SNES snes = new SNES(new TestRenderer());
+        SNES snes = new SNES(new TestRenderer(), new RecordingAudioSink());
         snes.bus.mapComponents(snes);
         snes.bus.write(0x2181, 0x34);
         snes.bus.write(0x2182, 0x12);
@@ -180,7 +182,7 @@ class SNESTest {
 
     @Test
     void loadRomResetsPpuVideoRegisterState() throws IOException {
-        SNES snes = new SNES(new TestRenderer());
+        SNES snes = new SNES(new TestRenderer(), new RecordingAudioSink());
         snes.bus.mapComponents(snes);
         snes.bus.write(0x2100, 0x80);
         snes.bus.write(0x2115, 0x80);
@@ -198,7 +200,7 @@ class SNESTest {
 
     @Test
     void loadRomResetsPpuCgramWriteLatchAndAddress() throws IOException {
-        SNES snes = new SNES(new TestRenderer());
+        SNES snes = new SNES(new TestRenderer(), new RecordingAudioSink());
         snes.bus.mapComponents(snes);
         snes.bus.write(0x2121, 0x20);
         snes.bus.write(0x2122, 0x12);
@@ -218,7 +220,7 @@ class SNESTest {
 
     @Test
     void loadRomClearsPpuMemoryState() throws IOException {
-        SNES snes = new SNES(new TestRenderer());
+        SNES snes = new SNES(new TestRenderer(), new RecordingAudioSink());
         snes.bus.mapComponents(snes);
         snes.ppu.vram.write(0x1234, 0x12);
         snes.ppu.oamram.write(0x0200, 0x34);
@@ -233,7 +235,7 @@ class SNESTest {
 
     @Test
     void loadRomClearsLastTimerIrqPosition() throws IOException {
-        SNES snes = new SNES(new TestRenderer());
+        SNES snes = new SNES(new TestRenderer(), new RecordingAudioSink());
         snes.bus.mapComponents(snes);
         snes.bus.write(0x4200, 0x10);
         snes.bus.write(0x4207, 0x08);
@@ -255,7 +257,7 @@ class SNESTest {
 
     @Test
     void loadRomClearsDmaAndHdmaEnableState() throws IOException {
-        SNES snes = new SNES(new TestRenderer());
+        SNES snes = new SNES(new TestRenderer(), new RecordingAudioSink());
         snes.bus.mapComponents(snes);
         snes.bus.write(0x420b, 0x01);
         snes.bus.write(0x420c, 0x01);
@@ -271,21 +273,20 @@ class SNESTest {
     @Test
     void updateRunsCpuPpuAndApuWithoutRenderingBeforeVBlank() {
         TestRenderer renderer = new TestRenderer();
-        SNES snes = new SNES(renderer);
+        SNES snes = new SNES(renderer, new RecordingAudioSink());
         snes.cpu.isDisabled = true;
         snes.apu.isDisabled = true;
 
         snes.update();
 
         assertEquals(0, renderer.drawScreenCalls);
-        assertEquals(0, renderer.putPixelCalls);
         assertEquals(265, snes.ppu.hCounter());
         assertEquals(0, snes.ppu.vCounter());
     }
 
     @Test
     void gameUpdatesAdvanceApuAtItsOwnFractionalClockRate() {
-        SNES snes = new SNES(new TestRenderer());
+        SNES snes = new SNES(new TestRenderer(), new RecordingAudioSink());
         snes.cpu.isDisabled = true;
 
         snes.update();
@@ -301,7 +302,7 @@ class SNESTest {
 
     @Test
     void gameUpdatesClockApuFromCpuMasterClocks() {
-        SNES snes = new SNES(new TestRenderer());
+        SNES snes = new SNES(new TestRenderer(), new RecordingAudioSink());
         snes.cartridge.setSize(0x10000);
         snes.cartridge.header.addMappingMode(MappingMode.LOROM);
         snes.sram.setSize(0x10000);
@@ -318,7 +319,7 @@ class SNESTest {
 
     @Test
     void updateAdvancesRequestedCyclesWhileCpuWaitsForInterrupt() {
-        SNES snes = new SNES(new TestRenderer());
+        SNES snes = new SNES(new TestRenderer(), new RecordingAudioSink());
         snes.cartridge.setSize(0x10000);
         snes.cartridge.header.addMappingMode(MappingMode.LOROM);
         snes.sram.setSize(0x10000);
@@ -337,7 +338,7 @@ class SNESTest {
 
     @Test
     void updateStallsOnceForDramRefreshEachScanline() {
-        SNES snes = new SNES(new TestRenderer());
+        SNES snes = new SNES(new TestRenderer(), new RecordingAudioSink());
         snes.bus.mapComponents(snes);
         snes.cpu.STP(0);
         snes.ppu.advanceCountersOnly(120);
@@ -361,7 +362,7 @@ class SNESTest {
 
     @Test
     void updateAdvancesPpuByInterruptEntryAndHandlerCycles() {
-        SNES snes = new SNES(new TestRenderer());
+        SNES snes = new SNES(new TestRenderer(), new RecordingAudioSink());
         snes.cartridge.setSize(0x10000);
         snes.cartridge.header.addMappingMode(MappingMode.LOROM);
         snes.sram.setSize(0x10000);
@@ -388,7 +389,7 @@ class SNESTest {
     @Test
     void updateDrawsFrameWhenEnteringVBlank() {
         TestRenderer renderer = new TestRenderer();
-        SNES snes = new SNES(renderer);
+        SNES snes = new SNES(renderer, new RecordingAudioSink());
         snes.cpu.isDisabled = true;
         snes.apu.isDisabled = true;
         snes.ppu.advanceCountersOnly(PPU.H_COUNTER_DOTS * PPU.V_BLANK_START_SCANLINE - 0xff);
@@ -396,13 +397,13 @@ class SNESTest {
         snes.update();
 
         assertEquals(1, renderer.drawScreenCalls);
-        assertEquals((long) 2 * PPU.VISIBLE_WIDTH * 2 * PPU.VISIBLE_HEIGHT, renderer.putPixelCalls);
+        assertEquals(2 * PPU.VISIBLE_HEIGHT, renderer.lastVisibleHeight);
     }
 
     @Test
     void overscanDelaysFrameAndNmiUntilScanline240() {
         TestRenderer renderer = new TestRenderer();
-        SNES snes = new SNES(renderer);
+        SNES snes = new SNES(renderer, new RecordingAudioSink());
         snes.bus.mapComponents(snes);
         snes.cpu.isDisabled = true;
         snes.apu.isDisabled = true;
@@ -428,20 +429,19 @@ class SNESTest {
     @Test
     void updateRunsOnlyApuForAudioCartridges() throws IOException {
         TestRenderer renderer = new TestRenderer();
-        SNES snes = new SNES(renderer);
+        SNES snes = new SNES(renderer, new RecordingAudioSink());
         Path spc = writeSpcFile();
 
         snes.loadRom(spc.toString());
         snes.update();
 
         assertEquals(0, renderer.drawScreenCalls);
-        assertEquals(0, renderer.putPixelCalls);
         assertEquals(0x1244, snes.apu.internalRegisters().pc);
     }
 
     @Test
     void updateDoesNotCopyJoypadStateBeforeVBlankWhenAutoReadIsEnabled() {
-        SNES snes = new SNES(new TestRenderer());
+        SNES snes = new SNES(new TestRenderer(), new RecordingAudioSink());
         snes.cpu.isDisabled = true;
         snes.apu.isDisabled = true;
         snes.cpu.internalRegisters()[0x00] = 0x01;
@@ -455,7 +455,7 @@ class SNESTest {
 
     @Test
     void updateShiftsJoypadSerialStateAcrossTheAutoReadBusyWindow() {
-        SNES snes = new SNES(new TestRenderer());
+        SNES snes = new SNES(new TestRenderer(), new RecordingAudioSink());
         snes.cpu.isDisabled = true;
         snes.apu.isDisabled = true;
         snes.cpu.internalRegisters()[0x00] = 0x01;
@@ -494,7 +494,7 @@ class SNESTest {
 
     @Test
     void updateSetsAutoJoypadBusyStatusWhenAutoReadStartsAtVBlankEntry() {
-        SNES snes = new SNES(new TestRenderer());
+        SNES snes = new SNES(new TestRenderer(), new RecordingAudioSink());
         snes.bus.mapComponents(snes);
         snes.cpu.isDisabled = true;
         snes.apu.isDisabled = true;
@@ -508,7 +508,7 @@ class SNESTest {
 
     @Test
     void updateClearsAutoJoypadBusyStatusAfterReadDuration() {
-        SNES snes = new SNES(new TestRenderer());
+        SNES snes = new SNES(new TestRenderer(), new RecordingAudioSink());
         snes.bus.mapComponents(snes);
         snes.cpu.isDisabled = true;
         snes.apu.isDisabled = true;
@@ -528,7 +528,7 @@ class SNESTest {
 
     @Test
     void disablingAutoJoypadAbortsActiveRead() {
-        SNES snes = new SNES(new TestRenderer());
+        SNES snes = new SNES(new TestRenderer(), new RecordingAudioSink());
         snes.bus.mapComponents(snes);
         snes.cpu.isDisabled = true;
         snes.apu.isDisabled = true;
@@ -547,7 +547,7 @@ class SNESTest {
 
     @Test
     void updateDoesNotCopyJoypadStateWhenAutoReadIsDisabled() {
-        SNES snes = new SNES(new TestRenderer());
+        SNES snes = new SNES(new TestRenderer(), new RecordingAudioSink());
         snes.cpu.isDisabled = true;
         snes.apu.isDisabled = true;
         snes.cpu.internalRegisters()[0x18] = 0x55;
@@ -560,7 +560,7 @@ class SNESTest {
 
     @Test
     void updateDoesNotSetAutoJoypadBusyStatusWhenAutoReadIsDisabled() {
-        SNES snes = new SNES(new TestRenderer());
+        SNES snes = new SNES(new TestRenderer(), new RecordingAudioSink());
         snes.bus.mapComponents(snes);
         snes.cpu.isDisabled = true;
         snes.apu.isDisabled = true;
@@ -573,7 +573,7 @@ class SNESTest {
 
     @Test
     void updateDoesNotRequestNmiBeforeVBlankWhenEnabled() {
-        SNES snes = new SNES(new TestRenderer());
+        SNES snes = new SNES(new TestRenderer(), new RecordingAudioSink());
         snes.bus.mapComponents(snes);
         snes.cpu.isDisabled = true;
         snes.apu.isDisabled = true;
@@ -587,7 +587,7 @@ class SNESTest {
 
     @Test
     void updateRequestsNmiOnceWhenEnteringVBlankAndEnabled() {
-        SNES snes = new SNES(new TestRenderer());
+        SNES snes = new SNES(new TestRenderer(), new RecordingAudioSink());
         snes.bus.mapComponents(snes);
         snes.cpu.isDisabled = true;
         snes.apu.isDisabled = true;
@@ -607,7 +607,7 @@ class SNESTest {
 
     @Test
     void updateRequestsNmiWhenEnabledDuringCurrentVBlank() {
-        SNES snes = new SNES(new TestRenderer());
+        SNES snes = new SNES(new TestRenderer(), new RecordingAudioSink());
         snes.bus.mapComponents(snes);
         snes.cpu.isDisabled = true;
         snes.apu.isDisabled = true;
@@ -625,7 +625,7 @@ class SNESTest {
 
     @Test
     void cpuNmitimenWriteRequestsLateNmiBeforeFollowingInstruction() {
-        SNES snes = new SNES(new TestRenderer());
+        SNES snes = new SNES(new TestRenderer(), new RecordingAudioSink());
         snes.bus.mapComponents(snes);
         snes.cpu.isDisabled = true;
         snes.apu.isDisabled = true;
@@ -654,7 +654,7 @@ class SNESTest {
 
     @Test
     void updateLatchesRdnmiAtVBlankEntryWhenNmiIsDisabled() {
-        SNES snes = new SNES(new TestRenderer());
+        SNES snes = new SNES(new TestRenderer(), new RecordingAudioSink());
         snes.bus.mapComponents(snes);
         snes.cpu.isDisabled = true;
         snes.apu.isDisabled = true;
@@ -669,7 +669,7 @@ class SNESTest {
 
     @Test
     void updateDoesNotRequestLateEnabledNmiAfterRdnmiWasCleared() {
-        SNES snes = new SNES(new TestRenderer());
+        SNES snes = new SNES(new TestRenderer(), new RecordingAudioSink());
         snes.bus.mapComponents(snes);
         snes.cpu.isDisabled = true;
         snes.apu.isDisabled = true;
@@ -687,7 +687,7 @@ class SNESTest {
 
     @Test
     void updateClearsUnreadRdnmiAtVBlankEnd() {
-        SNES snes = new SNES(new TestRenderer());
+        SNES snes = new SNES(new TestRenderer(), new RecordingAudioSink());
         snes.bus.mapComponents(snes);
         snes.cpu.isDisabled = true;
         snes.apu.isDisabled = true;
@@ -705,7 +705,7 @@ class SNESTest {
 
     @Test
     void updateDoesNotRequestNmiWhenDisabled() {
-        SNES snes = new SNES(new TestRenderer());
+        SNES snes = new SNES(new TestRenderer(), new RecordingAudioSink());
         snes.cpu.isDisabled = true;
         snes.apu.isDisabled = true;
 
@@ -716,7 +716,7 @@ class SNESTest {
 
     @Test
     void updateVideoStatusRegistersReflectsPpuBlanking() {
-        SNES snes = new SNES(new TestRenderer());
+        SNES snes = new SNES(new TestRenderer(), new RecordingAudioSink());
         snes.bus.mapComponents(snes);
 
         snes.ppu.update(PPU.H_BLANK_START_DOT - 1);
@@ -738,7 +738,7 @@ class SNESTest {
 
     @Test
     void updateTimerIrqRequestsIrqWhenEnabledTimerMatchesCounters() {
-        SNES snes = new SNES(new TestRenderer());
+        SNES snes = new SNES(new TestRenderer(), new RecordingAudioSink());
         snes.bus.mapComponents(snes);
         snes.bus.write(0x4200, 0x30);
         snes.bus.write(0x4207, 0x0c);
@@ -754,7 +754,7 @@ class SNESTest {
 
     @Test
     void updateTimerIrqRequestsIrqWhenUpdateCrossesHTimerCounter() {
-        SNES snes = new SNES(new TestRenderer());
+        SNES snes = new SNES(new TestRenderer(), new RecordingAudioSink());
         snes.bus.mapComponents(snes);
         snes.cpu.isDisabled = true;
         snes.apu.isDisabled = true;
@@ -769,7 +769,7 @@ class SNESTest {
 
     @Test
     void updateTimerIrqDoesNotReassertAtSameCounterPosition() {
-        SNES snes = new SNES(new TestRenderer());
+        SNES snes = new SNES(new TestRenderer(), new RecordingAudioSink());
         snes.bus.mapComponents(snes);
         snes.bus.write(0x4200, 0x10);
         snes.bus.write(0x4207, 0x08);
@@ -785,7 +785,7 @@ class SNESTest {
 
     @Test
     void updateTimerIrqReassertsAtSamePositionOnFollowingFrame() {
-        SNES snes = new SNES(new TestRenderer());
+        SNES snes = new SNES(new TestRenderer(), new RecordingAudioSink());
         snes.bus.mapComponents(snes);
         snes.bus.write(0x4200, 0x20);
         snes.bus.write(0x4209, 0x01);
@@ -805,7 +805,7 @@ class SNESTest {
 
     @Test
     void updateTimerIrqSkipsMissingLastDotOfShortScanline() {
-        SNES snes = new SNES(new TestRenderer());
+        SNES snes = new SNES(new TestRenderer(), new RecordingAudioSink());
         snes.bus.mapComponents(snes);
         snes.cpu.isDisabled = true;
         snes.apu.isDisabled = true;
@@ -826,7 +826,7 @@ class SNESTest {
 
     @Test
     void updateTimerIrqRejectsHorizontalCounter340() {
-        SNES snes = new SNES(new TestRenderer());
+        SNES snes = new SNES(new TestRenderer(), new RecordingAudioSink());
         snes.bus.mapComponents(snes);
         snes.cpu.isDisabled = true;
         snes.apu.isDisabled = true;
@@ -846,7 +846,7 @@ class SNESTest {
 
     @Test
     void updateTimerIrqAcceptsHorizontalCounter339() {
-        SNES snes = new SNES(new TestRenderer());
+        SNES snes = new SNES(new TestRenderer(), new RecordingAudioSink());
         snes.bus.mapComponents(snes);
         snes.bus.write(0x4200, 0x10);
         snes.bus.write(0x4207, 0x53);
@@ -860,7 +860,7 @@ class SNESTest {
 
     @Test
     void updateTimerIrqMatchesExtraInterlaceScanline() {
-        SNES snes = new SNES(new TestRenderer());
+        SNES snes = new SNES(new TestRenderer(), new RecordingAudioSink());
         snes.bus.mapComponents(snes);
         snes.cpu.isDisabled = true;
         snes.apu.isDisabled = true;
@@ -879,7 +879,7 @@ class SNESTest {
 
     @Test
     void updateTimerIrqSkipsExtraLineTargetOnSecondInterlaceField() {
-        SNES snes = new SNES(new TestRenderer());
+        SNES snes = new SNES(new TestRenderer(), new RecordingAudioSink());
         snes.bus.mapComponents(snes);
         snes.cpu.isDisabled = true;
         snes.apu.isDisabled = true;
@@ -899,7 +899,7 @@ class SNESTest {
 
     @Test
     void updateTimerIrqCanReassertAfterTimersAreDisabledAndReenabled() {
-        SNES snes = new SNES(new TestRenderer());
+        SNES snes = new SNES(new TestRenderer(), new RecordingAudioSink());
         snes.bus.mapComponents(snes);
         snes.bus.write(0x4200, 0x10);
         snes.bus.write(0x4207, 0x08);
@@ -919,7 +919,7 @@ class SNESTest {
 
     @Test
     void updateTimerIrqCanReassertWhenTimerEnableMaskChangesBetweenChecks() {
-        SNES snes = new SNES(new TestRenderer());
+        SNES snes = new SNES(new TestRenderer(), new RecordingAudioSink());
         snes.bus.mapComponents(snes);
         snes.bus.write(0x4200, 0x10);
         snes.bus.write(0x4207, 0x08);
@@ -938,7 +938,7 @@ class SNESTest {
 
     @Test
     void updateInitializesAndRunsHdmaWhenEnteringHBlank() {
-        SNES snes = new SNES(new TestRenderer());
+        SNES snes = new SNES(new TestRenderer(), new RecordingAudioSink());
         snes.bus.mapComponents(snes);
         snes.cpu.STP(0);
         snes.apu.isDisabled = true;
@@ -973,7 +973,7 @@ class SNESTest {
 
     @Test
     void updateDefersLateHdmaEnableUntilInitializationAfterFrameRollover() {
-        SNES snes = new SNES(new TestRenderer());
+        SNES snes = new SNES(new TestRenderer(), new RecordingAudioSink());
         snes.bus.mapComponents(snes);
         snes.cpu.STP(0);
         snes.apu.isDisabled = true;
@@ -1007,7 +1007,7 @@ class SNESTest {
     @Test
     void updatePreservesDisplayBrightnessFromBeforeEachScanlineHdmaTransfer() {
         TestRenderer renderer = new TestRenderer();
-        SNES snes = new SNES(renderer);
+        SNES snes = new SNES(renderer, new RecordingAudioSink());
         snes.bus.mapComponents(snes);
         snes.cpu.isDisabled = true;
         snes.apu.isDisabled = true;
@@ -1032,7 +1032,7 @@ class SNESTest {
     @Test
     void updatePreservesFixedColorFromBeforeEachScanlineHdmaTransfer() {
         TestRenderer renderer = new TestRenderer();
-        SNES snes = new SNES(renderer);
+        SNES snes = new SNES(renderer, new RecordingAudioSink());
         snes.bus.mapComponents(snes);
         snes.cpu.isDisabled = true;
         snes.apu.isDisabled = true;
@@ -1057,7 +1057,7 @@ class SNESTest {
     @Test
     void updatePreservesBackdropColorFromBeforeEachScanlineHdmaTransfer() {
         TestRenderer renderer = new TestRenderer();
-        SNES snes = new SNES(renderer);
+        SNES snes = new SNES(renderer, new RecordingAudioSink());
         snes.bus.mapComponents(snes);
         snes.cpu.isDisabled = true;
         snes.apu.isDisabled = true;
@@ -1082,7 +1082,7 @@ class SNESTest {
     @Test
     void updatePreservesBackgroundPaletteFromBeforeEachScanlineHdmaTransfer() {
         TestRenderer renderer = new TestRenderer();
-        SNES snes = new SNES(renderer);
+        SNES snes = new SNES(renderer, new RecordingAudioSink());
         snes.bus.mapComponents(snes);
         snes.cpu.isDisabled = true;
         snes.apu.isDisabled = true;
@@ -1116,7 +1116,7 @@ class SNESTest {
     @Test
     void updatePreservesObjectPaletteFromBeforeEachScanlineHdmaTransfer() {
         TestRenderer renderer = new TestRenderer();
-        SNES snes = new SNES(renderer);
+        SNES snes = new SNES(renderer, new RecordingAudioSink());
         snes.bus.mapComponents(snes);
         snes.cpu.isDisabled = true;
         snes.apu.isDisabled = true;
@@ -1147,7 +1147,7 @@ class SNESTest {
     @Test
     void updatePreservesModeSevenPaletteFromBeforeEachScanlineHdmaTransfer() {
         TestRenderer renderer = new TestRenderer();
-        SNES snes = new SNES(renderer);
+        SNES snes = new SNES(renderer, new RecordingAudioSink());
         snes.bus.mapComponents(snes);
         snes.cpu.isDisabled = true;
         snes.apu.isDisabled = true;
@@ -1184,7 +1184,7 @@ class SNESTest {
     @Test
     void updatePreservesBackgroundDirectColorFromBeforeEachScanlineHdmaTransfer() {
         TestRenderer renderer = new TestRenderer();
-        SNES snes = new SNES(renderer);
+        SNES snes = new SNES(renderer, new RecordingAudioSink());
         snes.bus.mapComponents(snes);
         snes.cpu.isDisabled = true;
         snes.apu.isDisabled = true;
@@ -1223,7 +1223,7 @@ class SNESTest {
     @Test
     void updatePreservesBackgroundScrollFromBeforeEachScanlineHdmaTransfer() {
         TestRenderer renderer = new TestRenderer();
-        SNES snes = new SNES(renderer);
+        SNES snes = new SNES(renderer, new RecordingAudioSink());
         snes.bus.mapComponents(snes);
         snes.cpu.isDisabled = true;
         snes.apu.isDisabled = true;
@@ -1265,7 +1265,7 @@ class SNESTest {
     @Test
     void updatePreservesModeSevenScrollFromBeforeEachScanlineHdmaTransfer() {
         TestRenderer renderer = new TestRenderer();
-        SNES snes = new SNES(renderer);
+        SNES snes = new SNES(renderer, new RecordingAudioSink());
         snes.bus.mapComponents(snes);
         snes.cpu.isDisabled = true;
         snes.apu.isDisabled = true;
@@ -1304,7 +1304,7 @@ class SNESTest {
     @Test
     void updatePreservesObjectDesignationFromBeforeEachScanlineHdmaTransfer() {
         TestRenderer renderer = new TestRenderer();
-        SNES snes = new SNES(renderer);
+        SNES snes = new SNES(renderer, new RecordingAudioSink());
         snes.bus.mapComponents(snes);
         snes.cpu.isDisabled = true;
         snes.apu.isDisabled = true;
@@ -1337,7 +1337,7 @@ class SNESTest {
     @Test
     void updatePreservesObjectTileBaseFromBeforeEachScanlineHdmaTransfer() {
         TestRenderer renderer = new TestRenderer();
-        SNES snes = new SNES(renderer);
+        SNES snes = new SNES(renderer, new RecordingAudioSink());
         snes.bus.mapComponents(snes);
         snes.cpu.isDisabled = true;
         snes.apu.isDisabled = true;
@@ -1370,7 +1370,7 @@ class SNESTest {
 
     @Test
     void updateSpreadsNormalDmaAcrossHblankAccessWindow() {
-        SNES snes = new SNES(new TestRenderer());
+        SNES snes = new SNES(new TestRenderer(), new RecordingAudioSink());
         snes.bus.mapComponents(snes);
         snes.apu.isDisabled = true;
         snes.cpu.registers().setPc(0x0200);
@@ -1408,7 +1408,7 @@ class SNESTest {
 
     @Test
     void loadRomClearsSmcOffsetBeforeLoadingAudioCartridge() throws IOException {
-        SNES snes = new SNES(new TestRenderer());
+        SNES snes = new SNES(new TestRenderer(), new RecordingAudioSink());
 
         snes.loadRom(writeHeaderedGameRomWithSram().toString());
         assertEquals(0x8000, snes.sram.getSize());
@@ -1422,7 +1422,7 @@ class SNESTest {
 
     @Test
     void loadRomScoresSmcHeaderResetOpcodeFromRomPayload() throws IOException {
-        SNES snes = new SNES(new TestRenderer());
+        SNES snes = new SNES(new TestRenderer(), new RecordingAudioSink());
         byte[] rom = headeredGameRomBytes("JAMSNES SMC RESET", 0x00);
         rom[0] = 0x00;
         rom[0x200] = 0x78;
@@ -1438,7 +1438,7 @@ class SNESTest {
 
     @Test
     void loadRomScoresHiromResetOpcodeFromBankZeroMirror() throws IOException {
-        SNES snes = new SNES(new TestRenderer());
+        SNES snes = new SNES(new TestRenderer(), new RecordingAudioSink());
         byte[] rom = ambiguousLoHiRomBytes();
         Path romPath = tempDir.resolve("game-hirom-reset.sfc");
         Files.write(romPath, rom);
@@ -1563,37 +1563,18 @@ class SNESTest {
         snes.bus.write(address, value >>> 8);
     }
 
-    private static final class TestRenderer implements IRenderer {
-        private long putPixelCalls;
+    private static final class TestRenderer implements VideoSink {
         private int drawScreenCalls;
+        private int lastVisibleHeight;
         private int firstScanlinePixel;
         private int secondScanlinePixel;
 
         @Override
-        public void setWindowName(String newWindowName) {
-        }
-
-        @Override
-        public void drawScreen() {
+        public void present(VideoFrame frame) {
             drawScreenCalls++;
-        }
-
-        @Override
-        public void putPixel(int y, int x, int rgba) {
-            putPixelCalls++;
-            if (x == 0 && y == 0) {
-                firstScanlinePixel = rgba;
-            } else if (x == 0 && y == 2) {
-                secondScanlinePixel = rgba;
-            }
-        }
-
-        @Override
-        public void createWindow(SNES snes, int maxFPS) {
-        }
-
-        @Override
-        public void playAudio(short[] samples) {
+            lastVisibleHeight = frame.visibleHeight();
+            firstScanlinePixel = frame.pixels()[0];
+            secondScanlinePixel = frame.pixels()[2 * VideoFrame.STRIDE];
         }
     }
 }

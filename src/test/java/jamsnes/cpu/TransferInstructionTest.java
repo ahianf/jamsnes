@@ -2,7 +2,8 @@ package jamsnes.cpu;
 
 import jamsnes.SNES;
 import jamsnes.cartridge.MappingMode;
-import jamsnes.renderer.TestFrontend;
+import jamsnes.audio.RecordingAudioSink;
+import jamsnes.video.RecordingVideoSink;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -383,7 +384,7 @@ class TransferInstructionTest {
     }
 
     private static SNES init() {
-        SNES snes = new SNES(new TestFrontend(0, 0, 0));
+        SNES snes = new SNES(new RecordingVideoSink(), new RecordingAudioSink());
         snes.cartridge.setSize(100);
         snes.cartridge.header.addMappingMode(MappingMode.LOROM);
         snes.sram.setSize(100);

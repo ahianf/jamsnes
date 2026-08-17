@@ -5,7 +5,8 @@ import jamsnes.cartridge.Header;
 import jamsnes.cartridge.MappingMode;
 import jamsnes.memory.IMemory;
 import jamsnes.memory.IMemoryBus;
-import jamsnes.renderer.TestFrontend;
+import jamsnes.audio.RecordingAudioSink;
+import jamsnes.video.RecordingVideoSink;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
@@ -738,7 +739,7 @@ class AddressingModeTest {
     }
 
     private static SNES init() {
-        SNES snes = new SNES(new TestFrontend(0, 0, 0));
+        SNES snes = new SNES(new RecordingVideoSink(), new RecordingAudioSink());
         snes.cartridge.setSize(100);
         snes.cartridge.header.addMappingMode(MappingMode.LOROM);
         snes.sram.setSize(100);

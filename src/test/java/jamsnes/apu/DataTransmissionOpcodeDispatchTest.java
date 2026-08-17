@@ -1,7 +1,8 @@
 package jamsnes.apu;
 
 import jamsnes.SNES;
-import jamsnes.renderer.TestFrontend;
+import jamsnes.audio.RecordingAudioSink;
+import jamsnes.video.RecordingVideoSink;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -308,6 +309,6 @@ class DataTransmissionOpcodeDispatchTest {
     }
 
     private static SNES init() {
-        return new SNES(new TestFrontend(0, 0, 0));
+        return new SNES(new RecordingVideoSink(), new RecordingAudioSink());
     }
 }

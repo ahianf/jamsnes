@@ -4,7 +4,8 @@ import jamsnes.cartridge.MappingMode;
 import jamsnes.input.Joypad;
 import jamsnes.ppu.Background;
 import jamsnes.ppu.PPUUtils;
-import jamsnes.renderer.TestFrontend;
+import jamsnes.audio.RecordingAudioSink;
+import jamsnes.video.RecordingVideoSink;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -22,47 +23,44 @@ class SyntheticRomBootTest {
 
     @Test
     void loadedLoRomExecutesPpuInitializationAndPresentsAFrame() throws IOException {
-        TestFrontend renderer =
-                new TestFrontend(Background.BUFFER_SIZE, Background.BUFFER_SIZE, 60);
-        SNES snes = new SNES(writeBootRom().toString(), renderer);
+        RecordingVideoSink renderer = new RecordingVideoSink();
+        SNES snes = new SNES(writeBootRom().toString(), renderer, new RecordingAudioSink());
 
-        for (int updates = 0; renderer.drawScreenCalls() == 0 && updates < 10_000; updates++) {
+        for (int updates = 0; renderer.presentCalls() == 0 && updates < 10_000; updates++) {
             snes.update();
         }
 
-        assertTrue(renderer.drawScreenCalls() > 0, "Synthetic ROM should reach VBlank and present a frame");
+        assertTrue(renderer.presentCalls() > 0, "Synthetic ROM should reach VBlank and present a frame");
         assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.pixel(0, 0));
         assertEquals(0x8015, snes.cpu.registers().pc);
     }
 
     @Test
     void loadedHiRomUsesBankZeroResetMirrorAndPresentsAFrame() throws IOException {
-        TestFrontend renderer =
-                new TestFrontend(Background.BUFFER_SIZE, Background.BUFFER_SIZE, 60);
-        SNES snes = new SNES(writeHiRomBootRom().toString(), renderer);
+        RecordingVideoSink renderer = new RecordingVideoSink();
+        SNES snes = new SNES(writeHiRomBootRom().toString(), renderer, new RecordingAudioSink());
 
-        for (int updates = 0; renderer.drawScreenCalls() == 0 && updates < 10_000; updates++) {
+        for (int updates = 0; renderer.presentCalls() == 0 && updates < 10_000; updates++) {
             snes.update();
         }
 
         assertTrue(snes.cartridge.header.hasMappingMode(MappingMode.HIROM));
         assertEquals(0x78, snes.bus.read(0x008000), "Bank-zero reset mirror should expose the HiROM program");
-        assertTrue(renderer.drawScreenCalls() > 0, "Synthetic HiROM should reach VBlank and present a frame");
+        assertTrue(renderer.presentCalls() > 0, "Synthetic HiROM should reach VBlank and present a frame");
         assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.pixel(0, 0));
         assertEquals(0x8015, snes.cpu.registers().pc);
     }
 
     @Test
     void loadedLoRomRunsNmiHandlerAndPresentsItsPaletteUpdate() throws IOException {
-        TestFrontend renderer =
-                new TestFrontend(Background.BUFFER_SIZE, Background.BUFFER_SIZE, 60);
-        SNES snes = new SNES(writeNmiRom().toString(), renderer);
+        RecordingVideoSink renderer = new RecordingVideoSink();
+        SNES snes = new SNES(writeNmiRom().toString(), renderer, new RecordingAudioSink());
 
-        for (int updates = 0; renderer.drawScreenCalls() < 2 && updates < 20_000; updates++) {
+        for (int updates = 0; renderer.presentCalls() < 2 && updates < 20_000; updates++) {
             snes.update();
         }
 
-        assertEquals(2, renderer.drawScreenCalls(), "Synthetic ROM should present the frame after its first NMI");
+        assertEquals(2, renderer.presentCalls(), "Synthetic ROM should present the frame after its first NMI");
         assertEquals(1, snes.wram.data()[0], "The NMI handler should run exactly once before the second frame");
         assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), renderer.pixel(0, 0));
         assertEquals(0x801a, snes.cpu.registers().pc, "RTI should return execution to the idle loop");
@@ -70,15 +68,14 @@ class SyntheticRomBootTest {
 
     @Test
     void loadedLoRomWakesFromWaiForTimerIrqAndPresentsItsDisplayUpdate() throws IOException {
-        TestFrontend renderer =
-                new TestFrontend(Background.BUFFER_SIZE, Background.BUFFER_SIZE, 60);
-        SNES snes = new SNES(writeTimerIrqRom().toString(), renderer);
+        RecordingVideoSink renderer = new RecordingVideoSink();
+        SNES snes = new SNES(writeTimerIrqRom().toString(), renderer, new RecordingAudioSink());
 
-        for (int updates = 0; renderer.drawScreenCalls() == 0 && updates < 10_000; updates++) {
+        for (int updates = 0; renderer.presentCalls() == 0 && updates < 10_000; updates++) {
             snes.update();
         }
 
-        assertEquals(1, renderer.drawScreenCalls(), "Synthetic ROM should present after its first timer IRQ");
+        assertEquals(1, renderer.presentCalls(), "Synthetic ROM should present after its first timer IRQ");
         assertEquals(1, snes.wram.data()[0], "The timer IRQ handler should run exactly once");
         assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.pixel(0, 0));
         assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.pixel(1, 0));
@@ -91,15 +88,14 @@ class SyntheticRomBootTest {
 
     @Test
     void loadedLoRomRunsDmaFromCartridgeIntoCgramBeforePresenting() throws IOException {
-        TestFrontend renderer =
-                new TestFrontend(Background.BUFFER_SIZE, Background.BUFFER_SIZE, 60);
-        SNES snes = new SNES(writeDmaRom().toString(), renderer);
+        RecordingVideoSink renderer = new RecordingVideoSink();
+        SNES snes = new SNES(writeDmaRom().toString(), renderer, new RecordingAudioSink());
 
-        for (int updates = 0; renderer.drawScreenCalls() == 0 && updates < 10_000; updates++) {
+        for (int updates = 0; renderer.presentCalls() == 0 && updates < 10_000; updates++) {
             snes.update();
         }
 
-        assertTrue(renderer.drawScreenCalls() > 0, "Synthetic ROM should present its DMA-loaded palette");
+        assertTrue(renderer.presentCalls() > 0, "Synthetic ROM should present its DMA-loaded palette");
         assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.pixel(0, 0));
         assertEquals(0, snes.cpu.dmaChannels()[0].getCount());
         assertEquals(0x008102, snes.cpu.dmaChannels()[0].getAAddress());
@@ -108,15 +104,14 @@ class SyntheticRomBootTest {
 
     @Test
     void loadedLoRomRunsHdmaAtHBlankAndPreservesThePriorScanline() throws IOException {
-        TestFrontend renderer =
-                new TestFrontend(Background.BUFFER_SIZE, Background.BUFFER_SIZE, 60);
-        SNES snes = new SNES(writeHdmaRom().toString(), renderer);
+        RecordingVideoSink renderer = new RecordingVideoSink();
+        SNES snes = new SNES(writeHdmaRom().toString(), renderer, new RecordingAudioSink());
 
-        for (int updates = 0; renderer.drawScreenCalls() < 2 && updates < 20_000; updates++) {
+        for (int updates = 0; renderer.presentCalls() < 2 && updates < 20_000; updates++) {
             snes.update();
         }
 
-        assertEquals(2, renderer.drawScreenCalls(), "Synthetic ROM should present its HDMA-updated frame");
+        assertEquals(2, renderer.presentCalls(), "Synthetic ROM should present its HDMA-updated frame");
         assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.pixel(0, 0));
         assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.pixel(1, 0));
         assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), renderer.pixel(2, 0));
@@ -127,16 +122,15 @@ class SyntheticRomBootTest {
 
     @Test
     void loadedLoRomReadsAutomaticJoypadStateInNmiAndUpdatesTheFrame() throws IOException {
-        TestFrontend renderer =
-                new TestFrontend(Background.BUFFER_SIZE, Background.BUFFER_SIZE, 60);
-        SNES snes = new SNES(writeJoypadRom().toString(), renderer);
+        RecordingVideoSink renderer = new RecordingVideoSink();
+        SNES snes = new SNES(writeJoypadRom().toString(), renderer, new RecordingAudioSink());
         snes.joypad.setControllerState(0, Joypad.BUTTON_B);
 
-        for (int updates = 0; renderer.drawScreenCalls() < 2 && updates < 20_000; updates++) {
+        for (int updates = 0; renderer.presentCalls() < 2 && updates < 20_000; updates++) {
             snes.update();
         }
 
-        assertEquals(2, renderer.drawScreenCalls(), "Synthetic ROM should present its input-updated frame");
+        assertEquals(2, renderer.presentCalls(), "Synthetic ROM should present its input-updated frame");
         assertEquals(0x00, snes.cpu.internalRegisters()[0x19],
                 "The next frame's automatic read should clear JOY1H before shifting its new report");
         assertEquals(0x01, snes.cpu.internalRegisters()[0x12] & 0x01,
@@ -148,15 +142,14 @@ class SyntheticRomBootTest {
 
     @Test
     void loadedLoRomWaitsForTheApuIplHandshakeBeforePresenting() throws IOException {
-        TestFrontend renderer =
-                new TestFrontend(Background.BUFFER_SIZE, Background.BUFFER_SIZE, 60);
-        SNES snes = new SNES(writeApuHandshakeRom().toString(), renderer);
+        RecordingVideoSink renderer = new RecordingVideoSink();
+        SNES snes = new SNES(writeApuHandshakeRom().toString(), renderer, new RecordingAudioSink());
 
-        for (int updates = 0; renderer.drawScreenCalls() < 2 && updates < 20_000; updates++) {
+        for (int updates = 0; renderer.presentCalls() < 2 && updates < 20_000; updates++) {
             snes.update();
         }
 
-        assertEquals(2, renderer.drawScreenCalls(), "Synthetic ROM should present after the APU IPL handshake");
+        assertEquals(2, renderer.presentCalls(), "Synthetic ROM should present after the APU IPL handshake");
         assertEquals(0xaa, snes.bus.read(0x002140));
         assertEquals(0xbb, snes.bus.read(0x002141));
         assertEquals(0x5a, snes.wram.data()[0], "Cartridge code should observe both IPL signature bytes");
@@ -166,15 +159,14 @@ class SyntheticRomBootTest {
 
     @Test
     void loadedLoRomUploadsAndLaunchesAnApuProgramBeforePresenting() throws IOException {
-        TestFrontend renderer =
-                new TestFrontend(Background.BUFFER_SIZE, Background.BUFFER_SIZE, 60);
-        SNES snes = new SNES(writeApuUploadRom().toString(), renderer);
+        RecordingVideoSink renderer = new RecordingVideoSink();
+        SNES snes = new SNES(writeApuUploadRom().toString(), renderer, new RecordingAudioSink());
 
-        for (int updates = 0; renderer.drawScreenCalls() < 2 && updates < 20_000; updates++) {
+        for (int updates = 0; renderer.presentCalls() < 2 && updates < 20_000; updates++) {
             snes.update();
         }
 
-        assertEquals(2, renderer.drawScreenCalls(), "Synthetic ROM should present after launching uploaded APU code");
+        assertEquals(2, renderer.presentCalls(), "Synthetic ROM should present after launching uploaded APU code");
         assertEquals(0x8f, snes.apu._internalRead(0x0200));
         assertEquals(0x5a, snes.apu._internalRead(0x0201));
         assertEquals(0xf6, snes.apu._internalRead(0x0202));

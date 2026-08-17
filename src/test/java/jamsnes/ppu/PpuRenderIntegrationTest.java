@@ -2,7 +2,9 @@ package jamsnes.ppu;
 
 import jamsnes.SNES;
 import jamsnes.models.Vector2;
-import jamsnes.renderer.IRenderer;
+import jamsnes.audio.RecordingAudioSink;
+import jamsnes.video.VideoFrame;
+import jamsnes.video.VideoSink;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -1473,7 +1475,7 @@ class PpuRenderIntegrationTest {
 
         assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.firstPixel);
         assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.lastPixel);
-        assertEquals((long) 2 * PPU.VISIBLE_WIDTH * 2 * PPU.VISIBLE_HEIGHT, renderer.putPixelCalls);
+        assertEquals(2 * PPU.VISIBLE_HEIGHT, renderer.lastVisibleHeight);
     }
 
     @Test
@@ -1512,7 +1514,7 @@ class PpuRenderIntegrationTest {
         snes.ppu.update(1);
 
         assertEquals(PPUUtils.cgramColorToRGBA(0x7c00), renderer.firstPixel);
-        assertEquals((long) 2 * PPU.VISIBLE_WIDTH * 2 * PPU.VISIBLE_HEIGHT, renderer.putPixelCalls);
+        assertEquals(2 * PPU.VISIBLE_HEIGHT, renderer.lastVisibleHeight);
         assertEquals(1, renderer.drawScreenCalls);
     }
 
@@ -1888,56 +1890,37 @@ class PpuRenderIntegrationTest {
         writeMode7Register(snes, 0x211e, 0x0100);
     }
 
-    private static SNES init(IRenderer renderer) {
-        SNES snes = new SNES(renderer);
+    private static SNES init(VideoSink renderer) {
+        SNES snes = new SNES(renderer, new RecordingAudioSink());
         snes.bus.mapComponents(snes);
         return snes;
     }
 
-    private static final class TestRenderer implements IRenderer {
+    private static final class TestRenderer implements VideoSink {
         private int firstPixel;
         private int lastPixel;
         private final int[] firstRowPixels = new int[4];
         private final int[] secondRowPixels = new int[4];
         private final int[][] outputRows = new int[4][4];
-        private long putPixelCalls;
+        private int lastVisibleHeight;
         private int drawScreenCalls;
 
         @Override
-        public void setWindowName(String newWindowName) {
-        }
-
-        @Override
-        public void drawScreen() {
+        public void present(VideoFrame frame) {
             drawScreenCalls++;
-        }
-
-        @Override
-        public void putPixel(int y, int x, int rgba) {
-            if (y < outputRows.length && x < outputRows[y].length) {
-                outputRows[y][x] = rgba;
-            }
-            if (x < firstRowPixels.length) {
-                if (y == 0) {
-                    firstRowPixels[x] = rgba;
-                } else if (y == 2) {
-                    secondRowPixels[x] = rgba;
+            lastVisibleHeight = frame.visibleHeight();
+            int[] pixels = frame.pixels();
+            for (int y = 0; y < outputRows.length; y++) {
+                for (int x = 0; x < outputRows[y].length; x++) {
+                    outputRows[y][x] = pixels[y * VideoFrame.STRIDE + x];
                 }
             }
-            if (y == 0 && x == 0) {
-                firstPixel = rgba;
-            } else if (y == 2 * PPU.VISIBLE_HEIGHT - 1 && x == 0) {
-                lastPixel = rgba;
+            for (int x = 0; x < firstRowPixels.length; x++) {
+                firstRowPixels[x] = pixels[x];
+                secondRowPixels[x] = pixels[2 * VideoFrame.STRIDE + x];
             }
-            putPixelCalls++;
-        }
-
-        @Override
-        public void createWindow(SNES snes, int maxFPS) {
-        }
-
-        @Override
-        public void playAudio(short[] samples) {
+            firstPixel = pixels[0];
+            lastPixel = pixels[(2 * PPU.VISIBLE_HEIGHT - 1) * VideoFrame.STRIDE];
         }
     }
 }

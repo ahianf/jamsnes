@@ -1,7 +1,7 @@
 package jamsnes;
 
-import jamsnes.renderer.IRenderer;
-import jamsnes.renderer.lwjgl.LwjglRenderer;
+import jamsnes.audio.RecordingAudioSink;
+import jamsnes.video.RecordingVideoSink;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -14,8 +14,8 @@ import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class MainTest {
@@ -52,30 +52,33 @@ class MainTest {
     @Test
     void runLoadsRomAndAdvancesEmulator() throws IOException {
         Path rom = writeGameRom();
+        TestLauncher launcher = new TestLauncher();
 
-        int exitCode = Main.run(new String[]{rom.toString()}, printStream(), printStream(), new TestRenderer());
+        int exitCode = Main.run(new String[]{rom.toString()}, printStream(), printStream(), launcher);
 
         assertEquals(0, exitCode);
+        assertEquals(1, launcher.launchCalls);
     }
 
     @Test
-    void runStartsRendererWindowForLoadedRom() throws IOException {
+    void runStartsEmulatorForLoadedRom() throws IOException {
         Path rom = writeGameRom();
-        TestRenderer renderer = new TestRenderer();
+        TestLauncher launcher = new TestLauncher();
 
-        int exitCode = Main.run(new String[]{rom.toString()}, printStream(), printStream(), renderer);
+        int exitCode = Main.run(new String[]{rom.toString()}, printStream(), printStream(), launcher);
 
         assertEquals(0, exitCode);
-        assertEquals(1, renderer.createWindowCalls);
-        assertEquals(60, renderer.maxFPS);
-        assertEquals(0x8000, renderer.snes.cpu.registers().pc);
+        assertNotNull(launcher.snes);
+        assertEquals(0x8000, launcher.snes.cpu.registers().pc);
     }
 
     @Test
     void runReportsInvalidRomPath() {
         ByteArrayOutputStream err = new ByteArrayOutputStream();
+        TestLauncher launcher = new TestLauncher();
 
-        int exitCode = Main.run(new String[]{tempDir.resolve("missing.sfc").toString()}, printStream(), new PrintStream(err));
+        int exitCode = Main.run(new String[]{tempDir.resolve("missing.sfc").toString()},
+                printStream(), new PrintStream(err), launcher);
 
         assertEquals(1, exitCode);
         assertTrue(err.toString(StandardCharsets.UTF_8).contains("Could not open the rom file"));
@@ -92,24 +95,13 @@ class MainTest {
     }
 
     @Test
-    void runReportsUnknownOption() throws IOException {
+    void runReportsUnknownOption() {
         ByteArrayOutputStream err = new ByteArrayOutputStream();
 
         int exitCode = Main.run(new String[]{"--debug"}, printStream(), new PrintStream(err));
 
         assertEquals(1, exitCode);
         assertTrue(err.toString(StandardCharsets.UTF_8).contains("Unknown option: --debug"));
-    }
-
-    @Test
-    void launcherAlwaysCreatesLwjglRenderer() {
-        LwjglRenderer renderer = assertInstanceOf(LwjglRenderer.class, Main.createRenderer());
-
-        assertEquals(448, renderer.displayHeight());
-        assertEquals(512, renderer.displayWidth());
-        assertEquals(256, renderer.windowWidth());
-        assertEquals(224, renderer.windowHeight());
-        assertEquals(3, renderer.windowScale());
     }
 
     private Path writeGameRom() throws IOException {
@@ -133,32 +125,14 @@ class MainTest {
         return new PrintStream(new ByteArrayOutputStream());
     }
 
-    private static final class TestRenderer implements IRenderer {
+    private static final class TestLauncher implements Main.RomLauncher {
         private SNES snes;
-        private int maxFPS;
-        private int createWindowCalls;
+        private int launchCalls;
 
         @Override
-        public void setWindowName(String newWindowName) {
-        }
-
-        @Override
-        public void drawScreen() {
-        }
-
-        @Override
-        public void putPixel(int y, int x, int rgba) {
-        }
-
-        @Override
-        public void createWindow(SNES snes, int maxFPS) {
-            this.snes = snes;
-            this.maxFPS = maxFPS;
-            createWindowCalls++;
-        }
-
-        @Override
-        public void playAudio(short[] samples) {
+        public void launch(String romPath) {
+            launchCalls++;
+            snes = new SNES(romPath, new RecordingVideoSink(), new RecordingAudioSink());
         }
     }
 }

@@ -6,7 +6,7 @@ import jamsnes.exceptions.InvalidAddress;
 import jamsnes.exceptions.InvalidOpcode;
 import jamsnes.memory.AMemory;
 import jamsnes.models.Component;
-import jamsnes.renderer.IRenderer;
+import jamsnes.audio.AudioSink;
 
 import static jamsnes.models.Unsigned.u16;
 import static jamsnes.models.Unsigned.u8;
@@ -53,8 +53,8 @@ public class APU extends AMemory {
     private boolean iplRomEnabled = true;
     public boolean isDisabled;
 
-    public APU(IRenderer renderer) {
-        dsp = new DSP(this::readApuRam, this::writeApuRam, renderer);
+    public APU(AudioSink audioSink) {
+        dsp = new DSP(this::readApuRam, this::writeApuRam, audioSink);
         reset();
     }
 

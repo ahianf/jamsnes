@@ -1,8 +1,6 @@
 package jamsnes;
 
-import jamsnes.ppu.Background;
-import jamsnes.renderer.IRenderer;
-import jamsnes.renderer.lwjgl.LwjglRenderer;
+import jamsnes.desktop.DesktopApplication;
 
 import java.io.PrintStream;
 
@@ -10,11 +8,20 @@ public final class Main {
     private Main() {
     }
 
+    @FunctionalInterface
+    interface RomLauncher {
+        void launch(String romPath);
+    }
+
     public static void main(String[] args) {
         run(args, System.out, System.err);
     }
 
     static int run(String[] args, PrintStream out, PrintStream err) {
+        return run(args, out, err, DesktopApplication::run);
+    }
+
+    static int run(String[] args, PrintStream out, PrintStream err, RomLauncher launcher) {
         if (isHelp(args)) {
             usage(out);
             return 0;
@@ -33,22 +40,8 @@ public final class Main {
             return 1;
         }
 
-        return run(args, out, err, createRenderer());
-    }
-
-    static int run(String[] args, PrintStream out, PrintStream err, IRenderer renderer) {
-        if (isHelp(args)) {
-            usage(out);
-            return 0;
-        }
-        if (args.length != 1) {
-            usage(err);
-            return 1;
-        }
-
         try {
-            SNES snes = new SNES(args[0], renderer);
-            renderer.createWindow(snes, 60);
+            launcher.launch(args[0]);
             return 0;
         } catch (RuntimeException exception) {
             err.println(exception.getMessage());
@@ -61,10 +54,6 @@ public final class Main {
         stream.println("\tUsage: jamsnes rom_path");
         stream.println("Options:");
         stream.println("\t-h, --help:\tDisplay this help message and exit.");
-    }
-
-    static LwjglRenderer createRenderer() {
-        return new LwjglRenderer(Background.BUFFER_SIZE, Background.BUFFER_SIZE, 60);
     }
 
     private static boolean isHelp(String[] args) {

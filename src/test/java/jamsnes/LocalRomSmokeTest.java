@@ -1,7 +1,7 @@
 package jamsnes;
 
-import jamsnes.ppu.Background;
-import jamsnes.renderer.TestFrontend;
+import jamsnes.audio.RecordingAudioSink;
+import jamsnes.video.RecordingVideoSink;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Files;
@@ -26,8 +26,9 @@ class LocalRomSmokeTest {
         Path rom = Path.of(romProperty);
         assumeTrue(Files.isRegularFile(rom), () -> "Local smoke ROM does not exist: " + rom);
 
-        TestFrontend renderer = new TestFrontend(Background.BUFFER_SIZE, Background.BUFFER_SIZE, 60);
-        SNES snes = assertDoesNotThrow(() -> new SNES(rom.toString(), renderer));
+        RecordingVideoSink video = new RecordingVideoSink();
+        RecordingAudioSink audio = new RecordingAudioSink();
+        SNES snes = assertDoesNotThrow(() -> new SNES(rom.toString(), video, audio));
         int updates = smokeUpdates();
 
         assertDoesNotThrow(() -> {
@@ -37,17 +38,17 @@ class LocalRomSmokeTest {
         });
 
         if (snes.cartridge.getType() == jamsnes.cartridge.CartridgeType.AUDIO) {
-            assertTrue(renderer.audioCalls() > 0 || renderer.audioSamples() > 0,
+            assertTrue(audio.writeCalls() > 0 || audio.samplesWritten() > 0,
                     "SPC smoke run should produce or attempt audio samples");
         } else {
-            assertTrue(renderer.drawScreenCalls() > 0, "Game smoke run should draw at least one frame");
+            assertTrue(video.presentCalls() > 0, "Game smoke run should present at least one frame");
             assertEquals(0, snes.ppu.registers()[0] & 0x80,
                     "Game smoke run should leave PPU forced blank");
-            assertTrue(renderer.hasNonUniformFrame(),
+            assertTrue(video.hasNonUniformFrame(),
                     "Game smoke run should produce a frame containing more than one color");
             String expectedFrameCrc32 = System.getProperty(FRAME_CRC32_PROPERTY);
             if (expectedFrameCrc32 != null && !expectedFrameCrc32.isBlank()) {
-                assertEquals(parseCrc32(expectedFrameCrc32), renderer.frameBufferCrc32(),
+                assertEquals(parseCrc32(expectedFrameCrc32), video.frameCrc32(),
                         "Local smoke frame CRC32 mismatch");
             }
         }

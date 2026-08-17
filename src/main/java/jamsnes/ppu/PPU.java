@@ -5,7 +5,8 @@ import jamsnes.exceptions.InvalidAddress;
 import jamsnes.models.Component;
 import jamsnes.models.Vector2;
 import jamsnes.ram.Ram;
-import jamsnes.renderer.IRenderer;
+import jamsnes.video.VideoFrame;
+import jamsnes.video.VideoSink;
 
 import java.util.Arrays;
 import java.util.function.BooleanSupplier;
@@ -65,7 +66,8 @@ public class PPU extends AMemory {
     public final Ram cgram = new Ram(CGRAM_SIZE, Component.CGRAM, "CGRAM");
     private final int[] registers = new int[0x40];
     private final PPURegisters ppuRegisters = new PPURegisters(registers);
-    private final IRenderer renderer;
+    private final VideoSink videoSink;
+    private final VideoFrame frame = new VideoFrame();
     private BooleanSupplier externalCounterLatchEnabled = () -> true;
     private final Background[] backgrounds;
     private final int[][] mainScreen = new int[Background.BUFFER_SIZE][Background.BUFFER_SIZE];
@@ -117,8 +119,8 @@ public class PPU extends AMemory {
     private int ppu1OpenBus;
     private int ppu2OpenBus;
 
-    public PPU(IRenderer renderer) {
-        this.renderer = renderer;
+    public PPU(VideoSink videoSink) {
+        this.videoSink = videoSink;
         this.backgrounds = new Background[]{
                 new Background(this, 1),
                 new Background(this, 2),
@@ -252,6 +254,7 @@ public class PPU extends AMemory {
         int firstSourceY = firstDisplayedScanline();
         int outputHeight = 2 * VISIBLE_HEIGHT;
         int outputWidth = 2 * VISIBLE_WIDTH;
+        int[] framePixels = frame.pixels();
 
         for (int outputY = 0; outputY < outputHeight; outputY++) {
             if (interlaced && (outputY & 1) != (secondField ? 1 : 0)) {
@@ -273,13 +276,13 @@ public class PPU extends AMemory {
                 screen[outputY][x] = highResolution && (x & 1) == 0
                         ? composeSubscreenPixel(sourceX, sourceY, colorMathState)
                         : composePixel(sourceX, sourceY, colorMathState);
-                renderer.putPixel(
-                        outputY,
-                        x,
-                        applyDisplayControl(screen[outputY][x], displayControl));
+                framePixels[outputY * VideoFrame.STRIDE + x] =
+                        applyDisplayControl(screen[outputY][x], displayControl);
             }
         }
-        renderer.drawScreen();
+        frame.setGeometry(outputHeight, interlaced, fieldOverscan);
+        frame.setFrameNumber(frameCounter);
+        videoSink.present(frame);
         Arrays.fill(scanlineColorMathStates, null);
         Arrays.fill(scanlineLayerStates, null);
         Arrays.fill(scanlineMode7States, null);

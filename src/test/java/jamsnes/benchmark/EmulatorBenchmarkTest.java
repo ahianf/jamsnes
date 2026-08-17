@@ -1,8 +1,8 @@
 package jamsnes.benchmark;
 
 import jamsnes.SNES;
-import jamsnes.ppu.Background;
-import jamsnes.renderer.TestFrontend;
+import jamsnes.audio.RecordingAudioSink;
+import jamsnes.video.RecordingVideoSink;
 import org.junit.jupiter.api.Test;
 
 import java.lang.management.GarbageCollectorMXBean;
@@ -44,8 +44,7 @@ class EmulatorBenchmarkTest {
         int warmupUpdates = positiveProperty(WARMUP_PROPERTY, DEFAULT_WARMUP_UPDATES);
         int measuredUpdates = positiveProperty(MEASURED_PROPERTY, DEFAULT_MEASURED_UPDATES);
 
-        TestFrontend frontend = new TestFrontend(Background.BUFFER_SIZE, Background.BUFFER_SIZE, 60);
-        SNES snes = new SNES(rom.toString(), frontend);
+        SNES snes = new SNES(rom.toString(), new RecordingVideoSink(), new RecordingAudioSink());
 
         runUpdates(snes, warmupUpdates);
 

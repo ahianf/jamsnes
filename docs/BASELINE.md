@@ -57,6 +57,13 @@ mvn test -Dtest=LocalRomSmokeTest \
 The CRC is only meaningful together with the geometry above; it must be
 re-derived (with an explanation) whenever the canonical surface changes.
 
+**Phase 1 surface redefinition:** the canonical surface became the visible
+region only — 512x448 RGBA8888 pixels at stride 512 (`VideoFrame`), same byte
+order. The displayed pixels are bit-identical to baseline; only the untouched
+zero padding left the CRC. Golden value for the same workload: `0x71839150`
+(verified equal to the baseline frame's 512x448 sub-region CRC before and
+after the port split).
+
 ## Test suite at baseline
 
 `mvn clean test`: 819 tests, 0 failures, 1 skipped (local ROM smoke without

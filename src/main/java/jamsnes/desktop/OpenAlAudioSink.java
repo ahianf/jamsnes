@@ -1,6 +1,7 @@
-package jamsnes.renderer.lwjgl;
+package jamsnes.desktop;
 
 import jamsnes.apu.dsp.DSP;
+import jamsnes.audio.AudioSink;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.openal.AL;
 import org.lwjgl.openal.AL10;
@@ -13,25 +14,43 @@ import java.util.concurrent.locks.LockSupport;
 
 import static org.lwjgl.system.MemoryUtil.NULL;
 
-final class LwjglAudioDevice implements AutoCloseable {
+/**
+ * Plays core audio batches through OpenAL. The bounded queue is the real-time
+ * pacing source: writes block until a queue slot frees up, and the optional
+ * event pump keeps the desktop window responsive while waiting.
+ */
+final class OpenAlAudioSink implements AudioSink, AutoCloseable {
     static final int SAMPLE_RATE = DSP.OUTPUT_SAMPLE_RATE_HZ;
     static final int MAX_QUEUED_BUFFERS = 3;
     private static final long QUEUE_WAIT_NANOS = 1_000_000;
 
+    private final Runnable eventPump;
     private long device;
     private long context;
     private int source;
     private boolean initialized;
 
-    void queueSamples(short[] samples) {
-        if (samples.length == 0) {
+    OpenAlAudioSink() {
+        this(() -> {
+        });
+    }
+
+    OpenAlAudioSink(Runnable eventPump) {
+        this.eventPump = eventPump;
+    }
+
+    @Override
+    public void write(short[] interleavedStereo, int offset, int sampleCount) {
+        eventPump.run();
+        if (sampleCount <= 0) {
             return;
         }
         ensureInitialized();
         waitForQueueSlot();
 
         int buffer = AL10.alGenBuffers();
-        AL10.alBufferData(buffer, AL10.AL_FORMAT_STEREO16, pcm16StereoLittleEndian(samples), SAMPLE_RATE);
+        AL10.alBufferData(buffer, AL10.AL_FORMAT_STEREO16,
+                pcm16StereoLittleEndian(interleavedStereo, offset, sampleCount), SAMPLE_RATE);
         AL10.alSourceQueueBuffers(source, buffer);
         if (AL10.alGetSourcei(source, AL10.AL_SOURCE_STATE) != AL10.AL_PLAYING) {
             AL10.alSourcePlay(source);
@@ -42,9 +61,10 @@ final class LwjglAudioDevice implements AutoCloseable {
         return queuedBuffers >= MAX_QUEUED_BUFFERS;
     }
 
-    static ByteBuffer pcm16StereoLittleEndian(short[] samples) {
-        ByteBuffer buffer = BufferUtils.createByteBuffer(samples.length * Short.BYTES);
-        for (short sample : samples) {
+    static ByteBuffer pcm16StereoLittleEndian(short[] samples, int offset, int sampleCount) {
+        ByteBuffer buffer = BufferUtils.createByteBuffer(sampleCount * Short.BYTES);
+        for (int i = 0; i < sampleCount; i++) {
+            short sample = samples[offset + i];
             buffer.put((byte) (sample & 0xff));
             buffer.put((byte) ((sample >>> 8) & 0xff));
         }

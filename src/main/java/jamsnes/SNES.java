@@ -10,8 +10,9 @@ import jamsnes.memory.WramPort;
 import jamsnes.models.Component;
 import jamsnes.ram.MirroredRam;
 import jamsnes.ppu.PPU;
+import jamsnes.audio.AudioSink;
 import jamsnes.ram.Ram;
-import jamsnes.renderer.IRenderer;
+import jamsnes.video.VideoSink;
 
 public class SNES {
     static final int APU_CLOCK_HZ = 1_024_000;
@@ -28,7 +29,6 @@ public class SNES {
     static final int HDMA_START_DOT = 1104 / MASTER_CLOCKS_PER_PPU_DOT;
     private static final int AUTO_JOYPAD_READ_DOTS = 4224 / MASTER_CLOCKS_PER_PPU_DOT;
 
-    private final IRenderer renderer;
     public final MemoryBus bus;
     public final Cartridge cartridge;
     public final Ram wram;
@@ -55,8 +55,7 @@ public class SNES {
     private long hdmaFrame = -1;
     private int hdmaScanline = -1;
 
-    public SNES(IRenderer renderer) {
-        this.renderer = renderer;
+    public SNES(VideoSink videoSink, AudioSink audioSink) {
         this.bus = new MemoryBus();
         this.cartridge = new Cartridge();
         this.wram = new Ram(131_072, Component.WRAM, "WRam");
@@ -64,15 +63,15 @@ public class SNES {
         this.sram = new MirroredRam(0, Component.SRAM, "SRam");
         this.cpu = new CPU(bus, cartridge.header);
         this.joypad = new Joypad(bus);
-        this.ppu = new PPU(renderer);
+        this.ppu = new PPU(videoSink);
         this.cpu.setIoPortLatchListener(this.ppu::latchCounters);
         this.cpu.setNmiControlListener(this::updateNmiControl);
         this.ppu.setExternalCounterLatchEnabled(() -> (cpu.internalRegisters()[0x01] & 0x80) != 0);
-        this.apu = new APU(renderer);
+        this.apu = new APU(audioSink);
     }
 
-    public SNES(String romPath, IRenderer renderer) {
-        this(renderer);
+    public SNES(String romPath, VideoSink videoSink, AudioSink audioSink) {
+        this(videoSink, audioSink);
         loadRom(romPath);
     }
 
@@ -485,10 +484,6 @@ public class SNES {
             return hCounter == hTarget;
         }
         return hCounter == 0 && vCounter == vTarget;
-    }
-
-    public IRenderer getRenderer() {
-        return renderer;
     }
 
     private record ScanlineEventTiming(int stallMasterClocks, int stallDots) {
