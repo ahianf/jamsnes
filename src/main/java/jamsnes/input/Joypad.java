@@ -54,9 +54,9 @@ public class Joypad extends AMemory {
 
         int[] reports = new int[controllerState.length];
         for (int bit = 0; bit < 16; bit++) {
-            int[] values = clockAutoReadBit();
-            for (int controller = 0; controller < values.length; controller++) {
-                reports[controller] = (reports[controller] << 1) | values[controller];
+            int values = clockAutoReadBits();
+            for (int controller = 0; controller < reports.length; controller++) {
+                reports[controller] = (reports[controller] << 1) | ((values >>> controller) & 1);
             }
         }
         return reports;
@@ -71,12 +71,17 @@ public class Joypad extends AMemory {
         autoStrobe = false;
     }
 
-    public int[] clockAutoReadBit() {
-        int[] values = new int[controllerState.length];
-        for (int controller = 0; controller < values.length; controller++) {
-            values[controller] = readSerialBit(controller);
+    /** Clocks one serial bit for every controller, packed as bit {@code controller}. */
+    public int clockAutoReadBits() {
+        int values = 0;
+        for (int controller = 0; controller < controllerState.length; controller++) {
+            values |= readSerialBit(controller) << controller;
         }
         return values;
+    }
+
+    public int controllerCount() {
+        return controllerState.length;
     }
 
     @Override

@@ -54,6 +54,8 @@ public class SNES {
     private int dramRefreshScanline = -1;
     private long hdmaFrame = -1;
     private int hdmaScanline = -1;
+    private int eventStallMasterClocks;
+    private int eventStallDots;
 
     public SNES(VideoSink videoSink, AudioSink audioSink) {
         this.bus = new MemoryBus();
@@ -123,23 +125,23 @@ public class SNES {
         cpu.update(0x0c);
         int cpuMasterClocks = cpu.elapsedMasterClocks();
         int cpuDots = ppuDotsForMasterClocks(cpuMasterClocks);
-        ScanlineEventTiming eventTiming = advanceCpuDotsThroughScanlineEvents(cpuDots);
+        advanceCpuDotsThroughScanlineEvents(cpuDots);
         boolean enteredVBlank = requestFrameNmi();
         if (enteredVBlank) {
             ppu.renderFrame();
         }
         updateAutoJoypadBusy(enteredVBlank, timerStartHCounter, timerStartVCounter,
-                cpuDots + eventTiming.stallDots());
+                cpuDots + eventStallDots);
         updateVideoStatusRegisters();
         updateTimerIrq(timerStartHCounter, timerStartVCounter, timerStartSecondField,
-                cpuDots + eventTiming.stallDots());
+                cpuDots + eventStallDots);
         advanceApuForMasterClocks(cpuMasterClocks);
-        if (eventTiming.stallMasterClocks() > 0) {
-            advanceApuForMasterClocks(eventTiming.stallMasterClocks());
+        if (eventStallMasterClocks > 0) {
+            advanceApuForMasterClocks(eventStallMasterClocks);
         }
     }
 
-    private ScanlineEventTiming advanceCpuDotsThroughScanlineEvents(int cpuDots) {
+    private void advanceCpuDotsThroughScanlineEvents(int cpuDots) {
         int remainingCpuDots = cpuDots;
         int stallMasterClocks = 0;
         int stallDots = 0;
@@ -186,7 +188,8 @@ public class SNES {
             ppu.advanceCountersOnly(dots);
             remainingCpuDots -= dots;
         }
-        return new ScanlineEventTiming(stallMasterClocks, stallDots);
+        eventStallMasterClocks = stallMasterClocks;
+        eventStallDots = stallDots;
     }
 
     private boolean hasDueScanlineEvent() {
@@ -349,12 +352,12 @@ public class SNES {
         }
         while (autoJoypadBitsRead < 16
                 && autoJoypadReadDotsElapsed >= 96 + autoJoypadBitsRead * 64) {
-            int[] values = joypad.clockAutoReadBit();
-            for (int controller = 0; controller < values.length; controller++) {
+            int values = joypad.clockAutoReadBits();
+            for (int controller = 0; controller < joypad.controllerCount(); controller++) {
                 int lowAddress = 0x18 + controller * 2;
                 int report = cpu.internalRegisters()[lowAddress]
                         | (cpu.internalRegisters()[lowAddress + 1] << 8);
-                report = ((report << 1) | values[controller]) & 0xffff;
+                report = ((report << 1) | ((values >>> controller) & 1)) & 0xffff;
                 cpu.internalRegisters()[lowAddress] = report & 0xff;
                 cpu.internalRegisters()[lowAddress + 1] = report >>> 8;
             }
@@ -405,18 +408,20 @@ public class SNES {
             return;
         }
 
-        int[] matchedPosition = timerMatchPosition(
+        long matchedPosition = timerMatchPosition(
                 hTimerEnabled, vTimerEnabled, startHCounter, startVCounter, startSecondField, cycles);
-        if (matchedPosition == null) {
+        if (matchedPosition == TIMER_NO_MATCH) {
             clearLastTimerIrqPosition();
             return;
         }
-        if (matchedPosition[0] == lastTimerIrqHCounter && matchedPosition[1] == lastTimerIrqVCounter) {
+        int matchedHCounter = (int) (matchedPosition & 0xffff);
+        int matchedVCounter = (int) (matchedPosition >>> 16);
+        if (matchedHCounter == lastTimerIrqHCounter && matchedVCounter == lastTimerIrqVCounter) {
             return;
         }
 
-        lastTimerIrqHCounter = matchedPosition[0];
-        lastTimerIrqVCounter = matchedPosition[1];
+        lastTimerIrqHCounter = matchedHCounter;
+        lastTimerIrqVCounter = matchedVCounter;
         cpu.requestIRQ();
     }
 
@@ -425,22 +430,28 @@ public class SNES {
         lastTimerIrqVCounter = -1;
     }
 
-    private int[] timerMatchPosition(boolean hTimerEnabled, boolean vTimerEnabled,
-                                     int startHCounter, int startVCounter, boolean startSecondField, int cycles) {
+    private static final long TIMER_NO_MATCH = -1;
+
+    private static long timerPosition(int hCounter, int vCounter) {
+        return ((long) vCounter << 16) | hCounter;
+    }
+
+    private long timerMatchPosition(boolean hTimerEnabled, boolean vTimerEnabled,
+                                    int startHCounter, int startVCounter, boolean startSecondField, int cycles) {
         int hTarget = cpu.internalRegisters()[0x07] | ((cpu.internalRegisters()[0x08] & 1) << 8);
         int vTarget = cpu.internalRegisters()[0x09] | ((cpu.internalRegisters()[0x0a] & 1) << 8);
         if (hTimerEnabled && hTarget > H_TIMER_MAX_DOT) {
-            return null;
+            return TIMER_NO_MATCH;
         }
         if (vTimerEnabled && vTarget > PPU.V_COUNTER_SCANLINES) {
-            return null;
+            return TIMER_NO_MATCH;
         }
         if (cycles <= 0) {
             int hCounter = ppu.hCounter();
             int vCounter = ppu.vCounter();
             return timerMatches(hTimerEnabled, vTimerEnabled, hCounter, vCounter)
-                    ? new int[]{hCounter, vCounter}
-                    : null;
+                    ? timerPosition(hCounter, vCounter)
+                    : TIMER_NO_MATCH;
         }
 
         int targetH = hTimerEnabled ? hTarget : 0;
@@ -454,13 +465,13 @@ public class SNES {
             if (verticalMatch && targetH < scanlineDots) {
                 long candidate = elapsed + targetH - hCounter;
                 if (candidate > 0 && candidate <= cycles) {
-                    return new int[]{targetH, vCounter};
+                    return timerPosition(targetH, vCounter);
                 }
             }
 
             int toNextScanline = scanlineDots - hCounter;
             if (elapsed + toNextScanline > cycles) {
-                return null;
+                return TIMER_NO_MATCH;
             }
             elapsed += toNextScanline;
             hCounter = 0;
@@ -470,7 +481,7 @@ public class SNES {
                 secondField = !secondField;
             }
         }
-        return null;
+        return TIMER_NO_MATCH;
     }
 
     private boolean timerMatches(boolean hTimerEnabled, boolean vTimerEnabled, int hCounter, int vCounter) {
@@ -486,6 +497,4 @@ public class SNES {
         return hCounter == 0 && vCounter == vTarget;
     }
 
-    private record ScanlineEventTiming(int stallMasterClocks, int stallDots) {
-    }
 }

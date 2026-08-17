@@ -16,19 +16,118 @@ public class Background {
     private static final int TILE_MAP_BYTE_SIZE = 0x800;
     public static final int BUFFER_SIZE = 1024;
 
-    public record ScanlineState(
-            boolean enabled,
-            int scrollX,
-            int scrollY,
-            int mosaicSize,
-            int mosaicSourceY,
-            boolean[] windowMask,
-            int horizontalScale,
-            int horizontalPhase,
-            int[] palette,
-            boolean directColor,
-            int levelLow,
-            int levelHigh) {
+    /** Per-scanline merge parameters. Mutable so callers can reuse instances. */
+    public static final class ScanlineState {
+        private boolean enabled;
+        private int scrollX;
+        private int scrollY;
+        private int mosaicSize;
+        private int mosaicSourceY;
+        private boolean[] windowMask;
+        private int horizontalScale;
+        private int horizontalPhase;
+        private int[] palette;
+        private boolean directColor;
+        private int levelLow;
+        private int levelHigh;
+
+        ScanlineState() {
+            this(false, 0, 0, 1, null, 1);
+        }
+
+        public ScanlineState(
+                boolean enabled,
+                int scrollX,
+                int scrollY,
+                int mosaicSize,
+                int mosaicSourceY,
+                boolean[] windowMask,
+                int horizontalScale,
+                int horizontalPhase,
+                int[] palette,
+                boolean directColor,
+                int levelLow,
+                int levelHigh) {
+            set(enabled, scrollX, scrollY, mosaicSize, mosaicSourceY, windowMask,
+                    horizontalScale, horizontalPhase, palette, directColor, levelLow, levelHigh);
+        }
+
+        /** Refills every field; the reuse equivalent of the canonical constructor. */
+        public void set(
+                boolean enabled,
+                int scrollX,
+                int scrollY,
+                int mosaicSize,
+                int mosaicSourceY,
+                boolean[] windowMask,
+                int horizontalScale,
+                int horizontalPhase,
+                int[] palette,
+                boolean directColor,
+                int levelLow,
+                int levelHigh) {
+            this.enabled = enabled;
+            this.scrollX = scrollX;
+            this.scrollY = scrollY;
+            this.mosaicSize = mosaicSize;
+            this.mosaicSourceY = mosaicSourceY;
+            this.windowMask = windowMask;
+            this.horizontalScale = horizontalScale;
+            this.horizontalPhase = horizontalPhase;
+            this.palette = palette;
+            this.directColor = directColor;
+            this.levelLow = levelLow;
+            this.levelHigh = levelHigh;
+        }
+
+        public boolean enabled() {
+            return enabled;
+        }
+
+        public int scrollX() {
+            return scrollX;
+        }
+
+        public int scrollY() {
+            return scrollY;
+        }
+
+        public int mosaicSize() {
+            return mosaicSize;
+        }
+
+        public int mosaicSourceY() {
+            return mosaicSourceY;
+        }
+
+        public boolean[] windowMask() {
+            return windowMask;
+        }
+
+        public int horizontalScale() {
+            return horizontalScale;
+        }
+
+        public int horizontalPhase() {
+            return horizontalPhase;
+        }
+
+        public int[] palette() {
+            return palette;
+        }
+
+        public boolean directColor() {
+            return directColor;
+        }
+
+        public int levelLow() {
+            return levelLow;
+        }
+
+        public int levelHigh() {
+            return levelHigh;
+        }
+
         public ScanlineState(
                 boolean enabled,
                 int scrollX,
@@ -110,6 +209,8 @@ public class Background {
     private int tileMapStartAddress;
     private int tilesetAddress;
     public Vector2<Integer> backgroundSize = new Vector2<>(0, 0);
+    private final int[] offsetPerTileSourceX = new int[BUFFER_SIZE];
+    private final int[] offsetPerTileScrollY = new int[BUFFER_SIZE];
 
     public Background(PPU ppu, int backgroundNumber) {
         this.ppu = ppu;
@@ -124,9 +225,11 @@ public class Background {
 
     /** Refreshes the logical background dimensions from the current configuration. */
     public void updateBackgroundSize() {
-        backgroundSize = new Vector2<>(
-                ((tileMapMirroring.x ? 1 : 0) + 1) * characterNbPixels.x * NB_CHARACTER_WIDTH,
-                ((tileMapMirroring.y ? 1 : 0) + 1) * characterNbPixels.y * NB_CHARACTER_HEIGHT);
+        int width = ((tileMapMirroring.x ? 1 : 0) + 1) * characterNbPixels.x * NB_CHARACTER_WIDTH;
+        int height = ((tileMapMirroring.y ? 1 : 0) + 1) * characterNbPixels.y * NB_CHARACTER_HEIGHT;
+        if (backgroundSize.x != width || backgroundSize.y != height) {
+            backgroundSize = new Vector2<>(width, height);
+        }
     }
 
     public void setTileMapStartAddress(int address) {
@@ -365,8 +468,8 @@ public class Background {
         int[] offsetSourceX = null;
         int[] offsetScrollY = null;
         if (backgroundSrc.ppu.usesOffsetPerTile(backgroundSrc.backgroundNumber)) {
-            offsetSourceX = new int[width];
-            offsetScrollY = new int[width];
+            offsetSourceX = backgroundSrc.offsetPerTileSourceX;
+            offsetScrollY = backgroundSrc.offsetPerTileScrollY;
             for (int x = 0; x < width; x++) {
                 int mosaicX = (x / pixelSize) * pixelSize;
                 offsetSourceX[x] = backgroundSrc.ppu.offsetPerTileHorizontalCoordinate(

@@ -87,12 +87,21 @@ public class PPU extends AMemory {
     private final int[][] evaluatedObjectIndices = new int[OBJ_EVALUATED_SCANLINES][OBJ_SCANLINE_LIMIT];
     private final int[][] evaluatedObjectSliverMasks = new int[OBJ_EVALUATED_SCANLINES][OBJ_SCANLINE_LIMIT];
     private final int[] evaluatedObjectCounts = new int[OBJ_EVALUATED_SCANLINES];
-    private final int[] scanlineDisplayControl = new int[Background.BUFFER_SIZE];
-    private final ColorMathState[] scanlineColorMathStates = new ColorMathState[Background.BUFFER_SIZE];
-    private final LayerState[] scanlineLayerStates = new LayerState[Background.BUFFER_SIZE];
-    private final Mode7State[] scanlineMode7States = new Mode7State[Background.BUFFER_SIZE];
-    private final int[][] scanlineCgramStates = new int[Background.BUFFER_SIZE][];
-    private final boolean[] scanlineDisplayControlCaptured = new boolean[Background.BUFFER_SIZE];
+    private final int[] scanlineDisplayControl = new int[ACTIVE_ROWS];
+    private final ColorMathState[] scanlineColorMathStates = new ColorMathState[ACTIVE_ROWS];
+    private final LayerState[] scanlineLayerStates = new LayerState[ACTIVE_ROWS];
+    private final Mode7State[] scanlineMode7States = new Mode7State[ACTIVE_ROWS];
+    private final int[][] scanlineCgramStates = new int[ACTIVE_ROWS][CGRAM_SIZE / 2];
+    private final boolean[] scanlineDisplayControlCaptured = new boolean[ACTIVE_ROWS];
+    private final ColorMathState currentColorMathStateHolder = new ColorMathState();
+    private final LayerState currentLayerStateHolder = new LayerState();
+    private final Mode7State currentMode7StateHolder = new Mode7State();
+    private final int[] currentCgramStateHolder = new int[CGRAM_SIZE / 2];
+    private final Background.ScanlineState[] mergeScanlineStates = new Background.ScanlineState[ACTIVE_ROWS];
+    private final int[] mosaicSourceLinesScratch = new int[ACTIVE_ROWS];
+    private final boolean[] windowMaskCurrentScratch = new boolean[VISIBLE_WIDTH];
+    private final boolean[][] windowMaskRowScratch = new boolean[ACTIVE_ROWS][VISIBLE_WIDTH];
+    private final boolean[] claimedObjectPixels = new boolean[VISIBLE_WIDTH];
     private int vramAddress;
     private int vmain;
     private int vramIncrementAmount = 1;
@@ -122,6 +131,12 @@ public class PPU extends AMemory {
 
     public PPU(VideoSink videoSink) {
         this.videoSink = videoSink;
+        for (int i = 0; i < ACTIVE_ROWS; i++) {
+            scanlineColorMathStates[i] = new ColorMathState();
+            scanlineLayerStates[i] = new LayerState();
+            scanlineMode7States[i] = new Mode7State();
+            mergeScanlineStates[i] = new Background.ScanlineState();
+        }
         this.backgrounds = new Background[]{
                 new Background(this, 1),
                 new Background(this, 2),
@@ -284,10 +299,6 @@ public class PPU extends AMemory {
         frame.setGeometry(outputHeight, interlaced, fieldOverscan);
         frame.setFrameNumber(frameCounter);
         videoSink.present(frame);
-        Arrays.fill(scanlineColorMathStates, null);
-        Arrays.fill(scanlineLayerStates, null);
-        Arrays.fill(scanlineMode7States, null);
-        Arrays.fill(scanlineCgramStates, null);
         Arrays.fill(scanlineDisplayControlCaptured, false);
         Arrays.fill(mainScreen, 0);
         Arrays.fill(subScreen, 0);
@@ -334,10 +345,6 @@ public class PPU extends AMemory {
         ppu1OpenBus = 0;
         ppu2OpenBus = 0;
         Arrays.fill(scanlineDisplayControl, 0);
-        Arrays.fill(scanlineColorMathStates, null);
-        Arrays.fill(scanlineLayerStates, null);
-        Arrays.fill(scanlineMode7States, null);
-        Arrays.fill(scanlineCgramStates, null);
         Arrays.fill(scanlineDisplayControlCaptured, false);
         clearCgramIndexMaps();
         updateBackgroundModes();
@@ -417,69 +424,81 @@ public class PPU extends AMemory {
             return;
         }
         scanlineDisplayControl[scanline] = registers[0x00];
-        scanlineColorMathStates[scanline] = currentColorMathState();
-        scanlineLayerStates[scanline] = currentLayerState();
-        scanlineMode7States[scanline] = currentMode7State();
-        scanlineCgramStates[scanline] = currentCgramState();
+        fillColorMathState(scanlineColorMathStates[scanline]);
+        fillLayerState(scanlineLayerStates[scanline]);
+        fillMode7State(scanlineMode7States[scanline]);
+        fillCgramState(scanlineCgramStates[scanline]);
         scanlineDisplayControlCaptured[scanline] = true;
     }
 
     private ColorMathState currentColorMathState() {
-        return new ColorMathState(
-                registers[0x25],
-                registers[0x26],
-                registers[0x27],
-                registers[0x28],
-                registers[0x29],
-                registers[0x2b],
-                registers[0x30],
-                registers[0x31],
-                ppuRegisters.fixedColor(),
-                cgram.read(0) | (cgram.read(1) << 8));
+        return fillColorMathState(currentColorMathStateHolder);
+    }
+
+    private ColorMathState fillColorMathState(ColorMathState state) {
+        state.windowSelection = registers[0x25];
+        state.window1Left = registers[0x26];
+        state.window1Right = registers[0x27];
+        state.window2Left = registers[0x28];
+        state.window2Right = registers[0x29];
+        state.windowLogic = registers[0x2b];
+        state.selection = registers[0x30];
+        state.designation = registers[0x31];
+        state.fixedColor = ppuRegisters.fixedColor();
+        state.backdropColor = cgram.read(0) | (cgram.read(1) << 8);
+        return state;
     }
 
     private LayerState currentLayerState() {
-        int[] offsets = new int[8];
-        for (int i = 0; i < offsets.length; i++) {
-            offsets[i] = ppuRegisters.bgOffset(i);
+        return fillLayerState(currentLayerStateHolder);
+    }
+
+    private LayerState fillLayerState(LayerState state) {
+        state.backgroundMode = registers[0x05];
+        state.setini = registers[0x33];
+        state.objectSelection = registers[0x01];
+        state.mosaic = registers[0x06];
+        state.windowSelection12 = registers[0x23];
+        state.windowSelection34 = registers[0x24];
+        state.objectWindowSelection = registers[0x25];
+        state.window1Left = registers[0x26];
+        state.window1Right = registers[0x27];
+        state.window2Left = registers[0x28];
+        state.window2Right = registers[0x29];
+        state.windowLogic = registers[0x2a];
+        state.objectWindowLogic = registers[0x2b];
+        state.mainScreenDesignation = registers[0x2c];
+        state.subScreenDesignation = registers[0x2d];
+        state.mainScreenWindowDesignation = registers[0x2e];
+        state.subScreenWindowDesignation = registers[0x2f];
+        for (int i = 0; i < state.backgroundOffsets.length; i++) {
+            state.backgroundOffsets[i] = ppuRegisters.bgOffset(i);
         }
-        return new LayerState(
-                registers[0x05],
-                registers[0x33],
-                registers[0x01],
-                registers[0x06],
-                registers[0x23],
-                registers[0x24],
-                registers[0x25],
-                registers[0x26],
-                registers[0x27],
-                registers[0x28],
-                registers[0x29],
-                registers[0x2a],
-                registers[0x2b],
-                registers[0x2c],
-                registers[0x2d],
-                registers[0x2e],
-                registers[0x2f],
-                offsets);
+        return state;
     }
 
     private Mode7State currentMode7State() {
-        int[] matrix = new int[4];
-        for (int i = 0; i < matrix.length; i++) {
-            matrix[i] = ppuRegisters.m7Matrix(i);
+        return fillMode7State(currentMode7StateHolder);
+    }
+
+    private Mode7State fillMode7State(Mode7State state) {
+        state.settings = registers[0x1a];
+        state.setini = registers[0x33];
+        for (int i = 0; i < state.matrix.length; i++) {
+            state.matrix[i] = ppuRegisters.m7Matrix(i);
         }
-        int[] offsets = new int[2];
-        int[] centers = new int[2];
-        for (int i = 0; i < offsets.length; i++) {
-            offsets[i] = ppuRegisters.m7OffsetValue(i);
-            centers[i] = ppuRegisters.m7CenterValue(i);
+        for (int i = 0; i < state.offsets.length; i++) {
+            state.offsets[i] = ppuRegisters.m7OffsetValue(i);
+            state.centers[i] = ppuRegisters.m7CenterValue(i);
         }
-        return new Mode7State(registers[0x1a], registers[0x33], matrix, offsets, centers);
+        return state;
     }
 
     private int[] currentCgramState() {
-        int[] palette = new int[CGRAM_SIZE / 2];
+        return fillCgramState(currentCgramStateHolder);
+    }
+
+    private int[] fillCgramState(int[] palette) {
         for (int i = 0; i < palette.length; i++) {
             int address = i * 2;
             palette[i] = cgram.read(address) | (cgram.read(address + 1) << 8);
@@ -1028,11 +1047,11 @@ public class PPU extends AMemory {
 
     private void addToMainSubScreen(Background background, int levelLow, int levelHigh) {
         int backgroundIndex = background.getBackgroundNumber() - 1;
-        mergeBackgroundScanlines(background, levelLow, levelHigh,
-                backgroundScanlineStates(backgroundIndex, 0),
+        int rows = fillBackgroundScanlineStates(backgroundIndex, 0);
+        mergeBackgroundScanlines(background, levelLow, levelHigh, rows,
                 mainScreen, mainScreenLevelMap, mainScreenSourceMap, mainScreenCgramIndexMap);
-        mergeBackgroundScanlines(background, levelLow, levelHigh,
-                backgroundScanlineStates(backgroundIndex, 1),
+        rows = fillBackgroundScanlineStates(backgroundIndex, 1);
+        mergeBackgroundScanlines(background, levelLow, levelHigh, rows,
                 subScreen, subScreenLevelMap, subScreenSourceMap, subScreenCgramIndexMap);
     }
 
@@ -1040,12 +1059,12 @@ public class PPU extends AMemory {
             Background background,
             int levelLow,
             int levelHigh,
-            Background.ScanlineState[] scanlineStates,
+            int stateRows,
             int[] colorRaster,
             int[] levelRaster,
             int[] sourceRaster,
             short[][] cgramIndexMap) {
-        int rows = Math.min(scanlineStates.length, ACTIVE_ROWS);
+        int rows = Math.min(stateRows, ACTIVE_ROWS);
         for (int y = 0; y < rows; y++) {
             int rowBase = y * VISIBLE_WIDTH;
             Background.mergeBackgroundScanline(
@@ -1057,23 +1076,28 @@ public class PPU extends AMemory {
                     background,
                     levelLow,
                     levelHigh,
-                    scanlineStates[y],
+                    mergeScanlineStates[y],
                     y,
                     VISIBLE_WIDTH);
         }
     }
 
-    private Background.ScanlineState[] backgroundScanlineStates(int backgroundIndex, int screenIndex) {
-        Background.ScanlineState[] result = new Background.ScanlineState[vBlankStartScanline()];
+    /**
+     * Refills the reusable merge-state array for one background/screen pair and
+     * returns the number of valid rows.
+     */
+    private int fillBackgroundScanlineStates(int backgroundIndex, int screenIndex) {
+        int rows = vBlankStartScanline();
         LayerState currentState = currentLayerState();
         int[] mosaicSourceLines = verticalMosaicSourceLines(currentState);
         ColorMathState currentColorMathState = currentColorMathState();
         int[] currentPalette = currentCgramState();
-        boolean[] currentWindowMask = backgroundWindowMask(currentState, backgroundIndex, screenIndex);
+        boolean[] currentWindowMask =
+                backgroundWindowMask(currentState, backgroundIndex, screenIndex, windowMaskCurrentScratch);
         int offsetIndex = backgroundIndex * 2;
         int backgroundBit = 1 << backgroundIndex;
 
-        for (int y = 0; y < result.length; y++) {
+        for (int y = 0; y < rows; y++) {
             LayerState state = scanlineDisplayControlCaptured[y]
                     ? scanlineLayerStates[y]
                     : currentState;
@@ -1093,9 +1117,9 @@ public class PPU extends AMemory {
                     : 1;
             boolean[] windowMask = state == currentState
                     ? currentWindowMask
-                    : backgroundWindowMask(state, backgroundIndex, screenIndex);
+                    : backgroundWindowMask(state, backgroundIndex, screenIndex, windowMaskRowScratch[y]);
             int levels = backgroundPriorityLevels(state.backgroundMode(), backgroundIndex);
-            result[y] = new Background.ScanlineState(
+            mergeScanlineStates[y].set(
                     (designation & backgroundBit) != 0,
                     state.backgroundOffsets()[offsetIndex],
                     state.backgroundOffsets()[offsetIndex + 1],
@@ -1109,7 +1133,7 @@ public class PPU extends AMemory {
                     levels == NO_SCANLINE_LEVELS ? Background.USE_MERGE_LEVELS : levels & 0xff,
                     levels == NO_SCANLINE_LEVELS ? Background.USE_MERGE_LEVELS : levels >>> 8);
         }
-        return result;
+        return rows;
     }
 
     private static final int NO_SCANLINE_LEVELS = -1;
@@ -1147,11 +1171,12 @@ public class PPU extends AMemory {
     }
 
     private int[] verticalMosaicSourceLines(LayerState currentState) {
-        int[] result = new int[vBlankStartScanline()];
+        int[] result = mosaicSourceLinesScratch;
+        int rows = vBlankStartScanline();
         int counter = 0;
         boolean wasEnabled = false;
 
-        for (int y = 0; y < result.length; y++) {
+        for (int y = 0; y < rows; y++) {
             LayerState state = scanlineDisplayControlCaptured[y]
                     ? scanlineLayerStates[y]
                     : currentState;
@@ -1171,7 +1196,8 @@ public class PPU extends AMemory {
         return result;
     }
 
-    private boolean[] backgroundWindowMask(LayerState state, int backgroundIndex, int screenIndex) {
+    private boolean[] backgroundWindowMask(
+            LayerState state, int backgroundIndex, int screenIndex, boolean[] target) {
         int designation = screenIndex == 0
                 ? state.mainScreenWindowDesignation()
                 : state.subScreenWindowDesignation();
@@ -1184,7 +1210,7 @@ public class PPU extends AMemory {
                 : state.windowSelection34();
         boolean highNibble = (backgroundIndex & 1) != 0;
         int shift = highNibble ? 4 : 0;
-        boolean[] mask = new boolean[VISIBLE_WIDTH];
+        boolean[] mask = target;
         for (int x = 0; x < mask.length; x++) {
             mask[x] = isInsideWindowMask(
                     (selection & (0x02 << shift)) != 0,
@@ -1299,7 +1325,7 @@ public class PPU extends AMemory {
         LayerState currentState = currentLayerState();
         int[] currentPalette = currentCgramState();
         short[][] cgramIndexMap = screenIndex == 0 ? mainScreenCgramIndexMap : subScreenCgramIndexMap;
-        boolean[] currentWindowMask = objectWindowMask(currentState, screenIndex);
+        boolean[] currentWindowMask = objectWindowMask(currentState, screenIndex, windowMaskCurrentScratch);
         for (int screenY = 0; screenY < vBlankStartScanline(); screenY++) {
             boolean captured = scanlineDisplayControlCaptured[screenY];
             LayerState state = captured
@@ -1314,8 +1340,9 @@ public class PPU extends AMemory {
             }
             boolean[] windowMask = state == currentState
                     ? currentWindowMask
-                    : objectWindowMask(state, screenIndex);
-            boolean[] claimedPixels = new boolean[VISIBLE_WIDTH];
+                    : objectWindowMask(state, screenIndex, windowMaskRowScratch[screenY]);
+            boolean[] claimedPixels = claimedObjectPixels;
+            Arrays.fill(claimedPixels, false);
             for (int objectSlot = 0; objectSlot < evaluatedObjectCounts[screenY]; objectSlot++) {
                 renderObjectScanlineToBuffer(
                         evaluatedObjectIndices[screenY][objectSlot],
@@ -1491,7 +1518,7 @@ public class PPU extends AMemory {
         return mask;
     }
 
-    private boolean[] objectWindowMask(LayerState state, int screenIndex) {
+    private boolean[] objectWindowMask(LayerState state, int screenIndex, boolean[] target) {
         int designation = screenIndex == 0
                 ? state.mainScreenWindowDesignation()
                 : state.subScreenWindowDesignation();
@@ -1500,7 +1527,7 @@ public class PPU extends AMemory {
         }
 
         int selection = state.objectWindowSelection();
-        boolean[] mask = new boolean[VISIBLE_WIDTH];
+        boolean[] mask = target;
         for (int x = 0; x < mask.length; x++) {
             mask[x] = isInsideWindowMask(
                     (selection & 0x02) != 0,
@@ -1562,7 +1589,8 @@ public class PPU extends AMemory {
         Mode7State currentMode7State = currentMode7State();
         ColorMathState currentColorMathState = currentColorMathState();
         int[] currentPalette = currentCgramState();
-        boolean[] currentWindowMask = backgroundWindowMask(currentLayerState, backgroundIndex, screenIndex);
+        boolean[] currentWindowMask =
+                backgroundWindowMask(currentLayerState, backgroundIndex, screenIndex, windowMaskCurrentScratch);
         int[] mosaicSourceLines = verticalMosaicSourceLines(currentLayerState);
         int rows = vBlankStartScanline();
 
@@ -1595,7 +1623,7 @@ public class PPU extends AMemory {
             boolean horizontalMosaic = (layerState.mosaic() & backgroundBit) != 0;
             boolean verticalMosaic = (layerState.mosaic() & 0x01) != 0;
             boolean[] windowMask = captured
-                    ? backgroundWindowMask(layerState, backgroundIndex, screenIndex)
+                    ? backgroundWindowMask(layerState, backgroundIndex, screenIndex, windowMaskRowScratch[y])
                     : currentWindowMask;
             int screenY = verticalMosaic ? mosaicSourceLines[y] : y;
             if ((mode7State.settings() & 0x02) != 0) {
@@ -1619,29 +1647,32 @@ public class PPU extends AMemory {
                 }
                 int sourceX = (originX + a * screenX) >> 8;
                 int sourceY = (originY + c * screenX) >> 8;
-                Mode7Pixel pixel = readMode7Pixel(
+                long pixel = readMode7Pixel(
                         sourceX,
                         sourceY,
                         extBg,
                         mode7State.settings(),
                         (colorMathState.selection() & 0x01) != 0,
                         palette);
-                int level = pixel.priority ? levelHigh : levelLow;
+                int color = (int) pixel;
+                int cgramIndex = (int) ((pixel >>> 32) & 0x1ff) - 1;
+                boolean priority = (pixel & MODE7_PIXEL_PRIORITY) != 0;
+                int level = priority ? levelHigh : levelLow;
                 int rasterIndex = y * VISIBLE_WIDTH + x;
-                if ((pixel.color & 0xff) == 0 || level < levelMap[rasterIndex]) {
+                if ((color & 0xff) == 0 || level < levelMap[rasterIndex]) {
                     continue;
                 }
-                destination[rasterIndex] = pixel.color;
+                destination[rasterIndex] = color;
                 levelMap[rasterIndex] = level;
                 sourceMap[rasterIndex] = source;
-                if (pixel.cgramIndex >= 0) {
-                    cgramIndexMap[y][x] = (short) pixel.cgramIndex;
+                if (cgramIndex >= 0) {
+                    cgramIndexMap[y][x] = (short) cgramIndex;
                 }
             }
         }
     }
 
-    private Mode7Pixel readMode7Pixel(
+    private long readMode7Pixel(
             int sourceX,
             int sourceY,
             boolean extBg,
@@ -1651,7 +1682,7 @@ public class PPU extends AMemory {
         boolean outsidePlayingField = sourceX < 0 || sourceX >= MODE7_SIZE || sourceY < 0 || sourceY >= MODE7_SIZE;
         boolean largePlayingField = (settings & 0x80) != 0;
         if (outsidePlayingField && largePlayingField && (settings & 0x40) == 0) {
-            return Mode7Pixel.TRANSPARENT;
+            return MODE7_PIXEL_TRANSPARENT;
         }
 
         int wrappedX = sourceX & (MODE7_SIZE - 1);
@@ -1675,12 +1706,15 @@ public class PPU extends AMemory {
             colorIndex &= 0x7f;
         }
         if (colorIndex == 0) {
-            return Mode7Pixel.TRANSPARENT;
+            return MODE7_PIXEL_TRANSPARENT;
         }
+        long priorityBit = priority ? MODE7_PIXEL_PRIORITY : 0;
         if (!extBg && directColor) {
-            return new Mode7Pixel(PPUUtils.directColorToRGBA(0, colorIndex), priority, NO_CGRAM_FETCH);
+            return priorityBit | (PPUUtils.directColorToRGBA(0, colorIndex) & 0xffffffffL);
         }
-        return new Mode7Pixel(PPUUtils.cgramColorToRGBA(palette[colorIndex]), priority, colorIndex);
+        return priorityBit
+                | ((long) (colorIndex + 1) << 32)
+                | (PPUUtils.cgramColorToRGBA(palette[colorIndex]) & 0xffffffffL);
     }
 
     private int signed16(int value) {
@@ -1707,50 +1741,185 @@ public class PPU extends AMemory {
         return (value & 0x2000) != 0 ? value | ~0x3ff : value & 0x3ff;
     }
 
-    private record Mode7Pixel(int color, boolean priority, int cgramIndex) {
-        private static final Mode7Pixel TRANSPARENT = new Mode7Pixel(0, false, NO_CGRAM_FETCH);
+    /** Packed mode 7 sample: low 32 bits RGBA, bits 32-40 cgramIndex + 1, bit 41 priority. */
+    private static final long MODE7_PIXEL_PRIORITY = 1L << 41;
+    private static final long MODE7_PIXEL_TRANSPARENT = 0L;
+
+    /** Reusable snapshot of the color-math registers; refilled, never reallocated. */
+    private static final class ColorMathState {
+        private int windowSelection;
+        private int window1Left;
+        private int window1Right;
+        private int window2Left;
+        private int window2Right;
+        private int windowLogic;
+        private int selection;
+        private int designation;
+        private int fixedColor;
+        private int backdropColor;
+
+        int windowSelection() {
+            return windowSelection;
+        }
+
+        int window1Left() {
+            return window1Left;
+        }
+
+        int window1Right() {
+            return window1Right;
+        }
+
+        int window2Left() {
+            return window2Left;
+        }
+
+        int window2Right() {
+            return window2Right;
+        }
+
+        int windowLogic() {
+            return windowLogic;
+        }
+
+        int selection() {
+            return selection;
+        }
+
+        int designation() {
+            return designation;
+        }
+
+        int fixedColor() {
+            return fixedColor;
+        }
+
+        int backdropColor() {
+            return backdropColor;
+        }
     }
 
-    private record ColorMathState(
-            int windowSelection,
-            int window1Left,
-            int window1Right,
-            int window2Left,
-            int window2Right,
-            int windowLogic,
-            int selection,
-            int designation,
-            int fixedColor,
-            int backdropColor) {
+    /** Reusable snapshot of the layer/window registers; refilled, never reallocated. */
+    private static final class LayerState {
+        private int backgroundMode;
+        private int setini;
+        private int objectSelection;
+        private int mosaic;
+        private int windowSelection12;
+        private int windowSelection34;
+        private int objectWindowSelection;
+        private int window1Left;
+        private int window1Right;
+        private int window2Left;
+        private int window2Right;
+        private int windowLogic;
+        private int objectWindowLogic;
+        private int mainScreenDesignation;
+        private int subScreenDesignation;
+        private int mainScreenWindowDesignation;
+        private int subScreenWindowDesignation;
+        private final int[] backgroundOffsets = new int[8];
+
+        int backgroundMode() {
+            return backgroundMode;
+        }
+
+        int setini() {
+            return setini;
+        }
+
+        int objectSelection() {
+            return objectSelection;
+        }
+
+        int mosaic() {
+            return mosaic;
+        }
+
+        int windowSelection12() {
+            return windowSelection12;
+        }
+
+        int windowSelection34() {
+            return windowSelection34;
+        }
+
+        int objectWindowSelection() {
+            return objectWindowSelection;
+        }
+
+        int window1Left() {
+            return window1Left;
+        }
+
+        int window1Right() {
+            return window1Right;
+        }
+
+        int window2Left() {
+            return window2Left;
+        }
+
+        int window2Right() {
+            return window2Right;
+        }
+
+        int windowLogic() {
+            return windowLogic;
+        }
+
+        int objectWindowLogic() {
+            return objectWindowLogic;
+        }
+
+        int mainScreenDesignation() {
+            return mainScreenDesignation;
+        }
+
+        int subScreenDesignation() {
+            return subScreenDesignation;
+        }
+
+        int mainScreenWindowDesignation() {
+            return mainScreenWindowDesignation;
+        }
+
+        int subScreenWindowDesignation() {
+            return subScreenWindowDesignation;
+        }
+
+        int[] backgroundOffsets() {
+            return backgroundOffsets;
+        }
     }
 
-    private record LayerState(
-            int backgroundMode,
-            int setini,
-            int objectSelection,
-            int mosaic,
-            int windowSelection12,
-            int windowSelection34,
-            int objectWindowSelection,
-            int window1Left,
-            int window1Right,
-            int window2Left,
-            int window2Right,
-            int windowLogic,
-            int objectWindowLogic,
-            int mainScreenDesignation,
-            int subScreenDesignation,
-            int mainScreenWindowDesignation,
-            int subScreenWindowDesignation,
-            int[] backgroundOffsets) {
-    }
+    /** Reusable snapshot of the mode 7 registers; refilled, never reallocated. */
+    private static final class Mode7State {
+        private int settings;
+        private int setini;
+        private final int[] matrix = new int[4];
+        private final int[] offsets = new int[2];
+        private final int[] centers = new int[2];
 
-    private record Mode7State(
-            int settings,
-            int setini,
-            int[] matrix,
-            int[] offsets,
-            int[] centers) {
+        int settings() {
+            return settings;
+        }
+
+        int setini() {
+            return setini;
+        }
+
+        int[] matrix() {
+            return matrix;
+        }
+
+        int[] offsets() {
+            return offsets;
+        }
+
+        int[] centers() {
+            return centers;
+        }
     }
 
     private record ObjectDimensions(int width, int height) {
