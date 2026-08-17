@@ -17,14 +17,21 @@ import static org.lwjgl.system.MemoryUtil.NULL;
 /**
  * Plays core audio batches through OpenAL. The bounded queue is the real-time
  * pacing source: writes block until a queue slot frees up, and the optional
- * event pump keeps the desktop window responsive while waiting.
+ * event pump keeps the desktop window responsive while waiting. Native PCM
+ * staging and the OpenAL buffer objects are allocated once and reused; no
+ * per-batch Java or native allocation happens in steady state.
  */
 final class OpenAlAudioSink implements AudioSink, AutoCloseable {
     static final int SAMPLE_RATE = DSP.OUTPUT_SAMPLE_RATE_HZ;
     static final int MAX_QUEUED_BUFFERS = 3;
+    /** Sized to the DSP's whole sound buffer so any batch fits the staging. */
+    static final int MAX_BATCH_SAMPLES = 0x10000;
     private static final long QUEUE_WAIT_NANOS = 1_000_000;
 
     private final Runnable eventPump;
+    private final int[] bufferPool = new int[MAX_QUEUED_BUFFERS];
+    private int pooledBuffers;
+    private ByteBuffer pcmStaging;
     private long device;
     private long context;
     private int source;
@@ -46,11 +53,13 @@ final class OpenAlAudioSink implements AudioSink, AutoCloseable {
             return;
         }
         ensureInitialized();
-        waitForQueueSlot();
+        if (!waitForFreeBuffer()) {
+            return;
+        }
 
-        int buffer = AL10.alGenBuffers();
-        AL10.alBufferData(buffer, AL10.AL_FORMAT_STEREO16,
-                pcm16StereoLittleEndian(interleavedStereo, offset, sampleCount), SAMPLE_RATE);
+        int buffer = bufferPool[--pooledBuffers];
+        fillPcm16StereoLittleEndian(pcmStaging, interleavedStereo, offset, sampleCount);
+        AL10.alBufferData(buffer, AL10.AL_FORMAT_STEREO16, pcmStaging, SAMPLE_RATE);
         AL10.alSourceQueueBuffers(source, buffer);
         if (AL10.alGetSourcei(source, AL10.AL_SOURCE_STATE) != AL10.AL_PLAYING) {
             AL10.alSourcePlay(source);
@@ -61,15 +70,20 @@ final class OpenAlAudioSink implements AudioSink, AutoCloseable {
         return queuedBuffers >= MAX_QUEUED_BUFFERS;
     }
 
-    static ByteBuffer pcm16StereoLittleEndian(short[] samples, int offset, int sampleCount) {
-        ByteBuffer buffer = BufferUtils.createByteBuffer(sampleCount * Short.BYTES);
+    /**
+     * Packs {@code sampleCount} 16-bit samples into little-endian PCM bytes,
+     * reusing {@code staging}. On return the buffer is flipped and its limit
+     * covers exactly the packed bytes, so no stale samples from a previous
+     * batch remain visible.
+     */
+    static void fillPcm16StereoLittleEndian(ByteBuffer staging, short[] samples, int offset, int sampleCount) {
+        staging.clear();
         for (int i = 0; i < sampleCount; i++) {
             short sample = samples[offset + i];
-            buffer.put((byte) (sample & 0xff));
-            buffer.put((byte) ((sample >>> 8) & 0xff));
+            staging.put((byte) (sample & 0xff));
+            staging.put((byte) ((sample >>> 8) & 0xff));
         }
-        buffer.flip();
-        return buffer;
+        staging.flip();
     }
 
     private void ensureInitialized() {
@@ -89,25 +103,31 @@ final class OpenAlAudioSink implements AudioSink, AutoCloseable {
         ALC10.alcMakeContextCurrent(context);
         AL.createCapabilities(ALC.createCapabilities(device));
         source = AL10.alGenSources();
+        pcmStaging = BufferUtils.createByteBuffer(MAX_BATCH_SAMPLES * Short.BYTES);
+        for (pooledBuffers = 0; pooledBuffers < MAX_QUEUED_BUFFERS; pooledBuffers++) {
+            bufferPool[pooledBuffers] = AL10.alGenBuffers();
+        }
         initialized = true;
     }
 
-    private void deleteProcessedBuffers() {
+    private void reclaimProcessedBuffers() {
         int processed = AL10.alGetSourcei(source, AL10.AL_BUFFERS_PROCESSED);
         while (processed-- > 0) {
-            AL10.alDeleteBuffers(AL10.alSourceUnqueueBuffers(source));
+            bufferPool[pooledBuffers++] = AL10.alSourceUnqueueBuffers(source);
         }
     }
 
-    private void waitForQueueSlot() {
+    /** Returns true when a pooled buffer is available; false if interrupted first. */
+    private boolean waitForFreeBuffer() {
         while (true) {
-            deleteProcessedBuffers();
-            if (!queueIsFull(AL10.alGetSourcei(source, AL10.AL_BUFFERS_QUEUED))) {
-                return;
+            reclaimProcessedBuffers();
+            if (pooledBuffers > 0) {
+                return true;
             }
             LockSupport.parkNanos(QUEUE_WAIT_NANOS);
             if (Thread.currentThread().isInterrupted()) {
-                return;
+                reclaimProcessedBuffers();
+                return pooledBuffers > 0;
             }
         }
     }
@@ -118,10 +138,13 @@ final class OpenAlAudioSink implements AudioSink, AutoCloseable {
             return;
         }
         AL10.alSourceStop(source);
-        deleteProcessedBuffers();
+        reclaimProcessedBuffers();
         int queued = AL10.alGetSourcei(source, AL10.AL_BUFFERS_QUEUED);
-        while (queued-- > 0) {
-            AL10.alDeleteBuffers(AL10.alSourceUnqueueBuffers(source));
+        while (queued-- > 0 && pooledBuffers < MAX_QUEUED_BUFFERS) {
+            bufferPool[pooledBuffers++] = AL10.alSourceUnqueueBuffers(source);
+        }
+        for (int i = 0; i < pooledBuffers; i++) {
+            AL10.alDeleteBuffers(bufferPool[i]);
         }
         AL10.alDeleteSources(source);
         ALC10.alcMakeContextCurrent(NULL);
@@ -130,6 +153,7 @@ final class OpenAlAudioSink implements AudioSink, AutoCloseable {
         source = 0;
         context = NULL;
         device = NULL;
+        pooledBuffers = 0;
         initialized = false;
     }
 }
