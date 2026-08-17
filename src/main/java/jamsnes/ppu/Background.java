@@ -15,7 +15,6 @@ public class Background {
     private static final int NB_TILE_PER_ROW = 16;
     private static final int TILE_MAP_BYTE_SIZE = 0x800;
     public static final int BUFFER_SIZE = 1024;
-    public static final int PRIORITY_SIZE = 64;
 
     public record ScanlineState(
             boolean enabled,
@@ -105,33 +104,22 @@ public class Background {
     private final PPU ppu;
     private final int backgroundNumber;
     private final Ram vram;
-    private final TileRenderer tileRenderer;
     private Vector2<Boolean> tileMapMirroring;
     private Vector2<Integer> characterNbPixels;
     private int bpp;
     private int tileMapStartAddress;
     private int tilesetAddress;
-    private final int[][] tileBuffer = new int[16][16];
-    private final short[][] tilePixelDescriptors = new short[16][16];
-    private final short[][] pixelDescriptors = new short[BUFFER_SIZE][BUFFER_SIZE];
-    public final int[][] buffer = new int[BUFFER_SIZE][BUFFER_SIZE];
-    public final boolean[][] tilesPriority = new boolean[PRIORITY_SIZE][PRIORITY_SIZE];
     public Vector2<Integer> backgroundSize = new Vector2<>(0, 0);
-    private long renderedVramModificationCount = -1;
-    private long renderedCgramModificationCount = -1;
-    private long renderedConfiguration = -1;
 
     public Background(PPU ppu, int backgroundNumber) {
         this.ppu = ppu;
         this.backgroundNumber = backgroundNumber;
         this.vram = ppu.vram;
-        this.tileRenderer = new TileRenderer(ppu.vram, ppu.cgram);
         this.tileMapMirroring = ppu.getBackgroundMirroring(backgroundNumber);
         this.characterNbPixels = ppu.getCharacterSize(backgroundNumber);
         this.bpp = ppu.getBpp(backgroundNumber);
         this.tileMapStartAddress = ppu.getTileMapStartAddress(backgroundNumber);
         this.tilesetAddress = ppu.getTilesetAddress(backgroundNumber);
-        this.tileRenderer.setBpp(bpp);
     }
 
     /** Refreshes the logical background dimensions from the current configuration. */
@@ -139,45 +127,6 @@ public class Background {
         backgroundSize = new Vector2<>(
                 ((tileMapMirroring.x ? 1 : 0) + 1) * characterNbPixels.x * NB_CHARACTER_WIDTH,
                 ((tileMapMirroring.y ? 1 : 0) + 1) * characterNbPixels.y * NB_CHARACTER_HEIGHT);
-    }
-
-    public void renderBackground() {
-        long configuration = renderConfiguration();
-        if (renderedVramModificationCount == vram.modificationCount()
-                && renderedCgramModificationCount == ppu.cgram.modificationCount()
-                && renderedConfiguration == configuration) {
-            return;
-        }
-        renderedVramModificationCount = vram.modificationCount();
-        renderedCgramModificationCount = ppu.cgram.modificationCount();
-        renderedConfiguration = configuration;
-
-        updateBackgroundSize();
-        clearBuffers();
-
-        int mapColumns = tileMapMirroring.x ? 2 : 1;
-        int mapRows = tileMapMirroring.y ? 2 : 1;
-        for (int mapY = 0; mapY < mapRows; mapY++) {
-            for (int mapX = 0; mapX < mapColumns; mapX++) {
-                int page = mapY * mapColumns + mapX;
-                drawBasicTileMap(
-                        u16(tileMapStartAddress + page * TILE_MAP_BYTE_SIZE),
-                        mapX,
-                        mapY);
-            }
-        }
-    }
-
-    private long renderConfiguration() {
-        return tileMapStartAddress
-                | ((long) tilesetAddress << 16)
-                | ((long) bpp << 32)
-                | ((long) characterNbPixels.x << 37)
-                | ((long) characterNbPixels.y << 43)
-                | ((tileMapMirroring.x ? 1L : 0L) << 49)
-                | ((tileMapMirroring.y ? 1L : 0L) << 50)
-                | ((long) (ppu.getBgMode() == 0 ? backgroundNumber : 0) << 51)
-                | ((ppu.ppuRegisters().cgwselDirectColorMode() ? 1L : 0L) << 54);
     }
 
     public void setTileMapStartAddress(int address) {
@@ -194,7 +143,6 @@ public class Background {
 
     public void setBpp(int bpp) {
         this.bpp = bpp == 2 || bpp == 4 || bpp == 8 || bpp == 7 ? bpp : 2;
-        tileRenderer.setBpp(this.bpp);
     }
 
     public void setTileMapMirroring(Vector2<Boolean> tileMaps) {
@@ -361,9 +309,9 @@ public class Background {
             ScanlineState[] scanlineStates,
             int maxWidth,
             short[][] cgramDestinationMap) {
-        int height = Math.min(scanlineStates.length, Math.min(bufferDest.length, backgroundSrc.buffer.length));
+        int height = Math.min(scanlineStates.length, Math.min(bufferDest.length, BUFFER_SIZE));
         for (int y = 0; y < height; y++) {
-            int width = Math.min(maxWidth, Math.min(bufferDest[y].length, backgroundSrc.buffer[y].length));
+            int width = Math.min(maxWidth, Math.min(bufferDest[y].length, BUFFER_SIZE));
             short[] cgramRow = cgramDestinationMap != null && y < cgramDestinationMap.length
                     ? cgramDestinationMap[y]
                     : null;
@@ -403,11 +351,11 @@ public class Background {
             return;
         }
         int sourceHeight = backgroundSrc.backgroundSize.y > 0
-                ? Math.min(backgroundSrc.backgroundSize.y, backgroundSrc.buffer.length)
-                : backgroundSrc.buffer.length;
+                ? Math.min(backgroundSrc.backgroundSize.y, BUFFER_SIZE)
+                : BUFFER_SIZE;
         int sourceWidth = backgroundSrc.backgroundSize.x > 0
-                ? Math.min(backgroundSrc.backgroundSize.x, backgroundSrc.buffer[0].length)
-                : backgroundSrc.buffer[0].length;
+                ? Math.min(backgroundSrc.backgroundSize.x, BUFFER_SIZE)
+                : BUFFER_SIZE;
         int scanlineLevelLow = state.levelLow() == USE_MERGE_LEVELS ? levelLow : state.levelLow();
         int scanlineLevelHigh = state.levelHigh() == USE_MERGE_LEVELS ? levelHigh : state.levelHigh();
         int pixelSize = Math.max(1, state.mosaicSize());
@@ -466,6 +414,17 @@ public class Background {
                 }
             }
         }
+    }
+
+    private static final ScanlineState SAMPLE_COLOR_STATE =
+            new ScanlineState(true, 0, 0, 1, null, 1);
+
+    /**
+     * Samples one logical background pixel and resolves it to RGBA against the
+     * current CGRAM contents. Transparent pixels return 0.
+     */
+    public int samplePixelColor(int x, int y) {
+        return resolveSampleColor(samplePackedPixel(x, y), SAMPLE_COLOR_STATE);
     }
 
     /** Set on a packed sample when the tilemap entry requests high priority. */
@@ -567,119 +526,6 @@ public class Background {
         return (bpp == 8
                 ? pixelReference
                 : paletteIndex * (1 << bpp) + pixelReference) & 0xff;
-    }
-
-    private void drawBasicTileMap(int baseAddress, int offsetX, int offsetY) {
-        int posX = 0;
-        int posY = 0;
-        int vramAddress = u16(baseAddress);
-
-        while (u16(vramAddress - baseAddress) < TILE_MAP_BYTE_SIZE) {
-            int tileMapValue = vram.read(vramAddress) | (vram.read(u16(vramAddress + 1)) << 8);
-            drawTile(tileMapValue, offsetX * NB_CHARACTER_WIDTH + posX, offsetY * NB_CHARACTER_HEIGHT + posY);
-            vramAddress = u16(vramAddress + 2);
-            if (posX % 31 == 0 && posX != 0) {
-                posY++;
-                posX = 0;
-            } else {
-                posX++;
-            }
-        }
-    }
-
-    private void drawTile(int data, int indexX, int indexY) {
-        tilesPriority[indexY][indexX] = (data & (1 << 13)) != 0;
-        drawTileFromMemoryToTileBuffer(data & 0x0f, (data >>> 4) & 0x3f, (data >>> 10) & 0x07);
-
-        if ((data & (1 << 15)) != 0) {
-            horizontalFlipTileBuffer(characterNbPixels.x, characterNbPixels.y);
-        }
-        if ((data & (1 << 14)) != 0) {
-            verticalFlipTileBuffer(characterNbPixels.x, characterNbPixels.y);
-        }
-
-        int pixelX = indexX * characterNbPixels.x;
-        int pixelY = indexY * characterNbPixels.y;
-        for (int y = 0; y < characterNbPixels.y; y++) {
-            System.arraycopy(tileBuffer[y], 0, buffer[pixelY + y], pixelX, characterNbPixels.x);
-            System.arraycopy(
-                    tilePixelDescriptors[y],
-                    0,
-                    pixelDescriptors[pixelY + y],
-                    pixelX,
-                    characterNbPixels.x);
-        }
-    }
-
-    private void drawTileFromMemoryToTileBuffer(int posX, int posY, int palette) {
-        int paletteBase = ppu.getBgMode() == 0 ? (backgroundNumber - 1) * 8 : 0;
-        tileRenderer.setPaletteIndex(paletteBase + palette);
-        int tileOffsetY = 0;
-        for (int y = 0; y < characterNbPixels.y; y += Tile.NB_PIXELS_HEIGHT) {
-            int tileOffsetX = 0;
-            for (int x = 0; x < characterNbPixels.x; x += Tile.NB_PIXELS_WIDTH) {
-                int graphicAddress = tilesetAddress
-                        + ((posY + tileOffsetY) * NB_TILE_PER_ROW * bpp * Tile.BASE_BYTE_SIZE)
-                        + ((posX + tileOffsetX) * bpp * Tile.BASE_BYTE_SIZE);
-                tileRenderer.render(graphicAddress, bpp == 8 && ppu.ppuRegisters().cgwselDirectColorMode());
-                mergeTileRendererBuffer(x, y);
-                tileOffsetX++;
-            }
-            tileOffsetY++;
-        }
-    }
-
-    private void mergeTileRendererBuffer(int offsetX, int offsetY) {
-        for (int y = 0; y < Tile.NB_PIXELS_HEIGHT; y++) {
-            System.arraycopy(tileRenderer.buffer[y], 0, tileBuffer[offsetY + y], offsetX, Tile.NB_PIXELS_WIDTH);
-            for (int x = 0; x < Tile.NB_PIXELS_WIDTH; x++) {
-                int pixelReference = tileRenderer.pixelReferences[y][x];
-                tilePixelDescriptors[offsetY + y][offsetX + x] =
-                        (short) ((tileRenderer.getPaletteIndex() << 8) | pixelReference);
-            }
-        }
-    }
-
-    private void horizontalFlipTileBuffer(int width, int height) {
-        for (int y = 0; y < height / 2; y++) {
-            int[] tmp = tileBuffer[y];
-            tileBuffer[y] = tileBuffer[height - 1 - y];
-            tileBuffer[height - 1 - y] = tmp;
-            short[] descriptorTmp = tilePixelDescriptors[y];
-            tilePixelDescriptors[y] = tilePixelDescriptors[height - 1 - y];
-            tilePixelDescriptors[height - 1 - y] = descriptorTmp;
-        }
-        if (width < tileBuffer[0].length) {
-            for (int y = 0; y < height; y++) {
-                Arrays.fill(tileBuffer[y], width, tileBuffer[y].length, 0);
-                Arrays.fill(tilePixelDescriptors[y], width, tilePixelDescriptors[y].length, (short) 0);
-            }
-        }
-    }
-
-    private void verticalFlipTileBuffer(int width, int height) {
-        for (int y = 0; y < height; y++) {
-            for (int x = 0; x < width / 2; x++) {
-                int tmp = tileBuffer[y][x];
-                tileBuffer[y][x] = tileBuffer[y][width - 1 - x];
-                tileBuffer[y][width - 1 - x] = tmp;
-                short descriptorTmp = tilePixelDescriptors[y][x];
-                tilePixelDescriptors[y][x] = tilePixelDescriptors[y][width - 1 - x];
-                tilePixelDescriptors[y][width - 1 - x] = descriptorTmp;
-            }
-        }
-    }
-
-    private void clearBuffers() {
-        int height = backgroundSize.y > 0 ? Math.min(backgroundSize.y, buffer.length) : buffer.length;
-        int width = backgroundSize.x > 0 ? Math.min(backgroundSize.x, buffer[0].length) : buffer[0].length;
-        for (int y = 0; y < height; y++) {
-            Arrays.fill(buffer[y], 0, width, 0);
-            Arrays.fill(pixelDescriptors[y], 0, width, (short) 0);
-        }
-        for (boolean[] row : tilesPriority) {
-            Arrays.fill(row, false);
-        }
     }
 
 }

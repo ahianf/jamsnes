@@ -25,11 +25,11 @@ class BackgroundRenderTest {
         snes.ppu.vram.write(0x1000, 0x80);
         snes.ppu.vram.write(0x1001, 0x00);
 
-        background.renderBackground();
+        background.updateBackgroundSize();
 
         assertEquals(new Vector2<>(256, 256), background.backgroundSize);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), background.buffer[0][0]);
-        assertEquals(0, background.buffer[0][1]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), background.samplePixelColor(0, 0));
+        assertEquals(0, background.samplePixelColor(1, 0));
         assertFalse(background.isPriorityPixel(0, 0));
     }
 
@@ -57,8 +57,8 @@ class BackgroundRenderTest {
         snes.ppu.vram.write(0x1010, 0x00);
         snes.ppu.vram.write(0x1011, 0x80);
 
-        low.renderBackground();
-        high.renderBackground();
+        low.updateBackgroundSize();
+        high.updateBackgroundSize();
 
         int[][] merged = new int[16][16];
         int[][] levels = new int[16][16];
@@ -89,11 +89,11 @@ class BackgroundRenderTest {
         snes.ppu.vram.write(0x1010, 0x00);
         snes.ppu.vram.write(0x1011, 0x80);
 
-        background.renderBackground();
+        background.updateBackgroundSize();
 
         assertEquals(new Vector2<>(512, 256), background.backgroundSize);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), background.buffer[0][0]);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), background.buffer[0][256]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), background.samplePixelColor(0, 0));
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), background.samplePixelColor(256, 0));
     }
 
     @Test
@@ -111,11 +111,11 @@ class BackgroundRenderTest {
         snes.ppu.vram.write(0x2000, 0x80);
         snes.ppu.vram.write(0x2011, 0x80);
 
-        background.renderBackground();
+        background.updateBackgroundSize();
 
         assertEquals(new Vector2<>(256, 512), background.backgroundSize);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), background.buffer[0][0]);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), background.buffer[256][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), background.samplePixelColor(0, 0));
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), background.samplePixelColor(0, 256));
     }
 
     @Test
@@ -139,13 +139,13 @@ class BackgroundRenderTest {
         snes.ppu.vram.write(0x2021, 0x80);
         snes.ppu.vram.write(0x2030, 0x80);
 
-        background.renderBackground();
+        background.updateBackgroundSize();
 
         assertEquals(new Vector2<>(512, 512), background.backgroundSize);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), background.buffer[0][0]);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), background.buffer[0][256]);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x7c00), background.buffer[256][0]);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), background.buffer[256][256]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), background.samplePixelColor(0, 0));
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), background.samplePixelColor(256, 0));
+        assertEquals(PPUUtils.cgramColorToRGBA(0x7c00), background.samplePixelColor(0, 256));
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), background.samplePixelColor(256, 256));
     }
 
     @Test
@@ -161,9 +161,9 @@ class BackgroundRenderTest {
         snes.ppu.vram.write(0x1000, 0x80);
         snes.ppu.vram.write(0x1001, 0x00);
 
-        background.renderBackground();
+        background.updateBackgroundSize();
 
-        assertEquals(0x000000ff, background.buffer[0][0]);
+        assertEquals(0x000000ff, background.samplePixelColor(0, 0));
 
         int[][] merged = new int[16][16];
         int[][] levels = new int[16][16];
