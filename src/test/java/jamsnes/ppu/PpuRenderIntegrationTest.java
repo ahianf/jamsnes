@@ -23,7 +23,7 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreenPixel(0, 0));
     }
 
     @Test
@@ -47,7 +47,7 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), snes.ppu.mainScreen()[0][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), snes.ppu.mainScreenPixel(0, 0));
     }
 
     @Test
@@ -65,7 +65,7 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), snes.ppu.mainScreen()[0][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), snes.ppu.mainScreenPixel(0, 0));
     }
 
     @Test
@@ -83,7 +83,7 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreenPixel(0, 0));
     }
 
     @Test
@@ -107,7 +107,7 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreenPixel(0, 0));
     }
 
     @Test
@@ -137,9 +137,9 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][0]);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), snes.ppu.mainScreen()[1][0]);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), snes.ppu.mainScreen()[2][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreenPixel(0, 0));
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), snes.ppu.mainScreenPixel(1, 0));
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), snes.ppu.mainScreenPixel(2, 0));
     }
 
     @Test
@@ -157,7 +157,7 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreenPixel(0, 0));
     }
 
     @Test
@@ -181,7 +181,7 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), snes.ppu.mainScreen()[0][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), snes.ppu.mainScreenPixel(0, 0));
     }
 
     @Test
@@ -199,7 +199,7 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreenPixel(0, 0));
     }
 
     @Test
@@ -222,7 +222,7 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), snes.ppu.mainScreen()[0][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), snes.ppu.mainScreenPixel(0, 0));
     }
 
     @Test
@@ -240,7 +240,7 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreenPixel(0, 0));
     }
 
     @Test
@@ -258,8 +258,8 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][0]);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][1]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreenPixel(0, 0));
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreenPixel(0, 1));
     }
 
     @Test
@@ -278,7 +278,7 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(0xe70000ff, snes.ppu.mainScreen()[0][0]);
+        assertEquals(0xe70000ff, snes.ppu.mainScreenPixel(0, 0));
     }
 
     @Test
@@ -300,8 +300,8 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][0]);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), snes.ppu.mainScreen()[0][8]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreenPixel(0, 0));
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), snes.ppu.mainScreenPixel(0, 8));
     }
 
     @Test
@@ -322,8 +322,8 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][0]);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), snes.ppu.mainScreen()[0][8]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreenPixel(0, 0));
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), snes.ppu.mainScreenPixel(0, 8));
     }
 
     @Test
@@ -345,8 +345,8 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][0]);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), snes.ppu.mainScreen()[0][8]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreenPixel(0, 0));
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), snes.ppu.mainScreenPixel(0, 8));
     }
 
     @Test
@@ -367,8 +367,8 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][0]);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), snes.ppu.mainScreen()[0][8]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreenPixel(0, 0));
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), snes.ppu.mainScreenPixel(0, 8));
     }
 
     @Test
@@ -390,8 +390,8 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][0]);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), snes.ppu.mainScreen()[0][8]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreenPixel(0, 0));
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), snes.ppu.mainScreenPixel(0, 8));
     }
 
     @Test
@@ -412,8 +412,8 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][0]);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), snes.ppu.mainScreen()[0][8]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreenPixel(0, 0));
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), snes.ppu.mainScreenPixel(0, 8));
     }
 
     @Test
@@ -432,8 +432,8 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(0, snes.ppu.mainScreen()[0][0]);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][1]);
+        assertEquals(0, snes.ppu.mainScreenPixel(0, 0));
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreenPixel(0, 1));
     }
 
     @Test
@@ -452,8 +452,8 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(0, snes.ppu.mainScreen()[0][0]);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][1]);
+        assertEquals(0, snes.ppu.mainScreenPixel(0, 0));
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreenPixel(0, 1));
     }
 
     @Test
@@ -472,8 +472,8 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][0]);
-        assertEquals(0, snes.ppu.mainScreen()[0][1]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreenPixel(0, 0));
+        assertEquals(0, snes.ppu.mainScreenPixel(0, 1));
     }
 
     @Test
@@ -495,9 +495,9 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(0, snes.ppu.mainScreen()[0][0]);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][1]);
-        assertEquals(0, snes.ppu.mainScreen()[0][2]);
+        assertEquals(0, snes.ppu.mainScreenPixel(0, 0));
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreenPixel(0, 1));
+        assertEquals(0, snes.ppu.mainScreenPixel(0, 2));
     }
 
     @Test
@@ -514,7 +514,7 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(0, snes.ppu.mainScreen()[0][0]);
+        assertEquals(0, snes.ppu.mainScreenPixel(0, 0));
     }
 
     @Test
@@ -538,8 +538,8 @@ class PpuRenderIntegrationTest {
         snes.ppu.renderMainAndSubScreen();
 
         assertEquals(new Vector2<>(512, 256), snes.ppu.background(0).backgroundSize);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.subScreen()[0][0]);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), snes.ppu.mainScreen()[0][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.subScreenPixel(0, 0));
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), snes.ppu.mainScreenPixel(0, 0));
 
         snes.ppu.renderFrame();
 
@@ -557,7 +557,7 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreenPixel(0, 0));
     }
 
     @Test
@@ -575,8 +575,8 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(0, snes.ppu.mainScreen()[0][0]);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][1]);
+        assertEquals(0, snes.ppu.mainScreenPixel(0, 0));
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreenPixel(0, 1));
     }
 
     @Test
@@ -594,9 +594,9 @@ class PpuRenderIntegrationTest {
         snes.ppu.renderMainAndSubScreen();
 
         int mosaicColor = PPUUtils.cgramColorToRGBA(0x001f);
-        assertEquals(mosaicColor, snes.ppu.mainScreen()[0][0]);
-        assertEquals(mosaicColor, snes.ppu.mainScreen()[0][1]);
-        assertEquals(mosaicColor, snes.ppu.mainScreen()[1][0]);
+        assertEquals(mosaicColor, snes.ppu.mainScreenPixel(0, 0));
+        assertEquals(mosaicColor, snes.ppu.mainScreenPixel(0, 1));
+        assertEquals(mosaicColor, snes.ppu.mainScreenPixel(1, 0));
     }
 
     @Test
@@ -620,9 +620,9 @@ class PpuRenderIntegrationTest {
 
         int firstColor = PPUUtils.cgramColorToRGBA(0x001f);
         int secondColor = PPUUtils.cgramColorToRGBA(0x03e0);
-        assertEquals(firstColor, snes.ppu.mainScreen()[0][0]);
-        assertEquals(secondColor, snes.ppu.mainScreen()[1][0]);
-        assertEquals(secondColor, snes.ppu.mainScreen()[2][0]);
+        assertEquals(firstColor, snes.ppu.mainScreenPixel(0, 0));
+        assertEquals(secondColor, snes.ppu.mainScreenPixel(1, 0));
+        assertEquals(secondColor, snes.ppu.mainScreenPixel(2, 0));
     }
 
     @Test
@@ -643,9 +643,9 @@ class PpuRenderIntegrationTest {
 
         int firstColor = PPUUtils.cgramColorToRGBA(0x001f);
         int secondColor = PPUUtils.cgramColorToRGBA(0x03e0);
-        assertEquals(firstColor, snes.ppu.mainScreen()[0][0]);
-        assertEquals(secondColor, snes.ppu.mainScreen()[1][0]);
-        assertEquals(secondColor, snes.ppu.mainScreen()[2][0]);
+        assertEquals(firstColor, snes.ppu.mainScreenPixel(0, 0));
+        assertEquals(secondColor, snes.ppu.mainScreenPixel(1, 0));
+        assertEquals(secondColor, snes.ppu.mainScreenPixel(2, 0));
     }
 
     @Test
@@ -669,9 +669,9 @@ class PpuRenderIntegrationTest {
         snes.ppu.renderMainAndSubScreen();
 
         int firstColor = PPUUtils.cgramColorToRGBA(0x001f);
-        assertEquals(firstColor, snes.ppu.mainScreen()[0][0]);
-        assertEquals(firstColor, snes.ppu.mainScreen()[1][0]);
-        assertEquals(firstColor, snes.ppu.mainScreen()[2][0]);
+        assertEquals(firstColor, snes.ppu.mainScreenPixel(0, 0));
+        assertEquals(firstColor, snes.ppu.mainScreenPixel(1, 0));
+        assertEquals(firstColor, snes.ppu.mainScreenPixel(2, 0));
     }
 
     @Test
@@ -685,7 +685,7 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(0xe784c6ff, snes.ppu.mainScreen()[0][0]);
+        assertEquals(0xe784c6ff, snes.ppu.mainScreenPixel(0, 0));
     }
 
     @Test
@@ -698,7 +698,7 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(0, snes.ppu.mainScreen()[0][1]);
+        assertEquals(0, snes.ppu.mainScreenPixel(0, 1));
     }
 
     @Test
@@ -712,7 +712,7 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][1]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreenPixel(0, 1));
     }
 
     @Test
@@ -726,7 +726,7 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreenPixel(0, 0));
     }
 
     @Test
@@ -740,7 +740,7 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreenPixel(0, 0));
     }
 
     @Test
@@ -757,7 +757,7 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreenPixel(0, 0));
     }
 
     @Test
@@ -772,7 +772,7 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreenPixel(0, 0));
     }
 
     @Test
@@ -792,8 +792,8 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(0, snes.ppu.mainScreen()[0][0]);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][1]);
+        assertEquals(0, snes.ppu.mainScreenPixel(0, 0));
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreenPixel(0, 1));
     }
 
     @Test
@@ -812,8 +812,8 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[1][0]);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), snes.ppu.mainScreen()[0][1]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreenPixel(1, 0));
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), snes.ppu.mainScreenPixel(0, 1));
     }
 
     @Test
@@ -829,7 +829,7 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreenPixel(0, 0));
     }
 
     @Test
@@ -845,7 +845,7 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), snes.ppu.mainScreen()[0][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), snes.ppu.mainScreenPixel(0, 0));
     }
 
     @Test
@@ -856,7 +856,7 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreenPixel(0, 0));
     }
 
     @Test
@@ -874,14 +874,14 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][0]);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[3][0]);
-        assertEquals(0, snes.ppu.mainScreen()[4][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreenPixel(0, 0));
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreenPixel(3, 0));
+        assertEquals(0, snes.ppu.mainScreenPixel(4, 0));
 
         snes.ppu.advanceCountersOnly(PPU.H_COUNTER_DOTS * PPU.V_COUNTER_SCANLINES);
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), snes.ppu.mainScreen()[0][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), snes.ppu.mainScreenPixel(0, 0));
     }
 
     @Test
@@ -897,11 +897,11 @@ class PpuRenderIntegrationTest {
         snes.bus.write(0x2133, 0x02);
 
         snes.ppu.renderMainAndSubScreen();
-        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), snes.ppu.mainScreen()[0][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), snes.ppu.mainScreenPixel(0, 0));
 
         snes.ppu.advanceCountersOnly(PPU.H_COUNTER_DOTS * PPU.V_COUNTER_SCANLINES);
         snes.ppu.renderMainAndSubScreen();
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreenPixel(0, 0));
     }
 
     @Test
@@ -912,7 +912,7 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreenPixel(0, 0));
     }
 
     @Test
@@ -929,7 +929,7 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreenPixel(0, 0));
     }
 
     @Test
@@ -953,7 +953,7 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x7c00), snes.ppu.mainScreen()[0][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x7c00), snes.ppu.mainScreenPixel(0, 0));
     }
 
     @Test
@@ -966,7 +966,7 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), snes.ppu.mainScreen()[0][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), snes.ppu.mainScreenPixel(0, 0));
     }
 
     @Test
@@ -984,12 +984,12 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), snes.ppu.mainScreen()[0][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), snes.ppu.mainScreenPixel(0, 0));
 
         snes.ppu.advanceCountersOnly(PPU.H_COUNTER_DOTS * PPU.V_BLANK_START_SCANLINE);
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreenPixel(0, 0));
     }
 
     @Test
@@ -1006,7 +1006,7 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(0, snes.ppu.mainScreen()[0][0]);
+        assertEquals(0, snes.ppu.mainScreenPixel(0, 0));
         assertEquals(0x40, snes.ppu.read(0x3e) & 0xc0);
     }
 
@@ -1043,7 +1043,7 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreenPixel(0, 0));
         assertEquals(0x40, snes.ppu.read(0x3e) & 0xc0);
     }
 
@@ -1080,7 +1080,7 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(0, snes.ppu.mainScreen()[0][0]);
+        assertEquals(0, snes.ppu.mainScreenPixel(0, 0));
         assertEquals(0x80, snes.ppu.read(0x3e) & 0xc0);
     }
 
@@ -1101,8 +1101,8 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][8]);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), snes.ppu.mainScreen()[8][8]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreenPixel(0, 8));
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), snes.ppu.mainScreenPixel(8, 8));
     }
 
     @Test
@@ -1119,7 +1119,7 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreenPixel(0, 0));
     }
 
     @Test
@@ -1135,7 +1135,7 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreenPixel(0, 0));
     }
 
     @Test
@@ -1152,7 +1152,7 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[8][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreenPixel(8, 0));
     }
 
     @Test
@@ -1167,7 +1167,7 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[24][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreenPixel(24, 0));
     }
 
     @Test
@@ -1183,7 +1183,7 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[56][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreenPixel(56, 0));
     }
 
     @Test
@@ -1198,7 +1198,7 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[24][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreenPixel(24, 0));
     }
 
     @Test
@@ -1215,8 +1215,8 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][0]);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), snes.ppu.mainScreen()[16][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreenPixel(0, 0));
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), snes.ppu.mainScreenPixel(16, 0));
     }
 
     @Test
@@ -1231,7 +1231,7 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreenPixel(0, 0));
     }
 
     @Test
@@ -1246,7 +1246,7 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreen()[0][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), snes.ppu.mainScreenPixel(0, 0));
     }
 
     @Test
@@ -1771,7 +1771,7 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderMainAndSubScreen();
 
-        assertEquals(0, snes.ppu.mainScreen()[0][0]);
+        assertEquals(0, snes.ppu.mainScreenPixel(0, 0));
     }
 
     private static void writeColor(SNES snes, int colorIndex, int color) {

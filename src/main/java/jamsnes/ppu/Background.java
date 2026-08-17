@@ -357,75 +357,106 @@ public class Background {
             int maxWidth,
             short[][] cgramDestinationMap) {
         int height = Math.min(scanlineStates.length, Math.min(bufferDest.length, backgroundSrc.buffer.length));
+        for (int y = 0; y < height; y++) {
+            int width = Math.min(maxWidth, Math.min(bufferDest[y].length, backgroundSrc.buffer[y].length));
+            short[] cgramRow = cgramDestinationMap != null && y < cgramDestinationMap.length
+                    ? cgramDestinationMap[y]
+                    : null;
+            mergeBackgroundScanline(
+                    bufferDest[y], 0,
+                    pixelDestinationLevelMap[y], 0,
+                    sourceDestinationMap == null ? null : sourceDestinationMap[y], 0,
+                    cgramRow, 0,
+                    source,
+                    backgroundSrc,
+                    levelLow,
+                    levelHigh,
+                    scanlineStates[y],
+                    y,
+                    width);
+        }
+    }
+
+    /**
+     * Merges one background scanline into row storage. The destination rows are
+     * addressed as {@code array[base + x]}, so callers may pass either per-row
+     * arrays (base 0) or flat frame rasters (base {@code y * stride}).
+     */
+    static void mergeBackgroundScanline(
+            int[] colorRow, int colorBase,
+            int[] levelRow, int levelBase,
+            int[] sourceRow, int sourceBase,
+            short[] cgramRow, int cgramBase,
+            int source,
+            Background backgroundSrc,
+            int levelLow,
+            int levelHigh,
+            ScanlineState state,
+            int y,
+            int width) {
+        if (state == null || !state.enabled()) {
+            return;
+        }
         int sourceHeight = backgroundSrc.backgroundSize.y > 0
                 ? Math.min(backgroundSrc.backgroundSize.y, backgroundSrc.buffer.length)
                 : backgroundSrc.buffer.length;
         int sourceWidth = backgroundSrc.backgroundSize.x > 0
                 ? Math.min(backgroundSrc.backgroundSize.x, backgroundSrc.buffer[0].length)
                 : backgroundSrc.buffer[0].length;
-        for (int y = 0; y < height; y++) {
-            ScanlineState state = scanlineStates[y];
-            if (state == null || !state.enabled()) {
+        int scanlineLevelLow = state.levelLow() == USE_MERGE_LEVELS ? levelLow : state.levelLow();
+        int scanlineLevelHigh = state.levelHigh() == USE_MERGE_LEVELS ? levelHigh : state.levelHigh();
+        int pixelSize = Math.max(1, state.mosaicSize());
+        int mosaicY = state.mosaicSourceY() == DERIVE_MOSAIC_SOURCE_FROM_OUTPUT
+                ? (y / pixelSize) * pixelSize
+                : state.mosaicSourceY();
+        int[] offsetSourceX = null;
+        int[] offsetScrollY = null;
+        if (backgroundSrc.ppu.usesOffsetPerTile(backgroundSrc.backgroundNumber)) {
+            offsetSourceX = new int[width];
+            offsetScrollY = new int[width];
+            for (int x = 0; x < width; x++) {
+                int mosaicX = (x / pixelSize) * pixelSize;
+                offsetSourceX[x] = backgroundSrc.ppu.offsetPerTileHorizontalCoordinate(
+                        backgroundSrc.backgroundNumber, mosaicX, state.scrollX());
+                offsetScrollY[x] = backgroundSrc.ppu.offsetPerTileVerticalScroll(
+                        backgroundSrc.backgroundNumber, mosaicX, state.scrollX(), state.scrollY());
+            }
+        }
+        for (int x = 0; x < width; x++) {
+            if (state.windowMask() != null
+                    && x < state.windowMask().length
+                    && state.windowMask()[x]) {
                 continue;
             }
-            int scanlineLevelLow = state.levelLow() == USE_MERGE_LEVELS ? levelLow : state.levelLow();
-            int scanlineLevelHigh = state.levelHigh() == USE_MERGE_LEVELS ? levelHigh : state.levelHigh();
-            int width = Math.min(maxWidth, Math.min(bufferDest[y].length, backgroundSrc.buffer[y].length));
-            int pixelSize = Math.max(1, state.mosaicSize());
-            int mosaicY = state.mosaicSourceY() == DERIVE_MOSAIC_SOURCE_FROM_OUTPUT
-                    ? (y / pixelSize) * pixelSize
-                    : state.mosaicSourceY();
-            int[] offsetSourceX = null;
-            int[] offsetScrollY = null;
-            if (backgroundSrc.ppu.usesOffsetPerTile(backgroundSrc.backgroundNumber)) {
-                offsetSourceX = new int[width];
-                offsetScrollY = new int[width];
-                for (int x = 0; x < width; x++) {
-                    int mosaicX = (x / pixelSize) * pixelSize;
-                    offsetSourceX[x] = backgroundSrc.ppu.offsetPerTileHorizontalCoordinate(
-                            backgroundSrc.backgroundNumber, mosaicX, state.scrollX());
-                    offsetScrollY[x] = backgroundSrc.ppu.offsetPerTileVerticalScroll(
-                            backgroundSrc.backgroundNumber, mosaicX, state.scrollX(), state.scrollY());
-                }
+            int mosaicX = (x / pixelSize) * pixelSize;
+            int sourceCoordinateX = mosaicX + state.scrollX();
+            int sourceScrollY = state.scrollY();
+            if (offsetSourceX != null) {
+                sourceCoordinateX = offsetSourceX[x];
+                sourceScrollY = offsetScrollY[x];
             }
-            for (int x = 0; x < width; x++) {
-                if (state.windowMask() != null
-                        && x < state.windowMask().length
-                        && state.windowMask()[x]) {
-                    continue;
-                }
-                int mosaicX = (x / pixelSize) * pixelSize;
-                int sourceCoordinateX = mosaicX + state.scrollX();
-                int sourceScrollY = state.scrollY();
-                if (offsetSourceX != null) {
-                    sourceCoordinateX = offsetSourceX[x];
-                    sourceScrollY = offsetScrollY[x];
-                }
-                int sourceX = Math.floorMod(
-                        sourceCoordinateX * state.horizontalScale() + state.horizontalPhase(),
-                        sourceWidth);
-                int sourceY = Math.floorMod(mosaicY + sourceScrollY, sourceHeight);
-                int pixel = backgroundSrc.resolvePixel(sourceX, sourceY, state);
-                if ((pixel & 0xff) == 0) {
-                    continue;
-                }
-                int pixelLevel = backgroundSrc.isPriorityPixel(sourceX, sourceY)
-                        ? scanlineLevelHigh
-                        : scanlineLevelLow;
-                if (pixelLevel >= pixelDestinationLevelMap[y][x]) {
-                    bufferDest[y][x] = pixel;
-                    pixelDestinationLevelMap[y][x] = pixelLevel;
-                    if (cgramDestinationMap != null
-                            && y < cgramDestinationMap.length
-                            && x < cgramDestinationMap[y].length) {
-                        int cgramIndex = backgroundSrc.resolveCgramIndex(sourceX, sourceY, state);
-                        if (cgramIndex >= 0) {
-                            cgramDestinationMap[y][x] = (short) cgramIndex;
-                        }
+            int sourceX = Math.floorMod(
+                    sourceCoordinateX * state.horizontalScale() + state.horizontalPhase(),
+                    sourceWidth);
+            int sourceY = Math.floorMod(mosaicY + sourceScrollY, sourceHeight);
+            int pixel = backgroundSrc.resolvePixel(sourceX, sourceY, state);
+            if ((pixel & 0xff) == 0) {
+                continue;
+            }
+            int pixelLevel = backgroundSrc.isPriorityPixel(sourceX, sourceY)
+                    ? scanlineLevelHigh
+                    : scanlineLevelLow;
+            if (pixelLevel >= levelRow[levelBase + x]) {
+                colorRow[colorBase + x] = pixel;
+                levelRow[levelBase + x] = pixelLevel;
+                if (cgramRow != null && x < cgramRow.length - cgramBase) {
+                    int cgramIndex = backgroundSrc.resolveCgramIndex(sourceX, sourceY, state);
+                    if (cgramIndex >= 0) {
+                        cgramRow[cgramBase + x] = (short) cgramIndex;
                     }
-                    if (sourceDestinationMap != null) {
-                        sourceDestinationMap[y][x] = source;
-                    }
+                }
+                if (sourceRow != null) {
+                    sourceRow[sourceBase + x] = source;
                 }
             }
         }
