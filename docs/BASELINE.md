@@ -77,3 +77,42 @@ interlaced frames weave 448 or 478 rows.
 
 `mvn clean test`: 819 tests, 0 failures, 1 skipped (local ROM smoke without
 ROM property).
+
+## Results after the architecture redesign (Phase 9)
+
+Same machine, same JVM, same workload and benchmark configuration as Phase 0.
+Recorded 2026-08-17 at commit `cover mixed resolution scanlines in one frame`.
+
+| Metric | Phase 0 baseline | After redesign | Change |
+|---|---:|---:|---|
+| Wall time (1,000,000 updates) | 2.001 s | 1.156 s | -42% |
+| Updates per second | 499,723 | 865,053 | +73% |
+| Emulated fps (unpaced) | 130.4 | 225.8 | +73% |
+| Real-time ratio | 2.17x | 3.76x | target was >= 2x |
+| Allocated bytes per emulated frame | 672,141 | 2,790 | -99.6% (rest is test-sink copies) |
+| GC collections in measurement window | 1 | 0 | - |
+| Retained heap after GC | 71,035,824 B | 11,278,712 B | -84% |
+
+Displayed pixels stayed bit-identical throughout: the SMW smoke golden was
+re-derived only at the two documented surface redefinitions (Phase 1 visible
+region, Phase 2 native rows) and is `0x3db2d0d7` on the native 512x224
+surface.
+
+Structural state at Phase 9:
+
+- The core exposes only `VideoSink`/`AudioSink`; `jamsnes.desktop` owns GLFW,
+  OpenGL presentation (512x478 texture, bulk row upload, 4:3 letterbox), and
+  the pooled OpenAL queue. No core package imports LWJGL; `IRenderer` and all
+  1024x1024 rasters are gone.
+- Backgrounds and Mode 7 sample VRAM directly; composition rasters are flat
+  240x256 arrays; frames use native geometry (224/239/448/478 rows).
+- Steady-state emulation performs no per-frame allocation (verified with
+  thread allocation counters after warmup).
+- The PPU counter domain is timestamped at CPU bus accesses (SchedulerBoundaryTest);
+  the remaining timing domains (APU ratio, refresh, HDMA, timers, interrupts,
+  auto joypad) still elapse through the aggregate per-slice scheduler, which
+  remains the plan's compatibility bridge for later migration steps.
+- The shaded `target/jamsnes.jar` contains the LWJGL production classes and no
+  test sinks.
+
+`mvn clean test`: 827 tests, 0 failures, 2 skipped (opt-in ROM runs).
