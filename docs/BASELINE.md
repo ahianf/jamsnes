@@ -64,6 +64,15 @@ zero padding left the CRC. Golden value for the same workload: `0x71839150`
 (verified equal to the baseline frame's 512x448 sub-region CRC before and
 after the port split).
 
+**Phase 2 surface redefinition:** non-interlaced frames are no longer
+vertically doubled; the canonical smoke surface is now 512x224 (each row one
+source scanline, low-resolution pixels still duplicated horizontally). The
+Phase 1 frame was verified pairwise row-doubled, and the golden value below is
+the CRC of its even rows, so per-scanline pixel content is unchanged. Golden
+value for the same workload: `0x3db2d0d7`. Overscan frames now carry the full
+239-line image (scanlines 1-239) instead of a centered 224-line crop;
+interlaced frames weave 448 or 478 rows.
+
 ## Test suite at baseline
 
 `mvn clean test`: 819 tests, 0 failures, 1 skipped (local ROM smoke without

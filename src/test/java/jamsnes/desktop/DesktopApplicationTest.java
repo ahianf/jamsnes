@@ -17,9 +17,10 @@ class DesktopApplicationTest {
     }
 
     @Test
-    void windowMatchesVisibleSnesFrameAtIntegerScale() {
-        assertEquals(256, DesktopApplication.WINDOW_WIDTH);
-        assertEquals(224, DesktopApplication.WINDOW_HEIGHT);
+    void windowUsesFourThirdsTelevisionAspect() {
         assertEquals(3, DesktopApplication.WINDOW_SCALE);
+        assertEquals(672, DesktopApplication.WINDOW_HEIGHT);
+        assertEquals(896, DesktopApplication.WINDOW_WIDTH);
+        assertEquals(4.0 / 3.0, (double) DesktopApplication.WINDOW_WIDTH / DesktopApplication.WINDOW_HEIGHT, 0.01);
     }
 }

@@ -78,9 +78,8 @@ class SyntheticRomBootTest {
         assertEquals(1, renderer.presentCalls(), "Synthetic ROM should present after its first timer IRQ");
         assertEquals(1, snes.wram.data()[0], "The timer IRQ handler should run exactly once");
         assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.pixel(0, 0));
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.pixel(1, 0));
+        assertEquals(PPUUtils.cgramColorToRGBA(0x0010), renderer.pixel(1, 0));
         assertEquals(PPUUtils.cgramColorToRGBA(0x0010), renderer.pixel(2, 0));
-        assertEquals(PPUUtils.cgramColorToRGBA(0x0010), renderer.pixel(4, 0));
         assertEquals(0, snes.cpu.internalRegisters()[0x11] & 0x80,
                 "The handler should acknowledge TIMEUP");
         assertEquals(0x8030, snes.cpu.registers().pc, "RTI should return execution to the idle loop");
@@ -113,8 +112,7 @@ class SyntheticRomBootTest {
 
         assertEquals(2, renderer.presentCalls(), "Synthetic ROM should present its HDMA-updated frame");
         assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.pixel(0, 0));
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.pixel(1, 0));
-        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), renderer.pixel(2, 0));
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), renderer.pixel(1, 0));
         assertEquals(0x8104, snes.cpu.dmaChannels()[0].getTableAddress());
         assertEquals(0x8116, snes.cpu.dmaChannels()[1].getTableAddress());
         assertEquals(0x8051, snes.cpu.registers().pc);

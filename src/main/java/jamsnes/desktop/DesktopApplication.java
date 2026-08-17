@@ -53,9 +53,9 @@ import static org.lwjgl.system.MemoryUtil.NULL;
  * {@code VideoSink} and {@code AudioSink} ports.
  */
 public final class DesktopApplication {
-    static final int WINDOW_WIDTH = 256;
-    static final int WINDOW_HEIGHT = 224;
     static final int WINDOW_SCALE = 3;
+    static final int WINDOW_HEIGHT = 224 * WINDOW_SCALE;
+    static final int WINDOW_WIDTH = WINDOW_HEIGHT * 4 / 3;
     private static final String WINDOW_TITLE = "JamSNES";
 
     private long window = NULL;
@@ -109,8 +109,7 @@ public final class DesktopApplication {
         glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
-        window = glfwCreateWindow(WINDOW_WIDTH * WINDOW_SCALE, WINDOW_HEIGHT * WINDOW_SCALE,
-                WINDOW_TITLE, NULL, NULL);
+        window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_TITLE, NULL, NULL);
         if (window == NULL) {
             throw new IllegalStateException("Could not create GLFW window");
         }

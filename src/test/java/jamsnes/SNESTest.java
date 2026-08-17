@@ -397,7 +397,7 @@ class SNESTest {
         snes.update();
 
         assertEquals(1, renderer.drawScreenCalls);
-        assertEquals(2 * PPU.VISIBLE_HEIGHT, renderer.lastVisibleHeight);
+        assertEquals(PPU.VISIBLE_HEIGHT, renderer.lastVisibleHeight);
     }
 
     @Test
@@ -1574,7 +1574,7 @@ class SNESTest {
             drawScreenCalls++;
             lastVisibleHeight = frame.visibleHeight();
             firstScanlinePixel = frame.pixels()[0];
-            secondScanlinePixel = frame.pixels()[2 * VideoFrame.STRIDE];
+            secondScanlinePixel = frame.pixels()[VideoFrame.STRIDE];
         }
     }
 }

@@ -3,7 +3,7 @@ package jamsnes.ppu;
 import jamsnes.SNES;
 import jamsnes.models.Vector2;
 import jamsnes.audio.RecordingAudioSink;
-import jamsnes.video.VideoFrame;
+import jamsnes.video.RecordingVideoSink;
 import jamsnes.video.VideoSink;
 import org.junit.jupiter.api.Test;
 
@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class PpuRenderIntegrationTest {
     @Test
     void registerWritesRefreshOwnedBackgrounds() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         writeColor(snes, 1, 0x001f);
         snes.bus.write(0x2107, 0x04);
         snes.bus.write(0x210b, 0x01);
@@ -28,7 +28,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void composesModeZeroBackgroundsByPriorityLevel() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         writeColor(snes, 1, 0x001f);
         writeColor(snes, 2, 0x03e0);
         snes.bus.write(0x2105, 0x00);
@@ -52,7 +52,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void modeZeroUsesBackgroundTwoPaletteRegion() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         writeColor(snes, 1, 0x001f);
         writeColor(snes, 33, 0x03e0);
         snes.bus.write(0x2105, 0x00);
@@ -70,7 +70,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void modeZeroBackgroundTwoLowPriorityRendersAboveObjectPriorityOne() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         writeColor(snes, 33, 0x001f);
         snes.bus.write(0x2105, 0x00);
         snes.bus.write(0x2108, 0x04);
@@ -88,7 +88,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void modeOneBg3PriorityBitRaisesBg3Priority() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         writeColor(snes, 1, 0x001f);
         writeColor(snes, 2, 0x03e0);
         snes.bus.write(0x2105, 0x09);
@@ -112,7 +112,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void modeOneBg3PriorityBitAppliesPerScanline() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         writeColor(snes, 1, 0x001f);
         writeColor(snes, 2, 0x03e0);
         snes.bus.write(0x2105, 0x09);
@@ -144,7 +144,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void modeOneBackgroundThreeHighPriorityRendersAboveObjectPriorityZero() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         writeColor(snes, 1, 0x001f);
         snes.bus.write(0x2105, 0x01);
         snes.bus.write(0x2109, 0x04);
@@ -162,7 +162,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void composesModeTwoBackgrounds() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         writeColor(snes, 1, 0x001f);
         writeColor(snes, 2, 0x03e0);
         snes.bus.write(0x2105, 0x02);
@@ -186,7 +186,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void modeTwoBackgroundTwoHighPriorityRendersAboveObjectPriorityOne() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         writeColor(snes, 1, 0x001f);
         snes.bus.write(0x2105, 0x02);
         snes.bus.write(0x2108, 0x04);
@@ -204,7 +204,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void backgroundScrollOffsetsSelectScrolledPixels() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         writeColor(snes, 1, 0x001f);
         writeColor(snes, 2, 0x03e0);
         snes.bus.write(0x210b, 0x01);
@@ -227,7 +227,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void verticalBackgroundScrollSelectsTheLowerTilemapPage() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         writeColor(snes, 1, 0x001f);
         snes.bus.write(0x2107, 0x02);
         snes.bus.write(0x210b, 0x01);
@@ -245,7 +245,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void backgroundMosaicRepeatsFirstPixelInMosaicBlock() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         writeColor(snes, 1, 0x001f);
         writeColor(snes, 2, 0x03e0);
         snes.bus.write(0x2106, 0x11);
@@ -264,7 +264,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void modeThreeDirectColorBypassesCgramForBackgroundOne() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         writeColor(snes, 7, 0x03e0);
         snes.bus.write(0x2105, 0x03);
         snes.bus.write(0x210b, 0x01);
@@ -283,7 +283,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void modeTwoUsesBg3HorizontalOffsetsAfterLeftmostVisibleColumn() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         writeColor(snes, 1, 0x001f);
         writeColor(snes, 2, 0x03e0);
         snes.bus.write(0x2105, 0x02);
@@ -306,7 +306,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void modeTwoUsesBg3VerticalOffsetsFromFollowingRow() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         writeColor(snes, 1, 0x001f);
         writeColor(snes, 2, 0x03e0);
         snes.bus.write(0x2105, 0x02);
@@ -328,7 +328,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void modeFourUsesHorizontalEntriesWhenDirectionBitIsClear() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         writeColor(snes, 1, 0x001f);
         writeColor(snes, 2, 0x03e0);
         snes.bus.write(0x2105, 0x04);
@@ -351,7 +351,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void modeFourUsesVerticalEntriesWhenDirectionBitIsSet() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         writeColor(snes, 1, 0x001f);
         writeColor(snes, 2, 0x03e0);
         snes.bus.write(0x2105, 0x04);
@@ -373,7 +373,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void modeSixUsesBg3HorizontalOffsetsAtHighResolution() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         writeColor(snes, 1, 0x001f);
         writeColor(snes, 2, 0x03e0);
         snes.bus.write(0x2105, 0x06);
@@ -396,7 +396,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void modeSixUsesBg3VerticalOffsetsAtHighResolution() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         writeColor(snes, 1, 0x001f);
         writeColor(snes, 2, 0x03e0);
         snes.bus.write(0x2105, 0x06);
@@ -418,7 +418,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void mainScreenWindowMaskSuppressesBackgroundPixelsInsideWindow() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         writeColor(snes, 1, 0x001f);
         snes.bus.write(0x210b, 0x01);
         snes.bus.write(0x2123, 0x02);
@@ -438,7 +438,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void mainScreenWindowTwoMaskSuppressesBackgroundPixelsInsideWindow() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         writeColor(snes, 1, 0x001f);
         snes.bus.write(0x210b, 0x01);
         snes.bus.write(0x2123, 0x08);
@@ -458,7 +458,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void invertedMainScreenWindowMasksBackgroundPixelsOutsideWindow() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         writeColor(snes, 1, 0x001f);
         snes.bus.write(0x210b, 0x01);
         snes.bus.write(0x2123, 0x03);
@@ -478,7 +478,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void backgroundWindowLogicUsesItsLowRegisterPair() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         writeColor(snes, 1, 0x001f);
         snes.bus.write(0x210b, 0x01);
         snes.bus.write(0x2123, 0x0a);
@@ -502,7 +502,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void modeSixComposesOnlyBackgroundOne() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         writeColor(snes, 1, 0x001f);
         snes.bus.write(0x2105, 0x06);
         snes.bus.write(0x2108, 0x08);
@@ -519,7 +519,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void modeFiveDeinterleavesEvenAndOddBackgroundDots() {
-        TestRenderer renderer = new TestRenderer();
+        RecordingVideoSink renderer = new RecordingVideoSink();
         SNES snes = init(renderer);
         writeColor(snes, 1, 0x001f);
         writeColor(snes, 2, 0x03e0);
@@ -543,13 +543,13 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderFrame();
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.firstRowPixels[0]);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), renderer.firstRowPixels[1]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.pixel(0, 0));
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), renderer.pixel(0, 1));
     }
 
     @Test
     void modeSevenRendersIdentityMappedBackgroundOne() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         writeColor(snes, 5, 0x001f);
         setupMode7Identity(snes);
         writeMode7Map(snes, 0, 0, 1);
@@ -562,7 +562,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void modeSevenBackgroundOneHonorsMainScreenWindowMask() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         writeColor(snes, 5, 0x001f);
         setupMode7Identity(snes);
         snes.bus.write(0x2123, 0x02);
@@ -581,7 +581,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void modeSevenAppliesBackgroundOneMosaicBeforeTransformingCoordinates() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         writeColor(snes, 5, 0x001f);
         writeColor(snes, 6, 0x03e0);
         setupMode7Identity(snes);
@@ -601,7 +601,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void backgroundVerticalMosaicRestartsWhenEnabledMidFrame() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         writeColor(snes, 1, 0x001f);
         writeColor(snes, 2, 0x03e0);
         snes.bus.write(0x210b, 0x01);
@@ -627,7 +627,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void modeSevenVerticalMosaicRestartsWhenEnabledMidFrame() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         writeColor(snes, 5, 0x001f);
         writeColor(snes, 6, 0x03e0);
         setupMode7Identity(snes);
@@ -650,7 +650,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void verticalMosaicCounterIsSharedAcrossBackgroundEnableBits() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         writeColor(snes, 1, 0x001f);
         writeColor(snes, 2, 0x03e0);
         snes.bus.write(0x210b, 0x01);
@@ -676,7 +676,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void modeSevenDirectColorBypassesCgramForBackgroundOne() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         writeColor(snes, 0xe7, 0x001f);
         setupMode7Identity(snes);
         snes.bus.write(0x2130, 0x01);
@@ -690,7 +690,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void modeSevenLargePlayingFieldMakesOutsidePixelsTransparent() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         setupMode7Identity(snes);
         snes.bus.write(0x211a, 0x80);
         writeMode7Register(snes, 0x210d, 0x03ff);
@@ -703,7 +703,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void modeSevenLargePlayingFieldCanFillOutsidePixelsWithCharacterZero() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         writeColor(snes, 5, 0x001f);
         setupMode7Identity(snes);
         snes.bus.write(0x211a, 0xc0);
@@ -717,7 +717,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void modeSevenHorizontalMirroringSamplesFromOppositeSide() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         writeColor(snes, 5, 0x001f);
         setupMode7Identity(snes);
         snes.bus.write(0x211a, 0x01);
@@ -731,7 +731,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void modeSevenVerticalMirroringSamplesFromOppositeSide() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         writeColor(snes, 5, 0x001f);
         setupMode7Identity(snes);
         snes.bus.write(0x211a, 0x02);
@@ -745,7 +745,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void modeSevenTransformsScrollOffsetWithTheAffineMatrix() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         writeColor(snes, 5, 0x001f);
         writeColor(snes, 6, 0x03e0);
         setupMode7Identity(snes);
@@ -762,7 +762,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void modeSevenExtBgRendersBackgroundTwoWhenEnabled() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         writeColor(snes, 5, 0x001f);
         setupMode7Identity(snes);
         snes.bus.write(0x2133, 0x40);
@@ -777,7 +777,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void modeSevenExtBgHonorsBackgroundTwoMainScreenWindowMask() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         writeColor(snes, 5, 0x001f);
         setupMode7Identity(snes);
         snes.bus.write(0x2133, 0x40);
@@ -798,7 +798,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void modeSevenExtBgUsesBg1ForVerticalMosaicAndBg2ForHorizontalMosaic() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         writeColor(snes, 5, 0x001f);
         writeColor(snes, 6, 0x03e0);
         setupMode7Identity(snes);
@@ -818,7 +818,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void modeSevenExtBgBackgroundTwoIgnoresDirectColor() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         writeColor(snes, 5, 0x001f);
         setupMode7Identity(snes);
         snes.bus.write(0x2130, 0x01);
@@ -834,7 +834,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void modeSevenExtBgUsesBitSevenAsPriority() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         writeColor(snes, 5, 0x001f);
         writeColor(snes, 6, 0x03e0);
         setupMode7Identity(snes);
@@ -850,7 +850,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void rendersObjectPixelsWhenEnabledOnMainScreen() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         setupObjFirstPixel(snes, 0x001f);
         snes.bus.write(0x212c, 0x10);
 
@@ -861,7 +861,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void objectInterlaceSelectsAlternatingSourceRowsAndHalvesCoverage() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         hideAllObjects(snes);
         writeColor(snes, 129, 0x001f);
         writeColor(snes, 130, 0x03e0);
@@ -886,7 +886,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void verticallyFlippedObjectInterlaceReversesFieldRowSelection() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         hideAllObjects(snes);
         writeColor(snes, 129, 0x001f);
         writeColor(snes, 130, 0x03e0);
@@ -906,7 +906,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void lowerObjectIndexWinsEqualObjectPriorityByDefault() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         setupOverlappingObjectPixels(snes);
         snes.bus.write(0x212c, 0x10);
 
@@ -917,7 +917,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void lowerObjectIndexWinsRegardlessOfObjectPriorityBits() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         hideAllObjects(snes);
         writeColor(snes, 129, 0x001f);
         writeColor(snes, 145, 0x03e0);
@@ -934,7 +934,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void higherOamObjectBehindBackgroundBlocksLowerOamObject() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         hideAllObjects(snes);
         writeColor(snes, 33, 0x7c00);
         writeColor(snes, 129, 0x001f);
@@ -958,7 +958,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void oamPriorityRotationSelectsConfiguredObjectAsHighestPriority() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         setupOverlappingObjectPixels(snes);
         snes.bus.write(0x2102, 0x02);
         snes.bus.write(0x2103, 0x80);
@@ -971,7 +971,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void oamDataAccessAdvancesPriorityRotationUntilVblankReloadsAddress() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         setupOverlappingObjectPixels(snes);
         snes.bus.write(0x2100, 0x0f);
         snes.bus.write(0x2102, 0x00);
@@ -994,7 +994,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void objectRangeLimitDropsTheThirtyThirdObjectAndSetsStat77() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         hideAllObjects(snes);
         writeColor(snes, 129, 0x001f);
         snes.ppu.vram.write(0x0000, 0x80);
@@ -1012,7 +1012,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void objectOverflowFlagsClearAtEndOfVblank() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         hideAllObjects(snes);
         for (int objectIndex = 0; objectIndex < 33; objectIndex++) {
             writeObject(snes, objectIndex, 0x08, 0x00, 0x00, 0x30);
@@ -1029,7 +1029,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void objectRangeLimitStartsAtThePriorityRotationObject() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         hideAllObjects(snes);
         writeColor(snes, 129, 0x001f);
         snes.ppu.vram.write(0x0000, 0x80);
@@ -1049,7 +1049,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void objectsAtNegativeTwoHundredFiftySixStillCountTowardTheRangeLimit() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         hideAllObjects(snes);
         for (int objectIndex = 0; objectIndex < 33; objectIndex++) {
             writeObject(snes, objectIndex, 0x00, 0x00, 0x00, 0x00);
@@ -1067,7 +1067,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void objectTimeLimitDropsTheThirtyFifthSliverAndSetsStat77() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         hideAllObjects(snes);
         writeColor(snes, 129, 0x001f);
         snes.ppu.vram.write(0x0000, 0x80);
@@ -1086,7 +1086,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void largeObjectsWrapLowTileNibbleHorizontally() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         hideAllObjects(snes);
         writeColor(snes, 129, 0x001f);
         writeColor(snes, 130, 0x03e0);
@@ -1107,7 +1107,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void objectNameBaseUsesVramWordAddresses() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         hideAllObjects(snes);
         writeColor(snes, 129, 0x001f);
         writeColor(snes, 130, 0x03e0);
@@ -1124,7 +1124,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void objectNameSelectionUsesVramWordAddresses() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         hideAllObjects(snes);
         writeColor(snes, 129, 0x001f);
         writeColor(snes, 130, 0x03e0);
@@ -1140,7 +1140,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void largeObjectsWrapHighTileNibbleWithinTheirCharacterTable() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         hideAllObjects(snes);
         writeColor(snes, 129, 0x001f);
         writeColor(snes, 130, 0x03e0);
@@ -1157,7 +1157,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void objectSizeModeSixRendersSmallObjectsAsSixteenByThirtyTwo() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         hideAllObjects(snes);
         writeColor(snes, 129, 0x001f);
         snes.bus.write(0x2101, 0xc0);
@@ -1172,7 +1172,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void objectSizeModeSixRendersLargeObjectsAsThirtyTwoBySixtyFour() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         hideAllObjects(snes);
         writeColor(snes, 129, 0x001f);
         snes.bus.write(0x2101, 0xc0);
@@ -1188,7 +1188,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void objectSizeModeSevenRendersSmallObjectsAsSixteenByThirtyTwo() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         hideAllObjects(snes);
         writeColor(snes, 129, 0x001f);
         snes.bus.write(0x2101, 0xe0);
@@ -1203,7 +1203,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void verticallyFlippedRectangularObjectsFlipEachSquareHalf() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         hideAllObjects(snes);
         writeColor(snes, 129, 0x001f);
         writeColor(snes, 130, 0x03e0);
@@ -1221,7 +1221,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void objectsWrapVerticallyAcrossEightBitCoordinates() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         hideAllObjects(snes);
         writeColor(snes, 129, 0x001f);
         snes.bus.write(0x2101, 0x60);
@@ -1236,7 +1236,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void rectangularObjectsWrapTheirLowerHalfToTheTop() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         hideAllObjects(snes);
         writeColor(snes, 129, 0x001f);
         snes.bus.write(0x2101, 0xc0);
@@ -1251,7 +1251,7 @@ class PpuRenderIntegrationTest {
 
     @Test
     void pseudoHiresAlternatesSubscreenAndMainScreenDots() {
-        TestRenderer renderer = new TestRenderer();
+        RecordingVideoSink renderer = new RecordingVideoSink();
         SNES snes = init(renderer);
         writeColor(snes, 1, 0x001f);
         writeColor(snes, 33, 0x03e0);
@@ -1272,15 +1272,15 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.update(1);
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), renderer.firstRowPixels[0]);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.firstRowPixels[1]);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), renderer.firstRowPixels[2]);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.firstRowPixels[3]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), renderer.pixel(0, 0));
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.pixel(0, 1));
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), renderer.pixel(0, 2));
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.pixel(0, 3));
     }
 
     @Test
     void pseudoHiresUsesBackdropColorForEmptySubscreenDots() {
-        TestRenderer renderer = new TestRenderer();
+        RecordingVideoSink renderer = new RecordingVideoSink();
         SNES snes = init(renderer);
         writeColor(snes, 0, 0x7c00);
         writeColor(snes, 1, 0x001f);
@@ -1295,13 +1295,13 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.update(1);
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x7c00), renderer.firstRowPixels[0]);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.firstRowPixels[1]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x7c00), renderer.pixel(0, 0));
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.pixel(0, 1));
     }
 
     @Test
     void pseudoHiresAppliesFixedColorMathToSubscreenAndMainDots() {
-        TestRenderer renderer = new TestRenderer();
+        RecordingVideoSink renderer = new RecordingVideoSink();
         SNES snes = init(renderer);
         writeColor(snes, 1, 0x0010);
         writeColor(snes, 33, 0x4000);
@@ -1324,13 +1324,13 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.update(1);
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x4200), renderer.firstRowPixels[0]);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x0210), renderer.firstRowPixels[1]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x4200), renderer.pixel(0, 0));
+        assertEquals(PPUUtils.cgramColorToRGBA(0x0210), renderer.pixel(0, 1));
     }
 
     @Test
     void pseudoHiresCanAddMainAndSubscreenDotsToEachOther() {
-        TestRenderer renderer = new TestRenderer();
+        RecordingVideoSink renderer = new RecordingVideoSink();
         SNES snes = init(renderer);
         writeColor(snes, 1, 0x0010);
         writeColor(snes, 33, 0x4000);
@@ -1353,13 +1353,13 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.update(1);
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x4010), renderer.firstRowPixels[0]);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x4010), renderer.firstRowPixels[1]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x4010), renderer.pixel(0, 0));
+        assertEquals(PPUUtils.cgramColorToRGBA(0x4010), renderer.pixel(0, 1));
     }
 
     @Test
     void pseudoHiresClipsBothDotsWithTheMainColorWindow() {
-        TestRenderer renderer = new TestRenderer();
+        RecordingVideoSink renderer = new RecordingVideoSink();
         SNES snes = init(renderer);
         writeColor(snes, 1, 0x001f);
         writeColor(snes, 33, 0x03e0);
@@ -1384,15 +1384,15 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.update(1);
 
-        assertEquals(0x000000ff, renderer.firstRowPixels[0]);
-        assertEquals(0x000000ff, renderer.firstRowPixels[1]);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), renderer.firstRowPixels[2]);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.firstRowPixels[3]);
+        assertEquals(0x000000ff, renderer.pixel(0, 0));
+        assertEquals(0x000000ff, renderer.pixel(0, 1));
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), renderer.pixel(0, 2));
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.pixel(0, 3));
     }
 
     @Test
     void pseudoHiresStateIsLatchedPerScanline() {
-        TestRenderer renderer = new TestRenderer();
+        RecordingVideoSink renderer = new RecordingVideoSink();
         SNES snes = init(renderer);
         writeColor(snes, 1, 0x001f);
         writeColor(snes, 33, 0x03e0);
@@ -1415,15 +1415,15 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderFrame();
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.firstRowPixels[0]);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.firstRowPixels[1]);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), renderer.secondRowPixels[0]);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.secondRowPixels[1]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.pixel(0, 0));
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.pixel(0, 1));
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), renderer.pixel(1, 0));
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.pixel(1, 1));
     }
 
     @Test
-    void progressiveOutputDuplicatesEachSourceScanline() {
-        TestRenderer renderer = new TestRenderer();
+    void progressiveOutputMapsEachSourceScanlineToOneRow() {
+        RecordingVideoSink renderer = new RecordingVideoSink();
         SNES snes = init(renderer);
         writeColor(snes, 1, 0x001f);
         writeColor(snes, 2, 0x03e0);
@@ -1437,15 +1437,13 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderFrame();
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.outputRows[0][0]);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.outputRows[1][0]);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), renderer.outputRows[2][0]);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), renderer.outputRows[3][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.pixel(0, 0));
+        assertEquals(PPUUtils.cgramColorToRGBA(0x03e0), renderer.pixel(1, 0));
     }
 
     @Test
     void progressiveOutputSkipsPreRenderingScanline() {
-        TestRenderer renderer = new TestRenderer();
+        RecordingVideoSink renderer = new RecordingVideoSink();
         SNES snes = init(renderer);
         writeColor(snes, 0, 0x001f);
         snes.ppu.captureScanlineState(0);
@@ -1454,33 +1452,13 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderFrame();
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.firstPixel);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.pixel(0, 0));
     }
 
-    @Test
-    void overscanOutputCentersVisibleViewportOnScanlineNine() {
-        TestRenderer renderer = new TestRenderer();
-        SNES snes = init(renderer);
-        writeColor(snes, 0, 0x001f);
-        snes.bus.write(0x2133, 0x04);
-        snes.ppu.captureScanlineState(0);
-        snes.ppu.captureScanlineState(8);
-        snes.bus.write(0x2100, 0x0f);
-        snes.ppu.captureScanlineState(9);
-        snes.ppu.captureScanlineState(232);
-        snes.bus.write(0x2100, 0x8f);
-        snes.ppu.captureScanlineState(233);
-
-        snes.ppu.renderFrame();
-
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.firstPixel);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.lastPixel);
-        assertEquals(2 * PPU.VISIBLE_HEIGHT, renderer.lastVisibleHeight);
-    }
 
     @Test
     void screenInterlaceWeavesFieldsIntoAlternatingOutputRows() {
-        TestRenderer renderer = new TestRenderer();
+        RecordingVideoSink renderer = new RecordingVideoSink();
         SNES snes = init(renderer);
         writeColor(snes, 1, 0x001f);
         snes.bus.write(0x2100, 0x0f);
@@ -1494,33 +1472,33 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.renderFrame();
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.outputRows[0][0]);
-        assertEquals(0, renderer.outputRows[1][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.pixel(0, 0));
+        assertEquals(0, renderer.pixel(1, 0));
 
         snes.ppu.advanceCountersOnly(PPU.H_COUNTER_DOTS * (PPU.V_COUNTER_SCANLINES + 1));
         snes.ppu.renderFrame();
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.outputRows[0][0]);
-        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.outputRows[1][0]);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.pixel(0, 0));
+        assertEquals(PPUUtils.cgramColorToRGBA(0x001f), renderer.pixel(1, 0));
     }
 
     @Test
     void updateDrawsComposedScreenToRenderer() {
-        TestRenderer renderer = new TestRenderer();
+        RecordingVideoSink renderer = new RecordingVideoSink();
         SNES snes = init(renderer);
         snes.bus.write(0x2100, 0x0f);
         writeColor(snes, 0, 0x7c00);
 
         snes.ppu.update(1);
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x7c00), renderer.firstPixel);
-        assertEquals(2 * PPU.VISIBLE_HEIGHT, renderer.lastVisibleHeight);
-        assertEquals(1, renderer.drawScreenCalls);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x7c00), renderer.pixel(0, 0));
+        assertEquals(PPU.VISIBLE_HEIGHT, renderer.visibleHeight());
+        assertEquals(1, renderer.presentCalls());
     }
 
     @Test
     void updateDoesNotDisplaySubscreenWithoutColorMath() {
-        TestRenderer renderer = new TestRenderer();
+        RecordingVideoSink renderer = new RecordingVideoSink();
         SNES snes = init(renderer);
         writeColor(snes, 0, 0x0010);
         writeColor(snes, 1, 0x0200);
@@ -1536,48 +1514,48 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.update(1);
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x0010), renderer.firstPixel);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x0010), renderer.pixel(0, 0));
     }
 
     @Test
     void updateAppliesDisplayBrightness() {
-        TestRenderer renderer = new TestRenderer();
+        RecordingVideoSink renderer = new RecordingVideoSink();
         SNES snes = init(renderer);
         snes.bus.write(0x2100, 0x07);
         writeColor(snes, 0, 0x001f);
 
         snes.ppu.update(1);
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x000e), renderer.firstPixel);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x000e), renderer.pixel(0, 0));
     }
 
     @Test
     void updateAppliesDisplayBrightnessInFiveBitColorSpace() {
-        TestRenderer renderer = new TestRenderer();
+        RecordingVideoSink renderer = new RecordingVideoSink();
         SNES snes = init(renderer);
         snes.bus.write(0x2100, 0x07);
         writeColor(snes, 0, 0x0004);
 
         snes.ppu.update(1);
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x0001), renderer.firstPixel);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x0001), renderer.pixel(0, 0));
     }
 
     @Test
     void updateDrawsBlackDuringForcedBlank() {
-        TestRenderer renderer = new TestRenderer();
+        RecordingVideoSink renderer = new RecordingVideoSink();
         SNES snes = init(renderer);
         snes.bus.write(0x2100, 0x8f);
         writeColor(snes, 0, 0x001f);
 
         snes.ppu.update(1);
 
-        assertEquals(0x000000ff, renderer.firstPixel);
+        assertEquals(0x000000ff, renderer.pixel(0, 0));
     }
 
     @Test
     void updateAddsFixedColorMathForEnabledBackground() {
-        TestRenderer renderer = new TestRenderer();
+        RecordingVideoSink renderer = new RecordingVideoSink();
         SNES snes = init(renderer);
         setupBg1FirstPixel(snes, 0x0010);
         snes.bus.write(0x2100, 0x0f);
@@ -1586,12 +1564,12 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.update(1);
 
-        assertEquals(0x848400ff, renderer.firstPixel);
+        assertEquals(0x848400ff, renderer.pixel(0, 0));
     }
 
     @Test
     void updateSubtractsFixedColorMathForEnabledBackground() {
-        TestRenderer renderer = new TestRenderer();
+        RecordingVideoSink renderer = new RecordingVideoSink();
         SNES snes = init(renderer);
         setupBg1FirstPixel(snes, 0x0210);
         snes.bus.write(0x2100, 0x0f);
@@ -1600,12 +1578,12 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.update(1);
 
-        assertEquals(0x840000ff, renderer.firstPixel);
+        assertEquals(0x840000ff, renderer.pixel(0, 0));
     }
 
     @Test
     void updateUsesFixedColorForTransparentSubscreenColorMath() {
-        TestRenderer renderer = new TestRenderer();
+        RecordingVideoSink renderer = new RecordingVideoSink();
         SNES snes = init(renderer);
         setupBg1FirstPixel(snes, 0x0010);
         snes.bus.write(0x2100, 0x0f);
@@ -1615,12 +1593,12 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.update(1);
 
-        assertEquals(0x848400ff, renderer.firstPixel);
+        assertEquals(0x848400ff, renderer.pixel(0, 0));
     }
 
     @Test
     void updateDoesNotHalfTransparentSubscreenBackdrop() {
-        TestRenderer renderer = new TestRenderer();
+        RecordingVideoSink renderer = new RecordingVideoSink();
         SNES snes = init(renderer);
         setupBg1FirstPixel(snes, 0x0010);
         snes.bus.write(0x2100, 0x0f);
@@ -1630,12 +1608,12 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.update(1);
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x4010), renderer.firstPixel);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x4010), renderer.pixel(0, 0));
     }
 
     @Test
     void updateHalvesVisibleSubscreenAgainstMainBackdrop() {
-        TestRenderer renderer = new TestRenderer();
+        RecordingVideoSink renderer = new RecordingVideoSink();
         SNES snes = init(renderer);
         writeColor(snes, 0, 0x0010);
         writeColor(snes, 1, 0x0200);
@@ -1653,12 +1631,12 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.update(1);
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x0108), renderer.firstPixel);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x0108), renderer.pixel(0, 0));
     }
 
     @Test
     void updateHalvesColorMathInFiveBitColorSpace() {
-        TestRenderer renderer = new TestRenderer();
+        RecordingVideoSink renderer = new RecordingVideoSink();
         SNES snes = init(renderer);
         setupBg1FirstPixel(snes, 0x0004);
         snes.bus.write(0x2100, 0x0f);
@@ -1667,12 +1645,12 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.update(1);
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x0004), renderer.firstPixel);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x0004), renderer.pixel(0, 0));
     }
 
     @Test
     void updateCanGloballyPreventColorMath() {
-        TestRenderer renderer = new TestRenderer();
+        RecordingVideoSink renderer = new RecordingVideoSink();
         SNES snes = init(renderer);
         setupBg1FirstPixel(snes, 0x0010);
         snes.bus.write(0x2100, 0x0f);
@@ -1682,12 +1660,12 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.update(1);
 
-        assertEquals(0x840000ff, renderer.firstPixel);
+        assertEquals(0x840000ff, renderer.pixel(0, 0));
     }
 
     @Test
     void updateCanGloballyClipColorToBlackBeforeMath() {
-        TestRenderer renderer = new TestRenderer();
+        RecordingVideoSink renderer = new RecordingVideoSink();
         SNES snes = init(renderer);
         setupBg1FirstPixel(snes, 0x0010);
         snes.bus.write(0x2100, 0x0f);
@@ -1697,12 +1675,12 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.update(1);
 
-        assertEquals(0x008400ff, renderer.firstPixel);
+        assertEquals(0x008400ff, renderer.pixel(0, 0));
     }
 
     @Test
     void updateDoesNotHalfColorMathWhenMainScreenIsClippedToBlack() {
-        TestRenderer renderer = new TestRenderer();
+        RecordingVideoSink renderer = new RecordingVideoSink();
         SNES snes = init(renderer);
         setupBg1FirstPixel(snes, 0x0010);
         snes.bus.write(0x2100, 0x0f);
@@ -1712,12 +1690,12 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.update(1);
 
-        assertEquals(PPUUtils.cgramColorToRGBA(0x0200), renderer.firstPixel);
+        assertEquals(PPUUtils.cgramColorToRGBA(0x0200), renderer.pixel(0, 0));
     }
 
     @Test
     void updateCanClipColorInsideColorWindowBeforeMath() {
-        TestRenderer renderer = new TestRenderer();
+        RecordingVideoSink renderer = new RecordingVideoSink();
         SNES snes = init(renderer);
         setupBg1FirstPixel(snes, 0x0010);
         snes.bus.write(0x2100, 0x0f);
@@ -1730,12 +1708,12 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.update(1);
 
-        assertEquals(0x008400ff, renderer.firstPixel);
+        assertEquals(0x008400ff, renderer.pixel(0, 0));
     }
 
     @Test
     void updateCanPreventColorMathOutsideColorWindow() {
-        TestRenderer renderer = new TestRenderer();
+        RecordingVideoSink renderer = new RecordingVideoSink();
         SNES snes = init(renderer);
         setupBg1FirstPixel(snes, 0x0010);
         snes.bus.write(0x2100, 0x0f);
@@ -1748,12 +1726,12 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.update(1);
 
-        assertEquals(0x840000ff, renderer.firstPixel);
+        assertEquals(0x840000ff, renderer.pixel(0, 0));
     }
 
     @Test
     void updateAddsFixedColorMathForEnabledObject() {
-        TestRenderer renderer = new TestRenderer();
+        RecordingVideoSink renderer = new RecordingVideoSink();
         SNES snes = init(renderer);
         setupObjFirstPixel(snes, 0x0010, 4);
         snes.bus.write(0x2100, 0x0f);
@@ -1763,12 +1741,12 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.update(1);
 
-        assertEquals(0x848400ff, renderer.firstPixel);
+        assertEquals(0x848400ff, renderer.pixel(0, 0));
     }
 
     @Test
     void updateDoesNotApplyObjectColorMathForLowerPalettes() {
-        TestRenderer renderer = new TestRenderer();
+        RecordingVideoSink renderer = new RecordingVideoSink();
         SNES snes = init(renderer);
         setupObjFirstPixel(snes, 0x0010);
         snes.bus.write(0x2100, 0x0f);
@@ -1778,12 +1756,12 @@ class PpuRenderIntegrationTest {
 
         snes.ppu.update(1);
 
-        assertEquals(0x840000ff, renderer.firstPixel);
+        assertEquals(0x840000ff, renderer.pixel(0, 0));
     }
 
     @Test
     void mainScreenWindowMaskSuppressesObjectPixelsInsideWindow() {
-        SNES snes = init(new TestRenderer());
+        SNES snes = init(new RecordingVideoSink());
         setupObjFirstPixel(snes, 0x001f);
         snes.bus.write(0x2125, 0x02);
         snes.bus.write(0x2126, 0x00);
@@ -1896,31 +1874,4 @@ class PpuRenderIntegrationTest {
         return snes;
     }
 
-    private static final class TestRenderer implements VideoSink {
-        private int firstPixel;
-        private int lastPixel;
-        private final int[] firstRowPixels = new int[4];
-        private final int[] secondRowPixels = new int[4];
-        private final int[][] outputRows = new int[4][4];
-        private int lastVisibleHeight;
-        private int drawScreenCalls;
-
-        @Override
-        public void present(VideoFrame frame) {
-            drawScreenCalls++;
-            lastVisibleHeight = frame.visibleHeight();
-            int[] pixels = frame.pixels();
-            for (int y = 0; y < outputRows.length; y++) {
-                for (int x = 0; x < outputRows[y].length; x++) {
-                    outputRows[y][x] = pixels[y * VideoFrame.STRIDE + x];
-                }
-            }
-            for (int x = 0; x < firstRowPixels.length; x++) {
-                firstRowPixels[x] = pixels[x];
-                secondRowPixels[x] = pixels[2 * VideoFrame.STRIDE + x];
-            }
-            firstPixel = pixels[0];
-            lastPixel = pixels[(2 * PPU.VISIBLE_HEIGHT - 1) * VideoFrame.STRIDE];
-        }
-    }
 }
